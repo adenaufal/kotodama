@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BrandVoice, UserSettings } from '../types';
 import { parseBrandVoiceMarkdown } from './brandVoiceImport';
 
@@ -319,7 +319,6 @@ const Onboarding: React.FC = () => {
   };
 
   const totalSteps = steps.length;
-  const progress = (step / totalSteps) * 100;
   const activeStep = steps.find((item) => item.id === step);
 
   return (
@@ -423,76 +422,13 @@ const Onboarding: React.FC = () => {
                   })}
                 </ol>
               </div>
-
-            {step === 2 && (
-              <div className="space-y-8">
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-slate-800">Brand voice name</label>
-                  <input
-                    type="text"
-                    value={brandVoiceName}
-                    onChange={(event) => {
-                      setBrandVoiceName(event.target.value);
-                      setImportFeedback(null);
-                    }}
-                    placeholder="e.g., Confident, Playful, Technical"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 shadow-inner focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-slate-800">Description (optional)</label>
-                  <textarea
-                    value={brandVoiceDescription}
-                    onChange={(event) => {
-                      setBrandVoiceDescription(event.target.value);
-                      setImportFeedback(null);
-                    }}
-                    placeholder="Share key phrases, tone notes, or instructions for the AI..."
-                    rows={3}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 shadow-inner focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                </div>
-              )}
             </header>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-800">Import from markdown</label>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-100"
-                    >
-                      Upload .md file
-                    </button>
-                    <p className="text-xs text-slate-500">
-                      Use headings like “Name”, “Description”, and “Example Tweets” to prefill the form automatically.
-                    </p>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".md,.markdown,text/markdown"
-                    onChange={handleMarkdownImport}
-                    className="hidden"
-                  />
-                  {importFeedback && (
-                    <p
-                      className={`text-xs ${
-                        importFeedback.type === 'error' ? 'text-rose-600' : 'text-emerald-600'
-                      }`}
-                    >
-                      {importFeedback.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-sm font-medium text-slate-800">
-                      Example tweets <span className="text-slate-400">(up to 5)</span>
-                    </label>
+            <div className="space-y-8 px-6 py-8 sm:px-8">
+              {step === 1 && (
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-slate-200">OpenAI API key</label>
                     <input
                       type="password"
                       value={openaiKey}
@@ -513,37 +449,25 @@ const Onboarding: React.FC = () => {
                       .
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    {exampleTweets.map((tweet, index) => (
-                      <div key={index} className="space-y-1">
-                        <input
-                          type="text"
-                          value={tweet}
-                          onChange={(event) => handleExampleTweetChange(index, event.target.value)}
-                          placeholder={`Example ${index + 1}...`}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                        />
-                        {exampleTweetStatuses[index] === 'loading' && (
-                          <p className="px-1 text-xs text-indigo-500">Fetching tweet text…</p>
-                        )}
-                        {exampleTweetStatuses[index] === 'error' && (
-                          <p className="px-1 text-xs text-rose-600">{exampleTweetErrors[index]}</p>
-                        )}
-                      </div>
-                    ))}
-                    <p className="text-xs text-slate-500">
-                      Paste a tweet link to pull in its text automatically.
+
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-slate-200">
+                    <p className="font-semibold text-white">Why we ask</p>
+                    <p className="mt-1 text-slate-300">
+                      Keys are encrypted locally using the Web Crypto API before they&apos;re stored. You can revoke or replace them
+                      any time from settings.
                     </p>
                   </div>
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <button
+                      type="button"
                       onClick={() => setOpenaiKey('')}
                       className="flex-1 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-medium text-slate-100 transition hover:bg-white/10 sm:flex-none sm:px-6"
                     >
                       Clear field
                     </button>
                     <button
+                      type="button"
                       onClick={() => setStep(2)}
                       disabled={!openaiKey.trim()}
                       className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white shadow-[0_18px_35px_-12px_rgba(79,70,229,0.65)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-slate-600/60 disabled:text-slate-300 disabled:shadow-none sm:flex-none sm:px-6"
@@ -551,17 +475,20 @@ const Onboarding: React.FC = () => {
                       Continue
                     </button>
                   </div>
-                </>
+                </div>
               )}
 
               {step === 2 && (
-                <>
+                <div className="space-y-8">
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-slate-200">Brand voice name</label>
                     <input
                       type="text"
                       value={brandVoiceName}
-                      onChange={(event) => setBrandVoiceName(event.target.value)}
+                      onChange={(event) => {
+                        setBrandVoiceName(event.target.value);
+                        setImportFeedback(null);
+                      }}
                       placeholder="e.g., Confident, Playful, Technical"
                       className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-base text-slate-100 placeholder:text-slate-400 focus:border-indigo-300/80 focus:bg-slate-900/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                     />
@@ -571,17 +498,52 @@ const Onboarding: React.FC = () => {
                     <label className="block text-sm font-medium text-slate-200">Description (optional)</label>
                     <textarea
                       value={brandVoiceDescription}
-                      onChange={(event) => setBrandVoiceDescription(event.target.value)}
+                      onChange={(event) => {
+                        setBrandVoiceDescription(event.target.value);
+                        setImportFeedback(null);
+                      }}
                       placeholder="Share key phrases, tone notes, or instructions for the AI..."
                       rows={4}
                       className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-base text-slate-100 placeholder:text-slate-400 focus:border-indigo-300/80 focus:bg-slate-900/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                     />
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-200">Import from markdown</label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-100"
+                      >
+                        Upload .md file
+                      </button>
+                      <p className="text-xs text-slate-400">
+                        Use headings like “Name”, “Description”, and “Example Tweets” to prefill the form automatically.
+                      </p>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".md,.markdown,text/markdown"
+                      onChange={handleMarkdownImport}
+                      className="hidden"
+                    />
+                    {importFeedback && (
+                      <p
+                        className={`text-xs ${
+                          importFeedback.type === 'error' ? 'text-rose-400' : 'text-emerald-400'
+                        }`}
+                      >
+                        {importFeedback.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <label className="text-sm font-medium text-slate-200">
-                        Example tweets <span className="text-slate-400">(up to 5)</span>
+                        Example tweets <span className="text-slate-400">(up to {MAX_EXAMPLE_TWEETS})</span>
                       </label>
                       <span className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
                         Optional but powerful
@@ -589,16 +551,24 @@ const Onboarding: React.FC = () => {
                     </div>
                     <div className="space-y-2">
                       {exampleTweets.map((tweet, index) => (
-                        <input
-                          key={index}
-                          type="text"
-                          value={tweet}
-                          onChange={(event) => handleExampleTweetChange(index, event.target.value)}
-                          placeholder={`Example ${index + 1}...`}
-                          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 transition focus:border-indigo-300/70 focus:bg-slate-900/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
-                        />
+                        <div key={index} className="space-y-1">
+                          <input
+                            type="text"
+                            value={tweet}
+                            onChange={(event) => handleExampleTweetChange(index, event.target.value)}
+                            placeholder={`Example ${index + 1}...`}
+                            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 transition focus:border-indigo-300/70 focus:bg-slate-900/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
+                          />
+                          {exampleTweetStatuses[index] === 'loading' && (
+                            <p className="px-1 text-xs text-indigo-300">Fetching tweet text…</p>
+                          )}
+                          {exampleTweetStatuses[index] === 'error' && (
+                            <p className="px-1 text-xs text-rose-400">{exampleTweetErrors[index]}</p>
+                          )}
+                        </div>
                       ))}
                     </div>
+                    <p className="text-xs text-slate-400">Paste a tweet link to pull in its text automatically.</p>
                   </div>
 
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-slate-200">
@@ -610,12 +580,14 @@ const Onboarding: React.FC = () => {
 
                   <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <button
+                      type="button"
                       onClick={() => setStep(1)}
                       className="flex-1 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-semibold text-slate-100 transition hover:bg-white/10 sm:flex-none sm:px-6"
                     >
                       Back
                     </button>
                     <button
+                      type="button"
                       onClick={handleComplete}
                       disabled={isSubmitting}
                       className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white shadow-[0_18px_35px_-12px_rgba(79,70,229,0.65)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:bg-slate-600/60 disabled:text-slate-300 disabled:shadow-none sm:flex-none sm:px-6"
@@ -623,7 +595,7 @@ const Onboarding: React.FC = () => {
                       {isSubmitting ? 'Setting up…' : 'Complete setup'}
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
