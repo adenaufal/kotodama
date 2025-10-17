@@ -1,9 +1,7 @@
 import { webcrypto } from 'node:crypto';
 
 declare global {
-  // eslint-disable-next-line no-var
   var btoa: (data: string) => string;
-  // eslint-disable-next-line no-var
   var atob: (data: string) => string;
 }
 

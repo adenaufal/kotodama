@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GenerateRequest, BrandVoice, UserSettings, AIProvider } from '../types';
+import { GenerateRequest, BrandVoice, UserSettings } from '../types';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -20,11 +20,6 @@ const Panel: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsDraft, setSettingsDraft] = useState<UserSettings | null>(null);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
-  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load settings and brand voices
@@ -189,6 +184,7 @@ const Panel: React.FC = () => {
             </p>
           </div>
         )}
+
       </div>
 
       <div className="-mt-10 flex-1 overflow-y-auto px-6 pb-8">
@@ -280,7 +276,6 @@ const Panel: React.FC = () => {
                 Clear
               </button>
             </div>
-          )}
 
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-600 shadow-sm">
