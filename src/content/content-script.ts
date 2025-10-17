@@ -4,6 +4,51 @@
 let panelIframe: HTMLIFrameElement | null = null;
 let currentContext: 'compose' | 'reply' | null = null;
 let currentTweetContext: any = null;
+let isPanelOpen = false;
+
+const PANEL_TRANSITION_DURATION = 300;
+
+function styleToolbarButton(button: HTMLButtonElement) {
+  button.classList.add('kotodama-ai-button');
+  button.innerHTML = `
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:rgba(255,255,255,0.18);backdrop-filter:blur(6px);">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
+      </svg>
+    </span>
+    <span style="font-weight:600;letter-spacing:0.01em;">Kotodama</span>
+  `;
+
+  Object.assign(button.style, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '0 16px',
+    height: '36px',
+    borderRadius: '9999px',
+    border: 'none',
+    background: 'linear-gradient(135deg, #1d9bf0, #7c3aed)',
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: '0 10px 30px rgba(124, 58, 237, 0.35)',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease',
+    position: 'relative',
+    outline: 'none',
+    whiteSpace: 'nowrap',
+  } as CSSStyleDeclaration);
+
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'translateY(-1px) scale(1.01)';
+    button.style.boxShadow = '0 18px 34px rgba(29, 155, 240, 0.35)';
+  });
+
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'translateY(0) scale(1)';
+    button.style.boxShadow = '0 10px 30px rgba(124, 58, 237, 0.35)';
+  });
+}
 
 // Initialize the content script
 function init() {
@@ -33,51 +78,23 @@ function injectButtonsIfNeeded() {
   composeSelectors.forEach((selector) => {
     const composeBoxes = document.querySelectorAll(selector);
     composeBoxes.forEach((box) => {
-      if (!box.parentElement?.querySelector('.kotodama-ai-button')) {
-        injectAIButton(box as HTMLElement);
+      const element = box as HTMLElement;
+      const wrapper = element.closest('[data-testid="tweetTextarea_0_wrapper"]');
+      const container = wrapper?.parentElement || element.parentElement;
+
+      if (container && container.querySelector('.kotodama-ai-button')) {
+        return;
       }
+
+      injectAIButton(element);
     });
   });
 }
 
 function injectAIButton(composeBox: HTMLElement) {
   const button = document.createElement('button');
-  button.className = 'kotodama-ai-button';
-  button.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
-    </svg>
-  `;
-  button.title = 'Compose with AI';
-
-  // Style the button
-  Object.assign(button.style, {
-    position: 'absolute',
-    right: '10px',
-    top: '10px',
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    border: 'none',
-    background: '#1d9bf0',
-    color: 'white',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: '1000',
-    transition: 'all 0.2s ease',
-  });
-
-  button.addEventListener('mouseenter', () => {
-    button.style.background = '#1a8cd8';
-    button.style.transform = 'scale(1.05)';
-  });
-
-  button.addEventListener('mouseleave', () => {
-    button.style.background = '#1d9bf0';
-    button.style.transform = 'scale(1)';
-  });
+  button.title = 'Compose with Kotodama';
+  styleToolbarButton(button);
 
   button.addEventListener('click', (e) => {
     e.preventDefault();
@@ -85,13 +102,32 @@ function injectAIButton(composeBox: HTMLElement) {
     handleAIButtonClick(composeBox);
   });
 
-  // Position the button relative to the compose box
-  const container =
-    composeBox.closest<HTMLElement>('[data-testid="tweetTextarea_0_wrapper"]') ||
-    composeBox.parentElement;
+  const wrapper = composeBox.closest('[data-testid="tweetTextarea_0_wrapper"]');
+  const toolbar = wrapper?.parentElement?.querySelector<HTMLElement>('[data-testid="toolBar"]');
+
+  if (toolbar && !toolbar.querySelector('.kotodama-ai-button')) {
+    const slot = document.createElement('div');
+    slot.className = 'kotodama-ai-button-slot';
+    Object.assign(slot.style, {
+      display: 'flex',
+      alignItems: 'center',
+      marginLeft: '8px',
+    });
+    slot.appendChild(button);
+    toolbar.appendChild(slot);
+    return;
+  }
+
+  const container = wrapper || composeBox.parentElement;
 
   if (container instanceof HTMLElement) {
-    container.style.position = 'relative';
+    container.style.position = container.style.position || 'relative';
+    Object.assign(button.style, {
+      position: 'absolute',
+      right: '12px',
+      bottom: '-18px',
+      transform: 'translateY(100%)',
+    });
     container.appendChild(button);
   }
 }
@@ -139,38 +175,39 @@ async function extractTweetContext(replyBox: HTMLElement): Promise<any> {
 
 function openPanel() {
   if (panelIframe) {
-    panelIframe.style.transform = 'translateX(0)';
+    showPanel();
     return;
   }
 
-  // Create iframe for the panel
   panelIframe = document.createElement('iframe');
   panelIframe.src = chrome.runtime.getURL('src/panel/index.html');
   panelIframe.id = 'kotodama-panel';
 
   Object.assign(panelIframe.style, {
     position: 'fixed',
-    top: '0',
-    right: '0',
-    width: '400px',
-    height: '100vh',
+    top: '72px',
+    right: '24px',
+    width: 'min(420px, calc(100vw - 48px))',
+    height: 'min(720px, calc(100vh - 120px))',
+    minHeight: '480px',
     border: 'none',
+    borderRadius: '20px',
     zIndex: '999999',
-    boxShadow: '-2px 0 10px rgba(0,0,0,0.1)',
-    transform: 'translateX(100%)',
-    transition: 'transform 0.3s ease',
-  });
+    boxShadow: '0 30px 80px rgba(15, 23, 42, 0.35)',
+    background: 'white',
+    overflow: 'hidden',
+    transform: 'translateY(24px)',
+    opacity: '0',
+    pointerEvents: 'none',
+    transition: 'transform 0.3s ease, opacity 0.3s ease',
+  } as CSSStyleDeclaration);
 
   document.body.appendChild(panelIframe);
 
-  // Animate in
-  setTimeout(() => {
-    if (panelIframe) {
-      panelIframe.style.transform = 'translateX(0)';
-    }
-  }, 10);
+  requestAnimationFrame(() => {
+    showPanel();
+  });
 
-  // Send context to panel once loaded
   panelIframe.addEventListener('load', () => {
     sendContextToPanel();
   });
@@ -179,12 +216,10 @@ function openPanel() {
 function togglePanel() {
   if (!panelIframe) return;
 
-  const isOpen = panelIframe.style.transform === 'translateX(0px)';
-
-  if (isOpen) {
-    panelIframe.style.transform = 'translateX(100%)';
+  if (isPanelOpen) {
+    hidePanel();
   } else {
-    panelIframe.style.transform = 'translateX(0)';
+    showPanel();
     sendContextToPanel();
   }
 }
@@ -202,14 +237,36 @@ function sendContextToPanel() {
   );
 }
 
+function showPanel() {
+  if (!panelIframe) return;
+
+  isPanelOpen = true;
+  panelIframe.style.pointerEvents = 'auto';
+  panelIframe.style.transform = 'translateY(0)';
+  panelIframe.style.opacity = '1';
+}
+
+function hidePanel() {
+  if (!panelIframe) return;
+
+  isPanelOpen = false;
+  panelIframe.style.pointerEvents = 'none';
+  panelIframe.style.transform = 'translateY(24px)';
+  panelIframe.style.opacity = '0';
+
+  setTimeout(() => {
+    if (!isPanelOpen && panelIframe) {
+      panelIframe.style.pointerEvents = 'none';
+    }
+  }, PANEL_TRANSITION_DURATION);
+}
+
 // Listen for messages from the panel
 window.addEventListener('message', async (event) => {
   if (event.data.type === 'insert-tweet') {
     insertTweetContent(event.data.content);
   } else if (event.data.type === 'close-panel') {
-    if (panelIframe) {
-      panelIframe.style.transform = 'translateX(100%)';
-    }
+    hidePanel();
   } else if (event.data.type === 'analyze-profile') {
     const tweets = await fetchUserTweets(event.data.username);
     event.source?.postMessage(
@@ -304,7 +361,7 @@ function insertTweetContent(content: string) {
 
   if (panelIframe) {
     setTimeout(() => {
-      if (panelIframe) panelIframe.style.transform = 'translateX(100%)';
+      hidePanel();
     }, 500);
   }
 }
