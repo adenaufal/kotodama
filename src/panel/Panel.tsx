@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GenerateRequest, BrandVoice, UserSettings } from '../types';
+import { GenerateRequest, BrandVoice, UserSettings, AIProvider } from '../types';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -20,6 +20,11 @@ const Panel: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsDraft, setSettingsDraft] = useState<UserSettings | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState<string | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load settings and brand voices
@@ -146,169 +151,197 @@ const Panel: React.FC = () => {
     window.parent.postMessage({ type: 'close-panel' }, '*');
   };
 
+  const hasGeneratedContent =
+    (Array.isArray(generatedContent) && generatedContent.length > 0) ||
+    (!!generatedContent && !Array.isArray(generatedContent));
+
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <div>
-          <h1 className="text-xl font-bold">AI Tweet Composer</h1>
-          {settings?.defaultProvider && (
-            <p className="text-xs text-gray-500">Default provider: {settings.defaultProvider}</p>
-          )}
-        </div>
-        <button
-          onClick={handleClose}
-          className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-        >
-          ×
-        </button>
-      </div>
-
-      {/* Context Info */}
-      {context.type === 'reply' && context.tweetContext && (
-        <div className="p-4 bg-blue-50 border-b border-blue-100">
-          <p className="text-sm text-blue-900">
-            Replying to <span className="font-semibold">@{context.tweetContext.username}</span>
-          </p>
-          <p className="text-xs text-blue-700 mt-1 line-clamp-2">
-            {context.tweetContext.text}
-          </p>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Prompt Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            What do you want to say?
-          </label>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder={
-              context.type === 'reply'
-                ? 'Describe your reply intent...'
-                : 'Describe your tweet...'
-            }
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            rows={4}
-          />
-        </div>
-
-        {/* Thread Toggle */}
-        {context.type === 'compose' && (
-          <div className="flex items-center space-x-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={isThread}
-                onChange={(e) => setIsThread(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm">Create thread</span>
-            </label>
-            {isThread && (
-              <input
-                type="number"
-                value={threadLength}
-                onChange={(e) => setThreadLength(Math.max(2, Math.min(10, parseInt(e.target.value) || 5)))}
-                min="2"
-                max="10"
-                className="w-16 p-1 border border-gray-300 rounded text-sm"
-              />
+    <div className="flex h-full flex-col bg-slate-950/5 text-slate-900">
+      <div className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-500 via-indigo-500 to-fuchsia-500 px-6 pb-14 pt-8 text-white shadow-lg">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_55%)]" />
+        <div className="relative z-10 flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-xs font-medium uppercase tracking-[0.3em] text-white/70">Kotodama</p>
+            <h1 className="text-2xl font-semibold leading-tight">AI Tweet Composer</h1>
+            {settings?.defaultProvider && (
+              <p className="text-xs text-white/70">
+                Default provider: <span className="font-medium text-white">{settings.defaultProvider}</span>
+              </p>
             )}
           </div>
-        )}
-
-        {/* Brand Voice Selector (placeholder) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Brand Voice
-          </label>
-          <select
-            value={selectedVoiceId}
-            onChange={(e) => setSelectedVoiceId(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          <button
+            onClick={handleClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25"
+            aria-label="Close panel"
           >
-            <option value="">Select a voice...</option>
-            {brandVoices.map((voice) => (
-              <option key={voice.id} value={voice.id}>
-                {voice.name}
-              </option>
-            ))}
-          </select>
+            ×
+          </button>
         </div>
 
-        {/* Generate Button */}
-        <button
-          onClick={handleGenerate}
-          disabled={isLoading || !prompt.trim() || !selectedVoiceId}
-          className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-        >
-          {isLoading ? 'Generating...' : 'Generate'}
-        </button>
-
-        {/* Error Message */}
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
+        {context.type === 'reply' && context.tweetContext && (
+          <div className="relative z-10 mt-6 rounded-2xl border border-white/10 bg-white/15 p-4 backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Replying to</p>
+            <p className="mt-1 text-sm font-medium text-white">
+              @{context.tweetContext.username}
+            </p>
+            <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-white/80">
+              {context.tweetContext.text}
+            </p>
           </div>
         )}
+      </div>
 
-        {/* Generated Content */}
-        {generatedContent && !isLoading && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-gray-900">Generated Content</h3>
-              <button
-                onClick={handleGenerate}
-                className="text-sm text-blue-500 hover:text-blue-600"
-              >
-                Regenerate
-              </button>
+      <div className="-mt-10 flex-1 overflow-y-auto px-6 pb-8">
+        <div className="rounded-3xl border border-white/70 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur-sm">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">
+                What would you like to share?
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={
+                  context.type === 'reply'
+                    ? 'Briefly describe the tone or key points for your reply...'
+                    : 'Share the idea, tone, or key points you want your tweet to convey...'
+                }
+                className="min-h-[120px] w-full resize-none rounded-2xl border border-slate-200 bg-white/80 p-4 text-sm leading-relaxed text-slate-800 shadow-inner outline-none transition focus:border-transparent focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-white"
+              />
             </div>
 
-            {Array.isArray(generatedContent) ? (
-              <div className="space-y-2">
-                {generatedContent.map((tweet, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-gray-50 border border-gray-200 rounded-lg"
-                  >
-                    <div className="text-xs text-gray-500 mb-1">Tweet {index + 1}</div>
-                    <div className="text-sm">{tweet}</div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {tweet.length} characters
-                    </div>
+            {context.type === 'compose' && (
+              <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-slate-50/80 p-4">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={isThread}
+                    onChange={(e) => setIsThread(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400"
+                  />
+                  Turn this into a thread
+                </label>
+                {isThread && (
+                  <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-700">
+                    <span>Posts:</span>
+                    <input
+                      type="number"
+                      value={threadLength}
+                      onChange={(e) =>
+                        setThreadLength(Math.max(2, Math.min(10, parseInt(e.target.value, 10) || 5)))
+                      }
+                      min="2"
+                      max="10"
+                      className="h-8 w-16 rounded-full border border-slate-200 bg-white px-2 text-center text-sm font-semibold text-slate-900 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-300"
+                    />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="text-sm whitespace-pre-wrap">{generatedContent}</div>
-                <div className="text-xs text-gray-400 mt-2">
-                  {generatedContent.length} characters
-                </div>
+                )}
               </div>
             )}
 
-            {/* Insert Button */}
-            <button
-              onClick={handleInsert}
-              className="w-full bg-green-500 text-white py-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
-            >
-              Insert to Twitter
-            </button>
-          </div>
-        )}
-      </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Brand voice</label>
+              <div className="relative">
+                <select
+                  value={selectedVoiceId}
+                  onChange={(e) => setSelectedVoiceId(e.target.value)}
+                  className="w-full appearance-none rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-4 py-3 text-sm font-medium text-slate-800 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-white"
+                >
+                  <option value="">Select a voice...</option>
+                  {brandVoices.map((voice) => (
+                    <option key={voice.id} value={voice.id}>
+                      {voice.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                  ▾
+                </span>
+              </div>
+            </div>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 text-center">
-        <p className="text-xs text-gray-500">
-          Powered by AI • Kotodama v1.0
-        </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={handleGenerate}
+                disabled={isLoading || !prompt.trim() || !selectedVoiceId}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              >
+                {isLoading ? 'Crafting magic…' : 'Generate with AI'}
+              </button>
+              <button
+                onClick={() => {
+                  setPrompt('');
+                  setGeneratedContent('');
+                  setError(null);
+                }}
+                className="inline-flex items-center justify-center rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                type="button"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
+            {error && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-600 shadow-sm">
+                {error}
+              </div>
+            )}
+
+            {hasGeneratedContent && !isLoading && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">Generated suggestions</h3>
+                    <p className="text-xs text-slate-500">Click insert to drop your favorite version into X.</p>
+                  </div>
+                  <button
+                    onClick={handleGenerate}
+                    className="text-sm font-semibold text-indigo-500 transition hover:text-indigo-600"
+                  >
+                    Regenerate
+                  </button>
+                </div>
+
+                {Array.isArray(generatedContent) ? (
+                  <div className="space-y-3">
+                    {generatedContent.map((tweet, index) => (
+                      <div
+                        key={index}
+                        className="space-y-2 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <span>Suggestion {index + 1}</span>
+                          <span>{tweet.length} characters</span>
+                        </div>
+                        <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">{tweet}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                    <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <span>Suggested copy</span>
+                      <span>{generatedContent.length} characters</span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">{generatedContent}</p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleInsert}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  Insert to X
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 text-center text-xs text-slate-400">
+          Powered by Kotodama • Crafted with AI assistance
+        </div>
       </div>
     </div>
   );
