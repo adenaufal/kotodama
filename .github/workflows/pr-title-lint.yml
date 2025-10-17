@@ -1,7 +1,7 @@
 name: PR Title Lint
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, edited, reopened, synchronize]
 
 permissions:
@@ -27,6 +27,7 @@ jobs:
             style
             test
           requireScope: false
-          ignoreLabels: bot
+          subjectPattern: '^[^A-Z]'
+          # Squash merges copy the PR title into the commit, so enforce the format here.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

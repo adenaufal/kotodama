@@ -1,32 +1,28 @@
 # Release & Deployment Guide
 
-## Conventional Commit Summary
-- `feat: add customer portal` – user-visible feature
-- `fix: correct typo in onboarding copy` – bug fix
-- `feat!: migrate settings storage` with `BREAKING CHANGE: resets user preferences` – breaking change (either add `!` after the type/scope or include a `BREAKING CHANGE:` footer)
-- `chore: update dependencies` – maintenance work
+## Required workflow
+- Enable **Squash and merge** and disable **Merge commit** under **Settings → General → Pull Requests** so every merge produces a single Conventional Commit derived from the PR title.
+- Keep PR titles in [Conventional Commit](https://www.conventionalcommits.org/) format such as `feat: add customer portal`, `fix: correct typo`, `feat!: migrate settings storage`, or include a `BREAKING CHANGE:` footer when needed.
+- The **PR Title Lint** workflow will block merges whose titles do not pass the format check—update the title and re-run the check to proceed.
 
-Use **Squash and merge** so the PR title becomes the release note entry. Configure the repo under **Settings → General → Pull Requests**:
-1. Enable **Allow squash merging**.
-2. Disable **Allow merge commits**.
-3. (Optional) Disable **Allow rebase merging** if you want a single merge strategy.
+## Release flow
+1. Merge feature branches into `main` using squash merges.
+2. `release-please` runs on every push to `main`. It keeps a draft **release PR** up to date with the next semantic version, changelog, and package version bump.
+3. When you merge the release PR, `release-please` automatically tags the merge commit as `vX.Y.Z` and publishes a GitHub Release. All commits merged since the previous tag are batched into this single release.
+4. The `Release Artifacts on Tag` workflow detects the new tag, rebuilds the project, packages the build output into `app-vX.Y.Z.tar.gz`, and attaches it to the GitHub Release.
 
-The `PR Title Lint` workflow blocks merges whose titles do not match the Conventional Commit format—fix the title and re-run the check if it fails.
+## Release artifacts
+- Build artifacts are searched in `.next/`, `dist/`, or `build/`. Any directories that exist are included in the tarball (source maps are omitted to keep downloads small).
+- Download the packaged archive from the GitHub Release assets list. The filename follows `app-<tag>.tar.gz`.
+- Need a fresh archive? Re-run the workflow from the **Actions** tab → `Release Artifacts on Tag` → choose the `v*.*.*` run → **Re-run all jobs**.
 
-## Choosing a batching strategy
-- **Release branch (`release`)** – Merge `main` into `release` whenever you are ready to publish. Pushing to `release` triggers the release workflow immediately.
-- **Scheduled cron** – Leave the `release` branch unused and rely on the scheduled run (daily at 00:00 Asia/Jakarta). Every successful run releases all commits since the last tag.
-- Switch between the modes by commenting/uncommenting the relevant trigger in `.github/workflows/release.yml`.
+## Secrets & optional integrations
+- `GITHUB_TOKEN` is provided automatically in GitHub Actions and is sufficient for release-please and uploading release assets.
+- `NPM_TOKEN` (optional) can be added later if you choose to publish the package to npm as part of the tag workflow.
+- Optional deployment hooks:
+  - **Render**: add `RENDER_DEPLOY_HOOK` to repository secrets and trigger it from an additional job after the archive upload.
+  - **Netlify**: supply `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets, then call the Netlify CLI or deploy API from a follow-up workflow (commonly via `workflow_run` on `Release Artifacts on Tag`).
 
-## Manual releases & skip guard
-- Use the **Run workflow** button on the `Release` workflow (`workflow_dispatch`) to cut an ad-hoc release.
-- The workflow checks the latest Git tag. If there are no commits after that tag, it exits early and reports "Release skipped" so you do not create empty releases.
-
-## Artifacts & GitHub Releases
-- The build step gathers `.next`, `out`, `dist`, or `build` folders (whichever exist) into `artifacts/app-<short-sha>.tar.gz` before semantic-release runs.
-- The GitHub release includes this archive under **Assets** with the label “Build archive”. Download it for ready-to-deploy build output.
-
-## Secrets & tokens
-- `GITHUB_TOKEN` – provided automatically; required for semantic-release and uploading assets.
-- `NPM_TOKEN` – optional; add if you want the npm plugin to update package metadata or publish.
-- `RENDER_DEPLOY_HOOK` – required to trigger the Render deploy hook (see `.github/workflows/deploy-render.yml`).
+## Troubleshooting
+- If release-please fails, inspect the workflow logs on the `Release Please` run. Fix commit messages or conflicts, then re-run the job from the Actions UI.
+- If the tag workflow fails, resolve the issue (for example, missing build output), push a fix to `main`, and use the **Re-run jobs** button to rebuild and re-attach the artifact.

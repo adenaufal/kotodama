@@ -8,8 +8,7 @@
     "prebuild": "node scripts/build.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
-    "release": "semantic-release"
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -49,5 +48,6 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zustand": "^5.0.8"
-  }
+  },
+  "_releasePleaseNote": "Versioning is automated by release-please via GitHub Actions; no local semantic-release step is necessary."
 }

@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Lint, test, and build
+    name: Lint, test, build, and archive
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: npm # Speeds up installs by caching ~/.npm between runs.
 
       - name: Install dependencies
         run: npm ci
@@ -36,25 +36,27 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Prepare build artifact
+      - name: Gather build output
+        id: gather
         run: |
           set -euo pipefail
-          mkdir -p artifact
-          for dir in .next out dist build; do
+          mkdir -p build-artifacts
+          copied=false
+          for dir in .next dist build; do
             if [ -d "$dir" ]; then
-              # Copy build output while excluding source maps to keep artifacts lean.
-              rsync -a --exclude='*.map' "$dir/" "artifact/$dir/"
+              copied=true
+              # Copy build output while dropping source maps to keep artifacts small.
+              rsync -a --exclude='*.map' "$dir/" "build-artifacts/$dir/"
             fi
           done
-          if [ "$(find artifact -mindepth 1 | wc -l)" -eq 0 ]; then
-            echo "No build output directories (.next, out, dist, build) were produced; skipping artifact upload." >&2
-            exit 0
+          if [ "$copied" = false ]; then
+            echo "No build output directories (.next, dist, build) were produced; skipping artifact upload."
           fi
 
-      - name: Upload build artifact
-        if: success() && hashFiles('artifact/**') != ''
+      - name: Upload build artifacts
+        if: steps.gather.outcome == 'success' && hashFiles('build-artifacts/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: build-output-${{ github.run_number }}
-          path: artifact
+          path: build-artifacts
           retention-days: 7
