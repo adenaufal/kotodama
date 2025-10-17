@@ -16,8 +16,6 @@
   "type": "module",
   "description": "",
   "devDependencies": {
-    "// linting": "Add eslint and related plugins as needed (e.g. \"eslint\": \"^9\" and \"@typescript-eslint/eslint-plugin\": \"^8\").",
-    "// testing": "Add vitest or jest plus their typings and utilities as required.",
     "@eslint/js": "^9.37.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.0",
