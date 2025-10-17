@@ -135,6 +135,34 @@ describe('saveSettings', () => {
     expect(stored.apiKeys.openai).not.toBe(openaiKey);
     expect(stored.apiKeys.gemini).not.toBe(geminiKey);
   });
+
+  it('does not mutate the provided settings object', async () => {
+    const openaiKey = 'plain-openai-key';
+    const geminiKey = 'plain-gemini-key';
+
+    const settings: UserSettings = {
+      apiKeys: {
+        openai: openaiKey,
+        gemini: geminiKey,
+      },
+      analysisDepth: 20,
+      ui: {
+        buttonPosition: 'top-right',
+        panelWidth: 400,
+        theme: 'auto',
+      },
+      features: {
+        autoAnalyze: true,
+        rememberHistory: true,
+        showToneControls: true,
+      },
+    };
+
+    await saveSettings(settings);
+
+    expect(settings.apiKeys.openai).toBe(openaiKey);
+    expect(settings.apiKeys.gemini).toBe(geminiKey);
+  });
 });
 
 describe('updateApiKey', () => {

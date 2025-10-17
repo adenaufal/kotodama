@@ -50,9 +50,14 @@ export async function getSettings(): Promise<UserSettings> {
 }
 
 export async function saveSettings(settings: UserSettings): Promise<void> {
-  const settingsToSave = { ...settings };
+  const settingsToSave: UserSettings = {
+    ...settings,
+    apiKeys: { ...settings.apiKeys },
+    ui: { ...settings.ui },
+    features: { ...settings.features },
+  };
 
-  // Encrypt API keys before saving
+  // Encrypt API keys before saving without mutating the original object
   if (settingsToSave.apiKeys.openai) {
     settingsToSave.apiKeys.openai = await encryptApiKey(settingsToSave.apiKeys.openai);
   }
