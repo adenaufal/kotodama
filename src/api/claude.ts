@@ -7,8 +7,6 @@ const CLAUDE_VERSION = '2023-06-01';
 // Claude Model Selection
 // Sonnet models - Best for balanced performance
 const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929'; // Claude Sonnet 4.5 (latest)
-const SONNET_4_MODEL = 'claude-sonnet-4-20250514'; // Claude Sonnet 4
-const SONNET_37_MODEL = 'claude-3-7-sonnet-20250219'; // Claude Sonnet 3.7
 
 // Opus models - Best for quality and complex reasoning
 const OPUS_4_MODEL = 'claude-opus-4-20250514'; // Claude Opus 4
@@ -359,9 +357,7 @@ export async function generateWithClaude(
 
 export async function analyzeTwitterProfileWithClaude(
   tweets: string[],
-  apiKey: string,
-  authType: ClaudeAuthType = 'api',
-  cookie?: string
+  apiKey: string
 ): Promise<{ avgLength: number; commonPhrases: string[]; tone: any }> {
   const systemPrompt = 'You are analyzing Twitter profiles. Analyze the writing style, tone, and patterns from the provided tweets. Return ONLY a valid JSON object with avgLength (number), commonPhrases (array of strings), and tone (object with formality, humor, technicality scores 0-100).';
   const userPrompt = `Analyze these tweets:\n\n${tweets.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
