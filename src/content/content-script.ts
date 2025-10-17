@@ -232,19 +232,23 @@ function findComposeEditable(): HTMLElement | null {
     '[aria-label="Post text"][contenteditable="true"]',
   ];
 
+  if (activeElement) {
+    for (const selector of selectors) {
+      if (activeElement.matches(selector)) {
+        return activeElement;
+      }
+
+      const closest = activeElement.closest(selector) as HTMLElement | null;
+      if (closest) {
+        return closest;
+      }
+    }
+  }
+
   for (const selector of selectors) {
-    if (activeElement?.matches(selector)) {
-      return activeElement;
-    }
-
-    const closest = activeElement?.closest(selector);
-    if (closest) {
-      return closest as HTMLElement;
-    }
-
-    const queried = document.querySelector(selector);
+    const queried = document.querySelector<HTMLElement>(selector);
     if (queried) {
-      return queried as HTMLElement;
+      return queried;
     }
   }
 
