@@ -1,0 +1,24 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write # Required so release-please can create tags and releases.
+  pull-requests: write # Allows the action to manage the release PR.
+
+jobs:
+  release:
+    name: Run release-please
+    runs-on: ubuntu-latest
+    steps:
+      - name: Release using release-please
+        uses: google-github-actions/release-please-action@v4
+        with:
+          release-type: node
+          package-name: kotodama
+          changelog-types: |-
+            [{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"perf","section":"Performance"},{"type":"refactor","section":"Refactoring"},{"type":"docs","section":"Documentation"},{"type":"chore","section":"Maintenance"}]
+          # The action inspects commits on main, opens/updates a release PR,
+          # and when merged, tags the commit (vX.Y.Z) plus creates a GitHub Release.
