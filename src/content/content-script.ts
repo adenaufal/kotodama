@@ -222,37 +222,86 @@ window.addEventListener('message', async (event) => {
   }
 });
 
-function insertTweetContent(content: string) {
-  // Find the active compose box
-  const activeBox = document.activeElement?.closest('[role="textbox"]') as HTMLElement ||
-                    document.querySelector('[data-testid="tweetTextarea_0"]') as HTMLElement;
+function findComposeEditable(): HTMLElement | null {
+  const activeElement = document.activeElement as HTMLElement | null;
+  const selectors = [
+    '[data-testid="tweetTextarea_0"][contenteditable="true"]',
+    '[data-testid="tweetTextarea_0"] [contenteditable="true"]',
+    '[role="textbox"][contenteditable="true"]',
+    '[aria-label="Tweet text"][contenteditable="true"]',
+    '[aria-label="Post text"][contenteditable="true"]',
+  ];
 
-  if (!activeBox) {
+  if (activeElement) {
+    for (const selector of selectors) {
+      if (activeElement.matches(selector)) {
+        return activeElement;
+      }
+
+      const closest = activeElement.closest(selector) as HTMLElement | null;
+      if (closest) {
+        return closest;
+      }
+    }
+  }
+
+  for (const selector of selectors) {
+    const queried = document.querySelector<HTMLElement>(selector);
+    if (queried) {
+      return queried;
+    }
+  }
+
+  return null;
+}
+
+function insertTweetContent(content: string) {
+  const composeEditable = findComposeEditable();
+
+  if (!composeEditable) {
     console.error('Could not find tweet compose box');
     return;
   }
 
-  // Set the content
-  activeBox.focus();
+  composeEditable.focus();
 
-  // For contenteditable divs, we need to set innerHTML or use execCommand
-  if (activeBox.getAttribute('contenteditable') === 'true') {
-    activeBox.textContent = content;
+  const selection = window.getSelection();
 
-    // Trigger input event so Twitter recognizes the change
-    const inputEvent = new Event('input', { bubbles: true });
-    activeBox.dispatchEvent(inputEvent);
-
-    // Place cursor at end
+  if (selection) {
     const range = document.createRange();
-    const sel = window.getSelection();
-    range.selectNodeContents(activeBox);
-    range.collapse(false);
-    sel?.removeAllRanges();
-    sel?.addRange(range);
+    range.selectNodeContents(composeEditable);
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 
-  // Close panel after insertion
+  let inserted = false;
+
+  try {
+    inserted = document.execCommand('insertText', false, content);
+  } catch (error) {
+    console.warn('Failed to use execCommand for insertion', error);
+  }
+
+  if (!inserted) {
+    composeEditable.textContent = content;
+  }
+
+  const inputEvent = new InputEvent('input', {
+    bubbles: true,
+    data: content,
+    inputType: 'insertFromPaste',
+  });
+
+  composeEditable.dispatchEvent(inputEvent);
+
+  if (selection) {
+    const range = document.createRange();
+    range.selectNodeContents(composeEditable);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
   if (panelIframe) {
     setTimeout(() => {
       if (panelIframe) panelIframe.style.transform = 'translateX(100%)';
