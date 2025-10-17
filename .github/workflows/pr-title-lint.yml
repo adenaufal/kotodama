@@ -27,7 +27,7 @@ jobs:
             style
             test
           requireScope: false
-          subjectPattern: '^[^A-Z].*'
+          subjectPattern: '^[^A-Z]'
           # Squash merges copy the PR title into the commit, so enforce the format here.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
