@@ -120,7 +120,7 @@ export async function generateWithOpenAI(
       body: JSON.stringify({
         model: modelName,
         messages,
-        max_tokens: isThread ? 1500 : 300,
+        max_completion_tokens: isThread ? 1500 : 300,
         temperature: 0.7,
       }),
     });
@@ -204,7 +204,7 @@ export async function analyzeTwitterProfile(
       body: JSON.stringify({
         model: FAST_MODEL, // Use faster, cheaper model for analysis
         messages,
-        max_tokens: 500,
+        max_completion_tokens: 500,
         temperature: 0.3,
         response_format: { type: 'json_object' },
       }),
