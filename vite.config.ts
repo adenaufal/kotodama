@@ -2,6 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
+const stripLeadingUnderscore = (value?: string) => {
+  if (!value) {
+    return '';
+  }
+
+  return value.startsWith('_') ? value.slice(1) : value;
+};
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -13,9 +21,18 @@ export default defineConfig({
         onboarding: resolve(__dirname, 'src/onboarding/index.html'),
       },
       output: {
-        entryFileNames: '[name].js',
-        chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]',
+        entryFileNames: ({ name }) => {
+          const sanitizedName = stripLeadingUnderscore(name) || 'entry';
+          return `${sanitizedName}.js`;
+        },
+        chunkFileNames: ({ name }) => {
+          const sanitizedName = stripLeadingUnderscore(name) || 'chunk';
+          return `${sanitizedName}.js`;
+        },
+        assetFileNames: ({ name }) => {
+          const sanitizedName = stripLeadingUnderscore(name) || '[name]';
+          return `${sanitizedName}.[ext]`;
+        },
       },
     },
     outDir: 'dist',
