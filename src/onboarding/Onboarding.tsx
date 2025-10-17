@@ -1,5 +1,52 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { BrandVoice, UserSettings } from '../types';
+import { parseBrandVoiceMarkdown } from './brandVoiceImport';
+
+const MAX_EXAMPLE_TWEETS = 5;
+
+type ExampleTweetStatus = 'idle' | 'loading' | 'error';
+
+const isTwitterStatusUrl = (value: string) =>
+  /^(https?:\/\/)?(www\.)?(twitter|x)\.com\/[A-Za-z0-9_]+\/status\/\d+/i.test(value.trim());
+
+const extractTweetId = (url: string) => {
+  const match = url.match(/status\/(\d+)/i);
+  return match ? match[1] : undefined;
+};
+
+const fetchTweetText = async (url: string): Promise<string | null> => {
+  const tweetId = extractTweetId(url);
+  if (!tweetId) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`https://cdn.syndication.twimg.com/widgets/tweet?id=${tweetId}&lang=en`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data: unknown = await response.json();
+    if (data && typeof data === 'object') {
+      const text =
+        (data as { text?: string; full_text?: string }).text ||
+        (data as { text?: string; full_text?: string }).full_text;
+      if (typeof text === 'string' && text.trim()) {
+        return text.replace(/\s+/g, ' ').trim();
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch tweet text', error);
+    return null;
+  }
+
+  return null;
+};
 
 const steps = [
   {
@@ -25,13 +72,160 @@ const Onboarding: React.FC = () => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [brandVoiceName, setBrandVoiceName] = useState('');
   const [brandVoiceDescription, setBrandVoiceDescription] = useState('');
-  const [exampleTweets, setExampleTweets] = useState(['', '', '', '', '']);
+  const [exampleTweets, setExampleTweets] = useState<string[]>(() =>
+    Array.from({ length: MAX_EXAMPLE_TWEETS }, () => ''),
+  );
+  const [exampleTweetStatuses, setExampleTweetStatuses] = useState<ExampleTweetStatus[]>(() =>
+    Array.from({ length: MAX_EXAMPLE_TWEETS }, () => 'idle'),
+  );
+  const [exampleTweetErrors, setExampleTweetErrors] = useState<string[]>(() =>
+    Array.from({ length: MAX_EXAMPLE_TWEETS }, () => ''),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [importFeedback, setImportFeedback] = useState<
+    { type: 'success' | 'error'; message: string } | null
+  >(null);
+  const exampleTweetRequestTokens = useRef<number[]>(
+    Array.from({ length: MAX_EXAMPLE_TWEETS }, () => 0),
+  );
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleExampleTweetChange = (index: number, value: string) => {
-    const newTweets = [...exampleTweets];
-    newTweets[index] = value;
-    setExampleTweets(newTweets);
+    setImportFeedback(null);
+    setExampleTweets((previous) => {
+      const next = [...previous];
+      next[index] = value;
+      return next;
+    });
+
+    setExampleTweetErrors((previous) => {
+      const next = [...previous];
+      next[index] = '';
+      return next;
+    });
+
+    const nextToken = exampleTweetRequestTokens.current[index] + 1;
+    exampleTweetRequestTokens.current[index] = nextToken;
+
+    const trimmed = value.trim();
+    if (!isTwitterStatusUrl(trimmed)) {
+      setExampleTweetStatuses((previous) => {
+        const next = [...previous];
+        next[index] = 'idle';
+        return next;
+      });
+      return;
+    }
+
+    setExampleTweetStatuses((previous) => {
+      const next = [...previous];
+      next[index] = 'loading';
+      return next;
+    });
+
+    fetchTweetText(trimmed)
+      .then((text) => {
+        if (exampleTweetRequestTokens.current[index] !== nextToken) {
+          return;
+        }
+
+        if (text) {
+          setExampleTweets((previous) => {
+            const next = [...previous];
+            next[index] = text;
+            return next;
+          });
+          setExampleTweetStatuses((previous) => {
+            const next = [...previous];
+            next[index] = 'idle';
+            return next;
+          });
+        } else {
+          setExampleTweetStatuses((previous) => {
+            const next = [...previous];
+            next[index] = 'error';
+            return next;
+          });
+          setExampleTweetErrors((previous) => {
+            const next = [...previous];
+            next[index] = 'We could not extract text from that tweet link.';
+            return next;
+          });
+        }
+      })
+      .catch(() => {
+        if (exampleTweetRequestTokens.current[index] !== nextToken) {
+          return;
+        }
+
+        setExampleTweetStatuses((previous) => {
+          const next = [...previous];
+          next[index] = 'error';
+          return next;
+        });
+        setExampleTweetErrors((previous) => {
+          const next = [...previous];
+          next[index] = 'Failed to fetch the tweet content. Try pasting the text manually.';
+          return next;
+        });
+      });
+  };
+
+  const handleMarkdownImport: React.ChangeEventHandler<HTMLInputElement> = async (
+    event,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      setImportFeedback(null);
+      const text = await file.text();
+      const parsed = parseBrandVoiceMarkdown(text);
+
+      if (!parsed.name && !parsed.description && parsed.exampleTweets.length === 0) {
+        throw new Error('No brand voice content found');
+      }
+
+      if (parsed.name) {
+        setBrandVoiceName(parsed.name);
+      }
+
+      if (parsed.description !== undefined) {
+        setBrandVoiceDescription(parsed.description);
+      }
+
+      if (parsed.exampleTweets.length > 0) {
+        const normalized = Array.from({ length: MAX_EXAMPLE_TWEETS }, (_, index) =>
+          parsed.exampleTweets[index] ?? '',
+        );
+        setExampleTweets(normalized);
+      }
+
+      setExampleTweetStatuses(Array.from({ length: MAX_EXAMPLE_TWEETS }, () => 'idle'));
+      setExampleTweetErrors(Array.from({ length: MAX_EXAMPLE_TWEETS }, () => ''));
+      exampleTweetRequestTokens.current = Array.from({ length: MAX_EXAMPLE_TWEETS }, () => 0);
+
+      setImportFeedback({
+        type: 'success',
+        message: 'Loaded your brand voice from markdown.',
+      });
+    } catch (error) {
+      console.error('Failed to import brand voice markdown', error);
+      setImportFeedback({
+        type: 'error',
+        message:
+          'Could not parse the markdown file. Include "Name", "Description", and "Example Tweets" sections.',
+      });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      } else {
+        event.target.value = '';
+      }
+    }
   };
 
   const handleComplete = async () => {
@@ -201,29 +395,74 @@ const Onboarding: React.FC = () => {
                 </ol>
               </div>
 
-              <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-indigo-300 to-sky-300 transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+            {step === 2 && (
+              <div className="space-y-8">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-slate-800">Brand voice name</label>
+                  <input
+                    type="text"
+                    value={brandVoiceName}
+                    onChange={(event) => {
+                      setBrandVoiceName(event.target.value);
+                      setImportFeedback(null);
+                    }}
+                    placeholder="e.g., Confident, Playful, Technical"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 shadow-inner focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
+                </div>
 
-              {activeStep?.helper && (
-                <div className="flex items-start gap-3 rounded-2xl border border-indigo-400/20 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-100">
-                  <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500 text-xs font-semibold text-white">
-                    i
-                  </span>
-                  <p>{activeStep.helper}</p>
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-slate-800">Description (optional)</label>
+                  <textarea
+                    value={brandVoiceDescription}
+                    onChange={(event) => {
+                      setBrandVoiceDescription(event.target.value);
+                      setImportFeedback(null);
+                    }}
+                    placeholder="Share key phrases, tone notes, or instructions for the AI..."
+                    rows={3}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 shadow-inner focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  />
                 </div>
               )}
             </header>
 
-            <div className="space-y-9 px-6 py-8 sm:px-8">
-              {step === 1 && (
-                <>
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-200">
-                      OpenAI API key
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-800">Import from markdown</label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-100"
+                    >
+                      Upload .md file
+                    </button>
+                    <p className="text-xs text-slate-500">
+                      Use headings like “Name”, “Description”, and “Example Tweets” to prefill the form automatically.
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".md,.markdown,text/markdown"
+                    onChange={handleMarkdownImport}
+                    className="hidden"
+                  />
+                  {importFeedback && (
+                    <p
+                      className={`text-xs ${
+                        importFeedback.type === 'error' ? 'text-rose-600' : 'text-emerald-600'
+                      }`}
+                    >
+                      {importFeedback.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-sm font-medium text-slate-800">
+                      Example tweets <span className="text-slate-400">(up to 5)</span>
                     </label>
                     <input
                       type="password"
@@ -245,11 +484,26 @@ const Onboarding: React.FC = () => {
                       .
                     </p>
                   </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-slate-200">
-                    <p className="font-semibold text-white">Security tip</p>
-                    <p className="mt-1 text-slate-300">
-                      Kotodama encrypts your key with the Web Crypto API and stores it locally. You can revoke the key anytime from your OpenAI dashboard.
+                  <div className="space-y-2">
+                    {exampleTweets.map((tweet, index) => (
+                      <div key={index} className="space-y-1">
+                        <input
+                          type="text"
+                          value={tweet}
+                          onChange={(event) => handleExampleTweetChange(index, event.target.value)}
+                          placeholder={`Example ${index + 1}...`}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                        />
+                        {exampleTweetStatuses[index] === 'loading' && (
+                          <p className="px-1 text-xs text-indigo-500">Fetching tweet text…</p>
+                        )}
+                        {exampleTweetStatuses[index] === 'error' && (
+                          <p className="px-1 text-xs text-rose-600">{exampleTweetErrors[index]}</p>
+                        )}
+                      </div>
+                    ))}
+                    <p className="text-xs text-slate-500">
+                      Paste a tweet link to pull in its text automatically.
                     </p>
                   </div>
 
