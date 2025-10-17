@@ -34,6 +34,7 @@ export default defineConfig({
         background: resolve(__dirname, 'src/background/service-worker.ts'),
         content: resolve(__dirname, 'src/content/content-script.ts'),
         onboarding: resolve(__dirname, 'src/onboarding/index.html'),
+        settings: resolve(__dirname, 'src/settings/index.html'),
       },
       output: {
         entryFileNames: ({ name }) => {

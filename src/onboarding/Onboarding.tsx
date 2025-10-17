@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrandVoice, UserSettings } from '../types';
 import { parseBrandVoiceMarkdown } from './brandVoiceImport';
 
@@ -90,6 +90,35 @@ const Onboarding: React.FC = () => {
   );
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('skipRedirect') === '1') {
+      return;
+    }
+
+    const checkExistingConfiguration = async () => {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'get-settings',
+        });
+
+        if (response.success) {
+          const existingSettings = response.data as UserSettings;
+          const existingKey = existingSettings.apiKeys.openai;
+
+          if (typeof existingKey === 'string' && existingKey.trim()) {
+            const settingsUrl = chrome.runtime.getURL('src/settings/index.html');
+            window.location.replace(settingsUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to verify existing configuration', error);
+      }
+    };
+
+    checkExistingConfiguration();
+  }, []);
 
   const handleExampleTweetChange = (index: number, value: string) => {
     setImportFeedback(null);

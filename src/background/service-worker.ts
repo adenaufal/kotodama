@@ -3,6 +3,23 @@ import { db } from '../storage/db';
 import { getSettings, saveSettings } from '../storage/settings';
 import { generateWithOpenAI, analyzeTwitterProfile } from '../api/openai';
 
+const ONBOARDING_POPUP = 'src/onboarding/index.html';
+const SETTINGS_POPUP = 'src/settings/index.html';
+
+async function updateActionPopup(): Promise<void> {
+  try {
+    const settings = await getSettings();
+    const hasOpenAiKey = typeof settings.apiKeys.openai === 'string' && settings.apiKeys.openai.trim().length > 0;
+
+    chrome.action.setPopup({
+      popup: hasOpenAiKey ? SETTINGS_POPUP : ONBOARDING_POPUP,
+    });
+  } catch (error) {
+    console.error('Failed to update action popup', error);
+    chrome.action.setPopup({ popup: ONBOARDING_POPUP });
+  }
+}
+
 // Listen for messages from content script and panel
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
   handleMessage(message)
@@ -173,6 +190,7 @@ async function handleGetSettings(): Promise<MessageResponse> {
 async function handleSaveSettings(settings: any): Promise<MessageResponse> {
   try {
     await saveSettings(settings);
+    await updateActionPopup();
     return {
       success: true,
     };
@@ -240,13 +258,21 @@ async function handleListBrandVoices(): Promise<MessageResponse> {
 }
 
 // Initialize extension
-chrome.runtime.onInstalled.addListener(async (details) => {
+chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     // Open onboarding page on first install
     chrome.tabs.create({
       url: chrome.runtime.getURL('src/onboarding/index.html'),
     });
   }
+
+  void updateActionPopup();
 });
+
+chrome.runtime.onStartup.addListener(() => {
+  void updateActionPopup();
+});
+
+void updateActionPopup();
 
 console.log('Kotodama service worker loaded');
