@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - release # Option A: merge main -> release to batch multiple PRs before triggering semantic-release.
+  schedule:
+    - cron: '0 17 * * *' # Option B: daily at 00:00 Asia/Jakarta (UTC+7) to automatically batch releases.
+  workflow_dispatch: {} # Manual trigger when you are ready to cut a release.
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Semantic release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed so semantic-release can inspect previous tags.
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Check for new commits since last tag
+        id: guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          last_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$last_tag" ]; then
+            echo "Latest tag: $last_tag"
+            commits_since=$(git rev-list "$last_tag"..HEAD --count)
+            if [ "$commits_since" -eq 0 ]; then
+              echo "No new commits since $last_tag. Skipping release." 
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+
+      - name: No release needed
+        if: steps.guard.outputs.should_release == 'false'
+        run: echo "Release skipped because there are no commits since the last tag."
+
+      - name: Install dependencies
+        if: steps.guard.outputs.should_release == 'true'
+        run: npm ci
+
+      - name: Build project (optional for libraries)
+        if: steps.guard.outputs.should_release == 'true'
+        run: npm run build
+
+      - name: Package build output for release
+        if: steps.guard.outputs.should_release == 'true'
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts bundle
+          copied=false
+          for dir in .next out dist build; do
+            if [ -d "$dir" ]; then
+              echo "Including $dir in release archive"
+              rsync -a --exclude='*.map' "$dir/" "bundle/$dir/"
+              copied=true
+            fi
+          done
+          if [ "$copied" = false ]; then
+            echo "No build output (.next, out, dist, build) found to package." >&2
+            exit 1
+          fi
+          # Use the short commit SHA to version the archive when batching multiple releases.
+          archive_name="app-${GITHUB_SHA::7}.tar.gz"
+          tar -czf "artifacts/$archive_name" -C bundle .
+          echo "archive_name=$archive_name" >> "$GITHUB_OUTPUT"
+
+      - name: semantic-release
+        if: steps.guard.outputs.should_release == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }} # Optional: set if you want npm metadata updates.
+        run: npx semantic-release

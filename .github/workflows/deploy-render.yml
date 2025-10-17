@@ -1,0 +1,25 @@
+name: Deploy (Render)
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  trigger:
+    name: Call Render deploy hook
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Invoke Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "${RENDER_DEPLOY_HOOK:-}" ]; then
+            echo "RENDER_DEPLOY_HOOK secret is not configured. Skipping deploy." >&2
+            exit 0
+          fi
+          curl -X POST "$RENDER_DEPLOY_HOOK"
