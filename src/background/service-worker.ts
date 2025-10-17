@@ -244,7 +244,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     // Open onboarding page on first install
     chrome.tabs.create({
-      url: chrome.runtime.getURL('onboarding.html'),
+      url: chrome.runtime.getURL('src/onboarding/index.html'),
     });
   }
 });
