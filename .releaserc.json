@@ -1,0 +1,61 @@
+{
+  "$schema": "https://unpkg.com/@semantic-release/config-schema/schema.json",
+  "_comment_branches": "To release from main only, set \"branches\": [\"main\"] and remove the release branch entry.",
+  "branches": [
+    "release",
+    {
+      "name": "main",
+      "prerelease": true
+    }
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits",
+        "writerOpts": {
+          "commitsSort": [
+            "scope",
+            "subject"
+          ]
+        }
+      }
+    ],
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md",
+        "changelogTitle": "# Changelog\n"
+      }
+    ],
+    [
+      "@semantic-release/npm",
+      {
+        "npmPublish": false
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "artifacts/app-*.tar.gz",
+            "label": "Build archive"
+          }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "CHANGELOG.md",
+          "package.json",
+          "package-lock.json"
+        ],
+        "message": "chore(release): ${nextRelease.version} [skip ci]"
+      }
+    ]
+  ]
+}

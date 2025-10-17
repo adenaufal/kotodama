@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Lint, test, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build
+
+      - name: Prepare build artifact
+        run: |
+          set -euo pipefail
+          mkdir -p artifact
+          for dir in .next out dist build; do
+            if [ -d "$dir" ]; then
+              # Copy build output while excluding source maps to keep artifacts lean.
+              rsync -a --exclude='*.map' "$dir/" "artifact/$dir/"
+            fi
+          done
+          if [ "$(find artifact -mindepth 1 | wc -l)" -eq 0 ]; then
+            echo "No build output directories (.next, out, dist, build) were produced; skipping artifact upload." >&2
+            exit 0
+          fi
+
+      - name: Upload build artifact
+        if: success() && hashFiles('artifact/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output-${{ github.run_number }}
+          path: artifact
+          retention-days: 7
