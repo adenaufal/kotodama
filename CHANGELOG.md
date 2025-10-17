@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/adenaufal/kotodama/compare/v1.1.0...v1.1.1) (2025-10-17)
+
+
+### Bug Fixes
+
+* resolve onboarding and panel lint errors ([#30](https://github.com/adenaufal/kotodama/issues/30)) ([9f2832f](https://github.com/adenaufal/kotodama/commit/9f2832fbb35f3ec962fa3ef0e46adc28c7c91c17))
+
 ## [1.1.0](https://github.com/adenaufal/kotodama/compare/v1.0.2...v1.1.0) (2025-10-17)
 
 
