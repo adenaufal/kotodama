@@ -5,6 +5,9 @@ on:
     types: [opened, edited, reopened, synchronize]
 
 permissions:
+  # action-semantic-pull-request reports its findings via the Checks API.
+  # Without checks: write the action exits with "Resource not accessible" errors.
+  checks: write
   pull-requests: read
 
 jobs:
