@@ -4,7 +4,7 @@ import { getSettings, saveSettings } from '../storage/settings';
 import { generateWithOpenAI, analyzeTwitterProfile } from '../api/openai';
 
 // Listen for messages from content script and panel
-chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
   handleMessage(message)
     .then((response) => sendResponse(response))
     .catch((error) => {
@@ -38,6 +38,8 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
 
     case 'save-brand-voice':
       return handleSaveBrandVoice(message.payload);
+    case 'list-brand-voices':
+      return handleListBrandVoices();
 
     default:
       throw new Error(`Unknown message type: ${message.type}`);
@@ -136,7 +138,7 @@ async function handleAnalyzeProfile(payload: {
     };
 
     if (existingProfile) {
-      await db.userProfiles.update(profileId, profile);
+      await db.userProfiles.put(profile);
     } else {
       await db.userProfiles.add(profile);
     }
@@ -213,6 +215,21 @@ async function handleSaveBrandVoice(brandVoice: BrandVoice): Promise<MessageResp
     return {
       success: true,
       data: brandVoice,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+async function handleListBrandVoices(): Promise<MessageResponse> {
+  try {
+    const voices = await db.brandVoices.toArray();
+    return {
+      success: true,
+      data: voices,
     };
   } catch (error: any) {
     return {

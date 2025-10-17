@@ -86,10 +86,11 @@ function injectAIButton(composeBox: HTMLElement) {
   });
 
   // Position the button relative to the compose box
-  const container = composeBox.closest('[data-testid="tweetTextarea_0_wrapper"]') ||
-                    composeBox.parentElement;
+  const container =
+    composeBox.closest<HTMLElement>('[data-testid="tweetTextarea_0_wrapper"]') ||
+    composeBox.parentElement;
 
-  if (container) {
+  if (container instanceof HTMLElement) {
     container.style.position = 'relative';
     container.appendChild(button);
   }
@@ -259,7 +260,7 @@ function insertTweetContent(content: string) {
   }
 }
 
-async function fetchUserTweets(username: string): Promise<string[]> {
+async function fetchUserTweets(_username: string): Promise<string[]> {
   // This would ideally scrape the user's timeline
   // For now, return a placeholder implementation
   // In production, this would navigate to the user's profile and extract recent tweets

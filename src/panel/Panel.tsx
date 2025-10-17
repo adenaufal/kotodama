@@ -59,8 +59,25 @@ const Panel: React.FC = () => {
         setSelectedVoiceId(settingsResponse.data.defaultBrandVoiceId || '');
       }
 
-      // Load brand voices from IndexedDB
-      // We'll implement this with a proper store later
+      const voicesResponse = await chrome.runtime.sendMessage({
+        type: 'list-brand-voices',
+      });
+
+      if (voicesResponse.success) {
+        const voices: BrandVoice[] = Array.isArray(voicesResponse.data)
+          ? voicesResponse.data
+          : [];
+        setBrandVoices(voices);
+
+        if (voices.length > 0) {
+          const defaultId = settingsResponse.success ? settingsResponse.data.defaultBrandVoiceId : undefined;
+          const hasDefault = defaultId ? voices.some((voice) => voice.id === defaultId) : false;
+
+          if (!hasDefault) {
+            setSelectedVoiceId(voices[0].id);
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to load initial data:', error);
     }
@@ -133,7 +150,12 @@ const Panel: React.FC = () => {
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold">AI Tweet Composer</h1>
+        <div>
+          <h1 className="text-xl font-bold">AI Tweet Composer</h1>
+          {settings?.defaultProvider && (
+            <p className="text-xs text-gray-500">Default provider: {settings.defaultProvider}</p>
+          )}
+        </div>
         <button
           onClick={handleClose}
           className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
@@ -210,7 +232,11 @@ const Panel: React.FC = () => {
             className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select a voice...</option>
-            {/* We'll populate this from the store */}
+            {brandVoices.map((voice) => (
+              <option key={voice.id} value={voice.id}>
+                {voice.name}
+              </option>
+            ))}
           </select>
         </div>
 

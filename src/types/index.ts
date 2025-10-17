@@ -96,7 +96,14 @@ export interface GenerateResponse {
 }
 
 export interface Message {
-  type: 'generate' | 'analyze-profile' | 'save-settings' | 'get-settings' | 'get-brand-voice' | 'save-brand-voice';
+  type:
+    | 'generate'
+    | 'analyze-profile'
+    | 'save-settings'
+    | 'get-settings'
+    | 'get-brand-voice'
+    | 'save-brand-voice'
+    | 'list-brand-voices';
   payload: any;
 }
 

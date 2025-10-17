@@ -5,7 +5,7 @@ const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 // Model Selection Strategy for Maximum Free Token Usage
 // 1M token group - Use for standard quality
 const DEFAULT_MODEL = 'gpt-5-2025-08-07'; // Latest GPT-5 for best quality
-const QUALITY_MODEL = 'gpt-4o-2024-11-20'; // Latest GPT-4o as backup
+const QUALITY_MODEL = 'gpt-4o-2024-11-20'; // Latest GPT-4o as quality-focused option
 
 // 10M token group - Use for fast/cheap operations
 const FAST_MODEL = 'gpt-5-mini-2025-08-07'; // Latest mini for speed
@@ -110,7 +110,7 @@ export async function generateWithOpenAI(
     },
   ];
 
-  try {
+  async function requestWithModel(modelName: string): Promise<GenerateResponse> {
     const response = await fetch(OPENAI_API_URL, {
       method: 'POST',
       headers: {
@@ -118,7 +118,7 @@ export async function generateWithOpenAI(
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: modelName,
         messages,
         max_tokens: isThread ? 1500 : 300,
         temperature: 0.7,
@@ -154,54 +154,24 @@ export async function generateWithOpenAI(
       tokenUsage,
       provider: 'openai',
     };
+  }
+
+  try {
+    return await requestWithModel(model);
   } catch (error) {
     console.error('OpenAI generation failed:', error);
 
-    // Try fallback models if primary fails
-    if (model !== FALLBACK_MODEL) {
+    const fallbackCandidates = [QUALITY_MODEL, FALLBACK_MODEL];
+    for (const candidate of fallbackCandidates) {
+      if (candidate === model) {
+        continue;
+      }
+
       try {
-        console.log('Attempting fallback to', FALLBACK_MODEL);
-        const fallbackResponse = await fetch(OPENAI_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: FALLBACK_MODEL,
-            messages,
-            max_tokens: isThread ? 1500 : 300,
-            temperature: 0.7,
-          }),
-        });
-
-        if (fallbackResponse.ok) {
-          const data = await fallbackResponse.json();
-          const content = data.choices[0].message.content.trim();
-          const tokenUsage = data.usage.total_tokens;
-
-          if (isThread) {
-            const tweets = content
-              .split('\n')
-              .filter((line: string) => line.trim())
-              .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-              .filter((tweet: string) => tweet.length > 0);
-
-            return {
-              content: tweets,
-              tokenUsage,
-              provider: 'openai',
-            };
-          }
-
-          return {
-            content,
-            tokenUsage,
-            provider: 'openai',
-          };
-        }
+        console.log('Attempting fallback to', candidate);
+        return await requestWithModel(candidate);
       } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
+        console.error(`Fallback to ${candidate} failed:`, fallbackError);
       }
     }
 

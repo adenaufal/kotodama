@@ -7,11 +7,6 @@ const DEFAULT_MODEL = 'gemini-2.5-pro'; // Best for complex reasoning (2M contex
 const FAST_MODEL = 'gemini-2.5-flash'; // Fast and efficient (1M context)
 const ULTRA_FAST_MODEL = 'gemini-2.5-flash-lite'; // Ultra fast and cheapest
 
-interface GeminiMessage {
-  role: 'user' | 'model';
-  parts: { text: string }[];
-}
-
 function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile): string {
   let prompt = `You are a tweet composition assistant. Your task is to write tweets that match the following brand voice:\n\n`;
 
