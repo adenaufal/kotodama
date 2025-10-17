@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { decryptApiKey, encryptApiKey } from '../encryption';
 
 const SAMPLE_KEY = 'sk-live-1234567890abcdef';
+const DECRYPT_ERROR_MESSAGE = 'Failed to decrypt API key';
 
 describe('encryptApiKey and decryptApiKey', () => {
   it('returns the original value after encryption and decryption', async () => {
@@ -16,7 +17,7 @@ describe('encryptApiKey and decryptApiKey', () => {
 
   it('throws an error when provided malformed encrypted data', async () => {
     await expect(decryptApiKey('not-base64')).rejects.toThrowError(
-      'Failed to decrypt API key'
+      DECRYPT_ERROR_MESSAGE
     );
   });
 });
