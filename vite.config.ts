@@ -21,4 +21,9 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  test: {
+    environment: 'node',
+    setupFiles: ['./vitest.setup.ts'],
+    restoreMocks: true,
+  },
 });
