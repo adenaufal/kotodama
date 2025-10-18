@@ -183,6 +183,18 @@ Commit messages must follow Conventional Commits format:
 4. **Service Worker Status**: The background service worker may show as "inactive" in chrome://extensions when idle, but it activates automatically when messages are sent. This is normal Chrome MV3 behavior for event-based service workers.
 5. **Multi-language Generation**: Language support depends on the AI model's capabilities. GPT-4 and GPT-5 models support multiple languages well, but responses may default to English if the prompt isn't explicit about language requirements.
 
-## Testing Status
+## Documentation
 
-See [TESTING.md](TESTING.md) for comprehensive testing guide. Current testing status documented in [tested-checklist-18102025.md](tested-checklist-18102025.md).
+All project documentation is organized in the [docs/](docs/) directory:
+
+- **[Development Guide](docs/development/DEVELOPMENT.md)** - Development setup, workflows, and conventions
+- **[Testing Guide](docs/testing/TESTING.md)** - Comprehensive testing documentation
+- **[Testing Recommendations](docs/testing/TESTING-RECOMMENDATIONS.md)** - Best practices for testing
+- **[Testing Checklist](docs/testing/tested-checklist-18102025.md)** - Current testing status
+- **[API Reference](docs/reference/API_REFERENCE.md)** - API endpoints and usage
+- **[Model Reference](docs/reference/MODEL_REFERENCE.md)** - AI model configurations
+- **[Quick Reference](docs/guides/QUICK_REFERENCE.md)** - Common tasks and commands
+- **[Project Map](docs/project/PROJECT_MAP.md)** - Codebase architecture overview
+- **[Full Documentation Index](docs/README.md)** - Complete documentation structure
+
+For the latest testing status, refer to [docs/testing/tested-checklist-18102025.md](docs/testing/tested-checklist-18102025.md).

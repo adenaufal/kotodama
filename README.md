@@ -112,6 +112,12 @@ kotodama/
 │   │   └── settings.ts   # Settings management
 │   └── types/            # TypeScript type definitions
 │       └── index.ts
+├── docs/                 # Documentation (see docs/README.md)
+│   ├── development/      # Development guides
+│   ├── guides/           # Quick-start and user guides
+│   ├── reference/        # API and technical references
+│   ├── testing/          # Testing documentation
+│   └── project/          # Project planning and history
 ├── public/
 │   ├── manifest.json     # Chrome extension manifest
 │   └── icons/            # Extension icons
@@ -121,9 +127,20 @@ kotodama/
 ├── vite.config.ts        # Vite build configuration
 ├── tsconfig.json         # TypeScript configuration
 ├── tailwind.config.js    # Tailwind CSS configuration
-├── prd.md                # Product Requirements Document
+├── CLAUDE.md             # Claude Code project instructions
+├── CHANGELOG.md          # Version history
 └── README.md
 ```
+
+## Documentation
+
+Comprehensive documentation is available in the [docs/](docs/) directory:
+
+- **[Quick Start Guide](docs/guides/QUICKSTART.md)** - Get started quickly
+- **[Development Guide](docs/development/DEVELOPMENT.md)** - Development setup and workflows
+- **[Testing Guide](docs/testing/TESTING.md)** - Testing strategies and procedures
+- **[API Reference](docs/reference/API_REFERENCE.md)** - API documentation
+- **[Full Documentation Index](docs/README.md)** - Complete documentation overview
 
 ## Development
 
@@ -132,6 +149,8 @@ kotodama/
 - **`npm run dev`**: Build in watch mode for development
 - **`npm run build`**: Production build
 - **`npm run type-check`**: Run TypeScript type checking
+- **`npm run lint`**: Lint the codebase
+- **`npm test`**: Run all tests
 
 ### Development Workflow
 
