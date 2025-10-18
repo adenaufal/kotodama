@@ -30,6 +30,13 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Generate CRX package
+        id: crx
+        env:
+          CHROME_EXTENSION_PRIVATE_KEY: ${{ secrets.CHROME_EXTENSION_PRIVATE_KEY }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: node scripts/create-crx.js
+
       - name: Package build output
         id: package
         run: |
@@ -58,6 +65,8 @@ jobs:
         if: steps.package.outputs.archive != ''
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.package.outputs.archive }}
+          files: |
+            ${{ steps.package.outputs.archive }}
+            ${{ steps.crx.outputs.crx_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

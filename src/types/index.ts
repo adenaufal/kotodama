@@ -60,6 +60,7 @@ export interface UserSettings {
   defaultProvider?: AIProvider;
   claudeAuthType?: 'api' | 'cookie'; // API key or cookie authentication
   defaultBrandVoiceId?: string;
+  defaultModel?: string; // Model ID to use for generation (e.g., 'gpt-4o', 'gpt-4o-mini')
   analysisDepth: 10 | 20 | 30 | 50;
   ui: {
     buttonPosition: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
