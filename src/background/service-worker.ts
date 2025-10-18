@@ -68,6 +68,9 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
     case 'list-brand-voices':
       return handleListBrandVoices();
 
+    case 'delete-brand-voice':
+      return handleDeleteBrandVoice(message.payload);
+
     default:
       throw new Error(`Unknown message type: ${message.type}`);
   }
@@ -257,6 +260,20 @@ async function handleListBrandVoices(): Promise<MessageResponse> {
     return {
       success: true,
       data: voices,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+async function handleDeleteBrandVoice(payload: { id: string }): Promise<MessageResponse> {
+  try {
+    await db.brandVoices.delete(payload.id);
+    return {
+      success: true,
     };
   } catch (error: any) {
     return {

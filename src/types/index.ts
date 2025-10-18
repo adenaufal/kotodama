@@ -103,7 +103,8 @@ export interface Message {
     | 'get-settings'
     | 'get-brand-voice'
     | 'save-brand-voice'
-    | 'list-brand-voices';
+    | 'list-brand-voices'
+    | 'delete-brand-voice';
   payload: any;
 }
 

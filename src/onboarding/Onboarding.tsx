@@ -258,6 +258,22 @@ const Onboarding: React.FC = () => {
   };
 
   const handleComplete = async () => {
+    if (!brandVoiceName.trim()) {
+      alert('Please enter a name for your brand voice');
+      return;
+    }
+
+    if (!brandVoiceDescription.trim()) {
+      alert('Please enter a description for your brand voice');
+      return;
+    }
+
+    const validExamples = exampleTweets.filter((tweet) => tweet.trim() !== '');
+    if (validExamples.length === 0) {
+      alert('Please provide at least one example tweet');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -285,9 +301,9 @@ const Onboarding: React.FC = () => {
 
       const brandVoice: BrandVoice = {
         id: crypto.randomUUID(),
-        name: brandVoiceName || 'My Brand Voice',
-        description: brandVoiceDescription,
-        exampleTweets: exampleTweets.filter((tweet) => tweet.trim() !== ''),
+        name: brandVoiceName.trim(),
+        description: brandVoiceDescription.trim(),
+        exampleTweets: validExamples,
         toneAttributes: {
           formality: 50,
           humor: 50,
@@ -481,7 +497,9 @@ const Onboarding: React.FC = () => {
               {step === 2 && (
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-200">Brand voice name</label>
+                    <label className="block text-sm font-medium text-slate-200">
+                      Brand voice name <span className="text-rose-400">*</span>
+                    </label>
                     <input
                       type="text"
                       value={brandVoiceName}
@@ -490,12 +508,15 @@ const Onboarding: React.FC = () => {
                         setImportFeedback(null);
                       }}
                       placeholder="e.g., Confident, Playful, Technical"
+                      required
                       className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-base text-slate-100 placeholder:text-slate-400 focus:border-indigo-300/80 focus:bg-slate-900/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-200">Description (optional)</label>
+                    <label className="block text-sm font-medium text-slate-200">
+                      Description <span className="text-rose-400">*</span>
+                    </label>
                     <textarea
                       value={brandVoiceDescription}
                       onChange={(event) => {
@@ -504,6 +525,7 @@ const Onboarding: React.FC = () => {
                       }}
                       placeholder="Share key phrases, tone notes, or instructions for the AI..."
                       rows={4}
+                      required
                       className="w-full rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-base text-slate-100 placeholder:text-slate-400 focus:border-indigo-300/80 focus:bg-slate-900/70 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                     />
                   </div>
