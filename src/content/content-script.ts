@@ -100,8 +100,11 @@ function init() {
 }
 
 function createFloatingButton() {
+  console.time('[Kotodama Performance] Button injection');
+
   // Check if button already exists
   if (document.querySelector('.kotodama-floating-button')) {
+    console.timeEnd('[Kotodama Performance] Button injection');
     return;
   }
 
@@ -150,12 +153,60 @@ function createFloatingButton() {
     button.style.transform = 'translateY(0)';
   });
 
-  button.addEventListener('click', (e) => {
+  button.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    currentContext = 'compose';
-    currentTweetContext = null;
+    console.log('[Kotodama] Floating button clicked, detecting context...');
+
+    // Strategy 1: Check for "Replying to" text (multiple selectors)
+    const replyingToSelectors = [
+      '[data-testid="inlineReplyingTo"]',
+      '[aria-label*="Replying to"]',
+      'div[dir="ltr"] > span:first-child', // "Replying to" text
+    ];
+    let replyingToElement = null;
+    for (const selector of replyingToSelectors) {
+      replyingToElement = document.querySelector(selector);
+      if (replyingToElement?.textContent?.includes('Replying to')) break;
+    }
+
+    // Strategy 2: Look for tweet articles on the page (original tweet)
+    const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
+
+    // Strategy 3: Check URL for /status/ (we're viewing a tweet detail page)
+    const isStatusPage = window.location.pathname.includes('/status/');
+
+    // Strategy 4: Check for compose box placeholder text
+    const composeBox = document.querySelector('[data-testid="tweetTextarea_0"]');
+    const placeholder = composeBox?.getAttribute('data-text') || composeBox?.getAttribute('placeholder') || '';
+    const isReplyPlaceholder = placeholder.toLowerCase().includes('reply');
+
+    console.log('[Kotodama] Detection results:', {
+      replyingToElement: !!replyingToElement,
+      tweetArticles: tweetArticles.length,
+      isStatusPage,
+      isReplyPlaceholder,
+      placeholder: placeholder.substring(0, 30),
+    });
+
+    // Determine if this is a reply context
+    const isReplyContext = (
+      replyingToElement ||
+      (isStatusPage && tweetArticles.length > 0) ||
+      isReplyPlaceholder
+    );
+
+    if (isReplyContext && tweetArticles.length > 0) {
+      console.log('[Kotodama] Reply context detected');
+      currentContext = 'reply';
+      currentTweetContext = await extractTweetContextFromPage(tweetArticles[0] as HTMLElement);
+      console.log('[Kotodama] Extracted context:', currentTweetContext);
+    } else {
+      console.log('[Kotodama] Compose context (not a reply)');
+      currentContext = 'compose';
+      currentTweetContext = null;
+    }
 
     if (panelIframe && document.body.contains(panelIframe)) {
       togglePanel();
@@ -165,6 +216,9 @@ function createFloatingButton() {
   });
 
   document.body.appendChild(button);
+
+  console.timeEnd('[Kotodama Performance] Button injection');
+  console.log('[Kotodama Performance] Floating button ready');
 }
 
 async function handleAIButtonClick(composeBox: HTMLElement) {
@@ -188,29 +242,111 @@ async function handleAIButtonClick(composeBox: HTMLElement) {
 }
 
 async function extractTweetContext(replyBox: HTMLElement): Promise<any> {
-  // Find the original tweet being replied to
-  const tweetArticle = replyBox.closest('article') ||
-                       document.querySelector('[data-testid="tweet"]');
+  console.log('[Kotodama] Extracting tweet context from reply box');
 
-  if (!tweetArticle) return null;
+  // Strategy 1: Look for tweet article in the same container
+  let tweetArticle = replyBox.closest('article');
+
+  // Strategy 2: If not found, look for the tweet above the reply
+  if (!tweetArticle) {
+    const allArticles = document.querySelectorAll('article');
+    // The original tweet should be one of the articles before the reply box
+    tweetArticle = Array.from(allArticles).find(article => {
+      return article.querySelector('[data-testid="tweetText"]') !== null;
+    }) || null;
+  }
+
+  if (!tweetArticle) {
+    console.warn('[Kotodama] Could not find original tweet article');
+    return null;
+  }
 
   // Extract tweet text
-  const tweetText = tweetArticle.querySelector('[data-testid="tweetText"]')?.textContent || '';
+  const tweetTextElement = tweetArticle.querySelector('[data-testid="tweetText"]');
+  const tweetText = tweetTextElement?.textContent || '';
 
-  // Extract username
-  const usernameElement = tweetArticle.querySelector('[data-testid="User-Name"] a[role="link"]');
-  const username = usernameElement?.textContent?.replace('@', '') || '';
+  // Extract username - try multiple selectors
+  let username = '';
+  const usernameSelectors = [
+    '[data-testid="User-Name"] a[role="link"]',
+    '[data-testid="User-Name"] span',
+    'a[role="link"][href^="/"]',
+  ];
 
-  return {
+  for (const selector of usernameSelectors) {
+    const element = tweetArticle.querySelector(selector);
+    if (element?.textContent) {
+      username = element.textContent.replace('@', '').trim();
+      if (username && username !== '') break;
+    }
+  }
+
+  const context = {
     text: tweetText,
     username,
     timestamp: new Date().toISOString(),
   };
+
+  console.log('[Kotodama] Extracted context:', context);
+
+  return context;
+}
+
+async function extractTweetContextFromPage(tweetArticle: HTMLElement): Promise<any> {
+  console.log('[Kotodama] Extracting tweet context from page');
+
+  if (!tweetArticle) {
+    console.warn('[Kotodama] No tweet article provided');
+    return null;
+  }
+
+  // Extract tweet text
+  const tweetTextElement = tweetArticle.querySelector('[data-testid="tweetText"]');
+  const tweetText = tweetTextElement?.textContent || '';
+
+  // Extract username - try multiple selectors
+  let username = '';
+  const usernameSelectors = [
+    '[data-testid="User-Name"] a[role="link"]',
+    '[data-testid="User-Name"] span',
+    'a[role="link"][href^="/"]',
+  ];
+
+  for (const selector of usernameSelectors) {
+    const element = tweetArticle.querySelector(selector);
+    if (element) {
+      const href = element.getAttribute('href');
+      if (href && href.startsWith('/')) {
+        username = href.substring(1).split('/')[0];
+        break;
+      }
+      const text = element.textContent;
+      if (text) {
+        username = text.replace('@', '').trim();
+        if (username && username !== '') break;
+      }
+    }
+  }
+
+  const context = {
+    text: tweetText,
+    username,
+    timestamp: new Date().toISOString(),
+  };
+
+  console.log('[Kotodama] Extracted context from page:', context);
+
+  return context;
 }
 
 function openPanel() {
   if (panelIframe) {
+    console.time('[Kotodama Performance] Panel show');
     showPanel();
+    // End timing after transition completes
+    setTimeout(() => {
+      console.timeEnd('[Kotodama Performance] Panel show');
+    }, PANEL_TRANSITION_DURATION);
     return;
   }
 
@@ -218,6 +354,8 @@ function openPanel() {
     console.error('Kotodama: extension runtime is unavailable in this context.');
     return;
   }
+
+  console.time('[Kotodama Performance] Panel creation + first load');
 
   panelIframe = document.createElement('iframe');
   panelIframe.src = extensionRuntime.getURL('src/panel/index.html');
@@ -249,6 +387,7 @@ function openPanel() {
   });
 
   panelIframe.addEventListener('load', () => {
+    console.timeEnd('[Kotodama Performance] Panel creation + first load');
     sendContextToPanel();
   });
 }

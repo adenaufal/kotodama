@@ -89,17 +89,31 @@ const Panel: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    console.time('[Kotodama Performance] AI generation');
+    const startTime = performance.now();
+
     try {
+      // Build the prompt with context if replying
+      let enhancedPrompt = prompt;
+      if (context.type === 'reply' && context.tweetContext) {
+        enhancedPrompt = `You are replying to @${context.tweetContext.username}'s tweet.
+
+Original tweet: "${context.tweetContext.text}"
+
+User's instructions: ${prompt}
+
+Write a reply that:
+1. Responds directly to the original tweet
+2. Maintains the brand voice
+3. Is conversational and engaging`;
+      }
+
       const request: GenerateRequest = {
-        prompt,
+        prompt: enhancedPrompt,
         brandVoiceId: selectedVoiceId,
         isThread,
         threadLength: isThread ? threadLength : undefined,
       };
-
-      if (context.type === 'reply' && context.tweetContext) {
-        // Reserved for future profile analysis
-      }
 
       const response = await chrome.runtime.sendMessage({
         type: 'generate',
@@ -107,11 +121,19 @@ const Panel: React.FC = () => {
       });
 
       if (response.success) {
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        console.timeEnd('[Kotodama Performance] AI generation');
+        console.log(`[Kotodama Performance] Generation took ${duration.toFixed(0)}ms`);
+        console.log(`[Kotodama Performance] Provider: ${response.data.provider}`);
+        console.log(`[Kotodama Performance] Token usage: ${response.data.tokenUsage || 'N/A'}`);
+
         setGeneratedContent(response.data.content);
       } else {
         setError(response.error || 'Generation failed');
       }
     } catch (generateError: any) {
+      console.timeEnd('[Kotodama Performance] AI generation');
       setError(generateError.message || 'An error occurred');
     } finally {
       setIsLoading(false);
