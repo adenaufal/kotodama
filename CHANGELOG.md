@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.3.0](https://github.com/adenaufal/kotodama/compare/v1.2.0...v1.3.0) (2025-10-18)
+
+
+### Features
+
+* add brand voice management UI and deletion support ([d147996](https://github.com/adenaufal/kotodama/commit/d147996ec1e19cca1da72ed219f717c4378780a8))
+* implement Kotodama UI theme and design tokens ([5299476](https://github.com/adenaufal/kotodama/commit/5299476a137dd642caa6a10700599ff87faca99e))
+
+
+### Bug Fixes
+
+* improve reply context detection and add performance logging ([597fcb5](https://github.com/adenaufal/kotodama/commit/597fcb58533e9750fa1b39fb1f73c3908d4e5cb5))
+* show full tweet context in reply panel ([8de5560](https://github.com/adenaufal/kotodama/commit/8de5560f58c7ae0a9f1e4ac4dc82af64d670fd71))
+
+
+### Performance Improvements
+
+* enhance temperature adjustment logic for OpenAI model requests ([28e3f84](https://github.com/adenaufal/kotodama/commit/28e3f84352e52443f1f079d90a623c40d04af404))
+
 ## [1.2.0](https://github.com/adenaufal/kotodama/compare/v1.1.1...v1.2.0) (2025-10-18)
 
 
