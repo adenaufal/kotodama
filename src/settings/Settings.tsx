@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BrandVoice, UserSettings } from '../types';
+import BrandVoiceManager from './BrandVoiceManager';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -13,6 +14,7 @@ const Settings: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [showVoiceManager, setShowVoiceManager] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -105,6 +107,31 @@ const Settings: React.FC = () => {
     window.location.href = onboardingUrl;
   };
 
+  const handleOpenVoiceManager = () => {
+    setShowVoiceManager(true);
+  };
+
+  const handleCloseVoiceManager = () => {
+    setShowVoiceManager(false);
+  };
+
+  const handleRefreshVoices = async () => {
+    try {
+      const voicesResponse = await chrome.runtime.sendMessage({ type: 'list-brand-voices' });
+
+      if (voicesResponse.success && Array.isArray(voicesResponse.data)) {
+        setBrandVoices(voicesResponse.data as BrandVoice[]);
+
+        // If currently selected default voice was deleted, reset to empty
+        if (defaultBrandVoiceId && !voicesResponse.data.some((v: BrandVoice) => v.id === defaultBrandVoiceId)) {
+          setDefaultBrandVoiceId('');
+        }
+      }
+    } catch (refreshError) {
+      console.error('Failed to refresh brand voices:', refreshError);
+    }
+  };
+
   const hasChanges = useMemo(() => {
     const trimmedKey = openaiKey.trim();
     return trimmedKey !== initialOpenaiKey || defaultBrandVoiceId !== initialBrandVoiceId;
@@ -179,6 +206,24 @@ const Settings: React.FC = () => {
               </p>
             </section>
 
+            <section className="stack-sm">
+              <h2 className="text-lg font-semibold text-slate-900">Brand Voices</h2>
+              <p className="text-sm text-slate-600">
+                Manage your brand voices - create, edit, or delete voices to match your unique style.
+              </p>
+              <button
+                type="button"
+                onClick={handleOpenVoiceManager}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-4 text-sm font-semibold text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Manage Brand Voices ({brandVoices.length})
+              </button>
+            </section>
+
             {brandVoices.length > 0 && (
               <section className="stack-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Default brand voice</h2>
@@ -230,6 +275,14 @@ const Settings: React.FC = () => {
           </footer>
         </div>
       </div>
+
+      {showVoiceManager && (
+        <BrandVoiceManager
+          voices={brandVoices}
+          onClose={handleCloseVoiceManager}
+          onRefresh={handleRefreshVoices}
+        />
+      )}
     </div>
   );
 };

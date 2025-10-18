@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { GenerateRequest, BrandVoice, UserSettings } from '../types';
-import BrandVoiceManager from './BrandVoiceManager';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -21,7 +20,6 @@ const Panel: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
-  const [showVoiceManager, setShowVoiceManager] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -163,32 +161,6 @@ Write a reply that:
     window.parent.postMessage({ type: 'close-panel' }, '*');
   };
 
-  const handleOpenVoiceManager = () => {
-    setShowVoiceManager(true);
-  };
-
-  const handleCloseVoiceManager = () => {
-    setShowVoiceManager(false);
-  };
-
-  const handleRefreshVoices = async () => {
-    try {
-      const voicesResponse = await chrome.runtime.sendMessage({ type: 'list-brand-voices' });
-
-      if (voicesResponse.success) {
-        const voices: BrandVoice[] = Array.isArray(voicesResponse.data) ? voicesResponse.data : [];
-        setBrandVoices(voices);
-
-        // If currently selected voice was deleted, reset to first available or empty
-        if (selectedVoiceId && !voices.some((v) => v.id === selectedVoiceId)) {
-          setSelectedVoiceId(voices.length > 0 ? voices[0].id : '');
-        }
-      }
-    } catch (refreshError) {
-      console.error('Failed to refresh brand voices:', refreshError);
-    }
-  };
-
   const hasGeneratedContent =
     (Array.isArray(generatedContent) && generatedContent.length > 0) ||
     (!!generatedContent && !Array.isArray(generatedContent));
@@ -210,26 +182,13 @@ Write a reply that:
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleOpenVoiceManager}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
-                aria-label="Manage brand voices"
-                title="Manage brand voices"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleClose}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25"
-                aria-label="Close panel"
-              >
-                &times;
-              </button>
-            </div>
+            <button
+              onClick={handleClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25"
+              aria-label="Close panel"
+            >
+              &times;
+            </button>
           </div>
 
           {context.type === 'reply' && context.tweetContext && (
@@ -398,15 +357,7 @@ Write a reply that:
         </div>
       </div>
     </div>
-
-    {showVoiceManager && (
-      <BrandVoiceManager
-        voices={brandVoices}
-        onClose={handleCloseVoiceManager}
-        onRefresh={handleRefreshVoices}
-      />
-    )}
-  </>
+    </>
   );
 };
 
