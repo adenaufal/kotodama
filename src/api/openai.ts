@@ -23,6 +23,12 @@ interface OpenAIMessage {
   content: string;
 }
 
+const FIXED_TEMPERATURE_MODEL_PREFIXES = ['o1']; // Reasoning models require the default temperature (see https://platform.openai.com/docs/guides/reasoning#parameters)
+
+function canAdjustTemperature(modelName: string): boolean {
+  return !FIXED_TEMPERATURE_MODEL_PREFIXES.some((prefix) => modelName.startsWith(prefix));
+}
+
 function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile): string {
   let prompt = `You are a tweet composition assistant. Your task is to write tweets that match the following brand voice:\n\n`;
 
@@ -111,18 +117,23 @@ export async function generateWithOpenAI(
   ];
 
   async function requestWithModel(modelName: string): Promise<GenerateResponse> {
+    const requestBody: Record<string, unknown> = {
+      model: modelName,
+      messages,
+      max_completion_tokens: isThread ? 1500 : 300,
+    };
+
+    if (canAdjustTemperature(modelName)) {
+      requestBody.temperature = 0.7;
+    }
+
     const response = await fetch(OPENAI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: modelName,
-        messages,
-        max_completion_tokens: isThread ? 1500 : 300,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -205,7 +216,7 @@ export async function analyzeTwitterProfile(
         model: FAST_MODEL, // Use faster, cheaper model for analysis
         messages,
         max_completion_tokens: 500,
-        temperature: 0.3,
+        ...(canAdjustTemperature(FAST_MODEL) ? { temperature: 0.3 } : {}),
         response_format: { type: 'json_object' },
       }),
     });
