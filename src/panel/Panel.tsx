@@ -39,9 +39,9 @@ const Panel: React.FC = () => {
       });
 
       if (event.data.context === 'reply' && event.data.tweetContext) {
-        setPrompt(
-          `Reply to @${event.data.tweetContext.username}'s tweet about: "${event.data.tweetContext.text.substring(0, 50)}..."`
-        );
+        // Don't set the prompt automatically - let user see context and write their own
+        // The context card will show the full tweet
+        setPrompt('');
       }
     }
   };
@@ -236,7 +236,7 @@ Write a reply that:
             <div className="relative z-10 mt-6 rounded-2xl border border-white/10 bg-white/15 p-4 backdrop-blur">
               <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Replying to</p>
               <p className="mt-1 text-sm font-medium text-white">@{context.tweetContext.username}</p>
-              <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-white/80">{context.tweetContext.text}</p>
+              <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-relaxed text-white/80 whitespace-pre-wrap">{context.tweetContext.text}</p>
             </div>
           )}
         </div>
