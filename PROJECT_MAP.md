@@ -48,7 +48,9 @@ kotodama/
 │   │
 │   ├── 🤖 AI Integration
 │   │   └── api/
-│   │       └── openai.ts          ← OpenAI API client
+│   │       ├── openai.ts          ← OpenAI API (GPT-5, o1, Codex)
+│   │       ├── gemini.ts          ← Google Gemini API (Pro, Flash, Flash Lite)
+│   │       └── claude.ts          ← Anthropic Claude (Sonnet, Opus, Haiku + Cookie)
 │   │
 │   ├── 💾 Data Layer
 │   │   └── storage/
@@ -120,8 +122,10 @@ kotodama/
                         │
                         ▼ HTTPS API call
 ┌─────────────────────────────────────────────────────────┐
-│                    OpenAI API                            │
-│  • GPT-4 generates tweet                                 │
+│                    AI Provider APIs                      │
+│  • OpenAI (GPT-5, o1, Codex) - 7 models                 │
+│  • Gemini (Pro, Flash, Flash Lite) - 3 models           │
+│  • Claude (Sonnet, Opus, Haiku + Cookie) - 9 models     │
 │  • Returns content + token usage                         │
 └───────────────────────┬─────────────────────────────────┘
                         │
@@ -224,6 +228,8 @@ npm run build
 
 ### Must Read
 - **[prd.md](prd.md)**: The original product spec - understand the vision
+- **[MODEL_REFERENCE.md](MODEL_REFERENCE.md)**: Complete model specifications (19 models)
+- **[UPDATES_FINAL_2025.md](UPDATES_FINAL_2025.md)**: Latest updates and features
 - **[src/types/index.ts](src/types/index.ts)**: All data structures used throughout
 
 ### Extension Entry Points
@@ -235,8 +241,12 @@ npm run build
 - **[src/panel/Panel.tsx](src/panel/Panel.tsx)**: Main composition UI
 - **[src/onboarding/Onboarding.tsx](src/onboarding/Onboarding.tsx)**: Setup wizard
 
-### Core Logic
-- **[src/api/openai.ts](src/api/openai.ts)**: AI generation
+### Core AI Logic
+- **[src/api/openai.ts](src/api/openai.ts)**: OpenAI (7 models: GPT-5, o1, Codex)
+- **[src/api/gemini.ts](src/api/gemini.ts)**: Google Gemini (3 models: Pro, Flash, Flash Lite)
+- **[src/api/claude.ts](src/api/claude.ts)**: Anthropic Claude (9 models + cookie auth)
+
+### Data Layer
 - **[src/storage/db.ts](src/storage/db.ts)**: Database schema
 - **[src/storage/encryption.ts](src/storage/encryption.ts)**: Security
 
@@ -254,12 +264,14 @@ npm run build
 
 ## 📊 Codebase Stats
 
-- **TypeScript Files**: 10
+- **TypeScript Files**: 12 (+2 new API integrations)
 - **React Components**: 4
-- **Total Lines**: ~2,500
-- **Bundle Size**: 320 KB
+- **Total Lines**: ~4,500 (+2,000)
+- **Bundle Size**: ~380 KB
 - **Dependencies**: 8 runtime, 10 dev
-- **Build Time**: ~1.2s
+- **Build Time**: ~1.4s
+- **AI Models**: 19 (7 OpenAI + 3 Gemini + 9 Claude)
+- **API Providers**: 3 (OpenAI, Google, Anthropic)
 
 ## 🔐 Security Model
 
@@ -283,5 +295,6 @@ API Call (HTTPS)
 ---
 
 **Last Updated**: October 17, 2025
-**Version**: 1.0.0 MVP
-**Status**: Ready for testing
+**Version**: 1.1.0
+**Status**: Complete AI integration with 19 models
+**New Features**: Claude cookie auth, GPT-5 family, Gemini Flash Lite

@@ -112,8 +112,8 @@ const Settings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <div className="rounded-2xl bg-white px-8 py-6 shadow-xl">
+      <div className="page-shell">
+        <div className="rounded-2xl bg-white px-8 py-6 text-center shadow-xl">
           <p className="text-sm font-medium text-slate-600">Loading your settings…</p>
         </div>
       </div>
@@ -122,8 +122,8 @@ const Settings: React.FC = () => {
 
   if (!settings) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100">
-        <div className="max-w-md rounded-2xl bg-white px-8 py-6 text-center shadow-xl">
+      <div className="page-shell">
+        <div className="stack max-w-md rounded-2xl bg-white px-8 py-6 text-center shadow-xl">
           <p className="text-base font-semibold text-slate-800">We couldn&apos;t load your settings.</p>
           <p className="mt-3 text-sm text-slate-600">
             Please close this window and reopen the extension. If the problem continues, try running the onboarding flow again.
@@ -134,20 +134,20 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div className="rounded-3xl bg-white p-8 shadow-2xl ring-1 ring-slate-200/70 sm:p-10">
-          <header className="mb-10">
+    <div className="page-shell">
+      <div className="stack w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="stack rounded-3xl bg-white p-8 shadow-2xl ring-1 ring-slate-200/70 sm:p-10">
+          <header className="stack-sm">
             <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-600">Settings</p>
-            <h1 className="mt-2 text-3xl font-semibold text-slate-900">Manage your Kotodama configuration</h1>
-            <p className="mt-3 text-sm text-slate-600">
+            <h1 className="text-3xl font-semibold text-slate-900">Manage your Kotodama configuration</h1>
+            <p className="text-sm text-slate-600">
               Update your API connections and defaults. These preferences sync locally on this browser only.
             </p>
           </header>
 
-          <div className="space-y-8">
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
+          <div className="stack">
+            <section className="stack-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-slate-900">OpenAI API key</h2>
                 {saveState === 'saved' && (
                   <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -180,7 +180,7 @@ const Settings: React.FC = () => {
             </section>
 
             {brandVoices.length > 0 && (
-              <section className="space-y-3">
+              <section className="stack-sm">
                 <h2 className="text-lg font-semibold text-slate-900">Default brand voice</h2>
                 <p className="text-sm text-slate-600">
                   Choose which saved voice Kotodama selects automatically when you open the compose panel.
@@ -207,7 +207,7 @@ const Settings: React.FC = () => {
             )}
           </div>
 
-          <footer className="mt-12 flex flex-col justify-between gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center">
+          <footer className="flex flex-col justify-between gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center">
             <button
               type="button"
               onClick={handleRerunOnboarding}

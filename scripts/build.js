@@ -8,10 +8,10 @@ const root = join(__dirname, '..');
 // Copy manifest and icons to dist
 const filesToCopy = [
   { from: 'public/manifest.json', to: 'dist/manifest.json' },
-  { from: 'public/icons/icon16.svg', to: 'dist/icons/icon16.svg' },
-  { from: 'public/icons/icon32.svg', to: 'dist/icons/icon32.svg' },
-  { from: 'public/icons/icon48.svg', to: 'dist/icons/icon48.svg' },
-  { from: 'public/icons/icon128.svg', to: 'dist/icons/icon128.svg' },
+  { from: 'public/icons/icon16.png', to: 'dist/icons/icon16.png' },
+  { from: 'public/icons/icon32.png', to: 'dist/icons/icon32.png' },
+  { from: 'public/icons/icon48.png', to: 'dist/icons/icon48.png' },
+  { from: 'public/icons/icon128.png', to: 'dist/icons/icon128.png' },
 ];
 
 console.log('Copying static files to dist...');
@@ -27,7 +27,7 @@ filesToCopy.forEach(({ from, to }) => {
   }
 
   copyFileSync(fromPath, toPath);
-  console.log(`  ✓ ${from} → ${to}`);
+  console.log(`  ${from} -> ${to}`);
 });
 
 console.log('Build preparation complete!');

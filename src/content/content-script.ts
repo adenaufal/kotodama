@@ -10,43 +10,40 @@ const PANEL_TRANSITION_DURATION = 300;
 
 function styleToolbarButton(button: HTMLButtonElement) {
   button.classList.add('kotodama-ai-button');
+
+  // Icon-only button matching Twitter's style
   button.innerHTML = `
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:rgba(255,255,255,0.18);backdrop-filter:blur(6px);">
-      <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
-      </svg>
-    </span>
-    <span style="font-weight:600;letter-spacing:0.01em;">Kotodama</span>
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
+    </svg>
   `;
 
+  // Match Twitter's action button style
   Object.assign(button.style, {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '0 16px',
+    justifyContent: 'center',
+    width: '36px',
     height: '36px',
     borderRadius: '9999px',
     border: 'none',
-    background: 'linear-gradient(135deg, #1d9bf0, #7c3aed)',
-    color: '#fff',
-    fontSize: '14px',
-    fontWeight: '600',
+    background: 'transparent',
+    color: 'rgb(83, 100, 113)', // Twitter's gray
     cursor: 'pointer',
-    boxShadow: '0 10px 30px rgba(124, 58, 237, 0.35)',
-    transition: 'transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease',
-    position: 'relative',
+    transition: 'background-color 0.2s ease, color 0.2s ease',
     outline: 'none',
-    whiteSpace: 'nowrap',
+    padding: '0',
+    marginLeft: '0',
   } as CSSStyleDeclaration);
 
   button.addEventListener('mouseenter', () => {
-    button.style.transform = 'translateY(-1px) scale(1.01)';
-    button.style.boxShadow = '0 18px 34px rgba(29, 155, 240, 0.35)';
+    button.style.backgroundColor = 'rgba(29, 155, 240, 0.1)'; // Light blue background
+    button.style.color = 'rgb(29, 155, 240)'; // Twitter's blue
   });
 
   button.addEventListener('mouseleave', () => {
-    button.style.transform = 'translateY(0) scale(1)';
-    button.style.boxShadow = '0 10px 30px rgba(124, 58, 237, 0.35)';
+    button.style.backgroundColor = 'transparent';
+    button.style.color = 'rgb(83, 100, 113)';
   });
 }
 
@@ -54,82 +51,76 @@ function styleToolbarButton(button: HTMLButtonElement) {
 function init() {
   console.log('Kotodama content script loaded');
 
-  // Use MutationObserver to detect when compose boxes appear
-  const observer = new MutationObserver(() => {
-    injectButtonsIfNeeded();
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  // Initial injection
-  injectButtonsIfNeeded();
+  // Create a floating button at top-right
+  createFloatingButton();
 }
 
-function injectButtonsIfNeeded() {
-  // Twitter's compose box selectors (these may need adjustment based on Twitter's DOM)
-  const composeSelectors = [
-    '[data-testid="tweetTextarea_0"]',
-    '[role="textbox"][contenteditable="true"]',
-  ];
+function createFloatingButton() {
+  // Check if button already exists
+  if (document.querySelector('.kotodama-floating-button')) {
+    return;
+  }
 
-  composeSelectors.forEach((selector) => {
-    const composeBoxes = document.querySelectorAll(selector);
-    composeBoxes.forEach((box) => {
-      const element = box as HTMLElement;
-      const wrapper = element.closest('[data-testid="tweetTextarea_0_wrapper"]');
-      const container = wrapper?.parentElement || element.parentElement;
-
-      if (container && container.querySelector('.kotodama-ai-button')) {
-        return;
-      }
-
-      injectAIButton(element);
-    });
-  });
-}
-
-function injectAIButton(composeBox: HTMLElement) {
   const button = document.createElement('button');
+  button.className = 'kotodama-floating-button';
   button.title = 'Compose with Kotodama';
-  styleToolbarButton(button);
+
+  // Icon-only button
+  button.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
+    </svg>
+    <span style="margin-left: 8px; font-weight: 600;">Kotodama</span>
+  `;
+
+  // Floating button style
+  Object.assign(button.style, {
+    position: 'fixed',
+    top: '80px',
+    right: '24px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '44px',
+    padding: '0 20px',
+    borderRadius: '9999px',
+    border: 'none',
+    background: 'rgba(255, 255, 255, 0.95)',
+    color: 'rgb(29, 155, 240)',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    transition: 'all 0.2s ease',
+    outline: 'none',
+    zIndex: '1000',
+    fontSize: '15px',
+    fontWeight: '600',
+  } as CSSStyleDeclaration);
+
+  button.addEventListener('mouseenter', () => {
+    button.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
+    button.style.transform = 'translateY(-1px)';
+  });
+
+  button.addEventListener('mouseleave', () => {
+    button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+    button.style.transform = 'translateY(0)';
+  });
 
   button.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    handleAIButtonClick(composeBox);
+
+    currentContext = 'compose';
+    currentTweetContext = null;
+
+    if (panelIframe && document.body.contains(panelIframe)) {
+      togglePanel();
+    } else {
+      openPanel();
+    }
   });
 
-  const wrapper = composeBox.closest('[data-testid="tweetTextarea_0_wrapper"]');
-  const toolbar = wrapper?.parentElement?.querySelector<HTMLElement>('[data-testid="toolBar"]');
-
-  if (toolbar && !toolbar.querySelector('.kotodama-ai-button')) {
-    const slot = document.createElement('div');
-    slot.className = 'kotodama-ai-button-slot';
-    Object.assign(slot.style, {
-      display: 'flex',
-      alignItems: 'center',
-      marginLeft: '8px',
-    });
-    slot.appendChild(button);
-    toolbar.appendChild(slot);
-    return;
-  }
-
-  const container = wrapper || composeBox.parentElement;
-
-  if (container instanceof HTMLElement) {
-    container.style.position = container.style.position || 'relative';
-    Object.assign(button.style, {
-      position: 'absolute',
-      right: '12px',
-      bottom: '-18px',
-      transform: 'translateY(100%)',
-    });
-    container.appendChild(button);
-  }
+  document.body.appendChild(button);
 }
 
 async function handleAIButtonClick(composeBox: HTMLElement) {

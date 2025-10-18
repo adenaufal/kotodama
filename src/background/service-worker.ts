@@ -3,22 +3,32 @@ import { db } from '../storage/db';
 import { getSettings, saveSettings } from '../storage/settings';
 import { generateWithOpenAI, analyzeTwitterProfile } from '../api/openai';
 
-const ONBOARDING_POPUP = 'src/onboarding/index.html';
-const SETTINGS_POPUP = 'src/settings/index.html';
+const ONBOARDING_URL = chrome.runtime.getURL('src/onboarding/index.html');
+const SETTINGS_URL = chrome.runtime.getURL('src/settings/index.html');
 
-async function updateActionPopup(): Promise<void> {
+// Handle extension icon click - open onboarding or settings in new tab
+chrome.action.onClicked.addListener(async () => {
   try {
     const settings = await getSettings();
     const hasOpenAiKey = typeof settings.apiKeys.openai === 'string' && settings.apiKeys.openai.trim().length > 0;
 
-    chrome.action.setPopup({
-      popup: hasOpenAiKey ? SETTINGS_POPUP : ONBOARDING_POPUP,
-    });
+    const url = hasOpenAiKey ? SETTINGS_URL : ONBOARDING_URL;
+
+    // Check if tab already exists
+    const tabs = await chrome.tabs.query({ url });
+    if (tabs.length > 0 && tabs[0].id) {
+      // Focus existing tab
+      await chrome.tabs.update(tabs[0].id, { active: true });
+      await chrome.windows.update(tabs[0].windowId!, { focused: true });
+    } else {
+      // Create new tab
+      await chrome.tabs.create({ url });
+    }
   } catch (error) {
-    console.error('Failed to update action popup', error);
-    chrome.action.setPopup({ popup: ONBOARDING_POPUP });
+    console.error('Failed to open extension page', error);
+    await chrome.tabs.create({ url: ONBOARDING_URL });
   }
-}
+});
 
 // Listen for messages from content script and panel
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
@@ -190,7 +200,6 @@ async function handleGetSettings(): Promise<MessageResponse> {
 async function handleSaveSettings(settings: any): Promise<MessageResponse> {
   try {
     await saveSettings(settings);
-    await updateActionPopup();
     return {
       success: true,
     };
@@ -265,14 +274,6 @@ chrome.runtime.onInstalled.addListener((details) => {
       url: chrome.runtime.getURL('src/onboarding/index.html'),
     });
   }
-
-  void updateActionPopup();
 });
-
-chrome.runtime.onStartup.addListener(() => {
-  void updateActionPopup();
-});
-
-void updateActionPopup();
 
 console.log('Kotodama service worker loaded');
