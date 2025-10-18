@@ -140,8 +140,11 @@ const Settings: React.FC = () => {
   if (isLoading) {
     return (
       <div className="page-shell">
-        <div className="rounded-2xl bg-white px-8 py-6 text-center shadow-xl">
-          <p className="text-sm font-medium text-slate-600">Loading your settings…</p>
+        <div className="rounded-2xl px-8 py-6 text-center shadow-xl" style={{
+          backgroundColor: 'var(--koto-surface)',
+          boxShadow: 'var(--koto-shadow-lg)'
+        }}>
+          <p className="text-sm font-medium" style={{ color: 'var(--koto-text-secondary)' }}>Loading your settings…</p>
         </div>
       </div>
     );
@@ -150,9 +153,12 @@ const Settings: React.FC = () => {
   if (!settings) {
     return (
       <div className="page-shell">
-        <div className="stack max-w-md rounded-2xl bg-white px-8 py-6 text-center shadow-xl">
-          <p className="text-base font-semibold text-slate-800">We couldn&apos;t load your settings.</p>
-          <p className="mt-3 text-sm text-slate-600">
+        <div className="stack max-w-md rounded-2xl px-8 py-6 text-center shadow-xl" style={{
+          backgroundColor: 'var(--koto-surface)',
+          boxShadow: 'var(--koto-shadow-lg)'
+        }}>
+          <p className="text-base font-semibold" style={{ color: 'var(--koto-text-primary)' }}>We couldn&apos;t load your settings.</p>
+          <p className="mt-3 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
             Please close this window and reopen the extension. If the problem continues, try running the onboarding flow again.
           </p>
         </div>
@@ -163,11 +169,15 @@ const Settings: React.FC = () => {
   return (
     <div className="page-shell">
       <div className="stack w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="stack rounded-3xl bg-white p-8 shadow-2xl ring-1 ring-slate-200/70 sm:p-10">
+        <div className="stack rounded-3xl p-8 shadow-2xl ring-1 sm:p-10" style={{
+          backgroundColor: 'var(--koto-surface)',
+          boxShadow: 'var(--koto-shadow-lg)',
+          borderColor: 'var(--koto-border)'
+        }}>
           <header className="stack-sm">
-            <p className="text-sm font-medium uppercase tracking-[0.3em] text-indigo-600">Settings</p>
-            <h1 className="text-3xl font-semibold text-slate-900">Manage your Kotodama configuration</h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-sakura-pink)' }}>Settings</p>
+            <h1 className="text-3xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Manage your Kotodama configuration</h1>
+            <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
               Update your API connections and defaults. These preferences sync locally on this browser only.
             </p>
           </header>
@@ -175,14 +185,17 @@ const Settings: React.FC = () => {
           <div className="stack">
             <section className="stack-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-slate-900">OpenAI API key</h2>
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--koto-text-primary)' }}>OpenAI API key</h2>
                 {saveState === 'saved' && (
-                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" style={{
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    color: 'var(--koto-success)'
+                  }}>
                     Saved
                   </span>
                 )}
               </div>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                 Your key is encrypted with the Web Crypto API before being stored. Kotodama never uploads or shares it.
               </p>
               <input
@@ -190,15 +203,21 @@ const Settings: React.FC = () => {
                 value={openaiKey}
                 onChange={(event) => setOpenaiKey(event.target.value)}
                 placeholder="sk-..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 shadow-inner focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="w-full rounded-xl border px-4 py-3 text-base shadow-inner focus:outline-none"
+                style={{
+                  borderColor: 'var(--koto-border)',
+                  backgroundColor: 'var(--koto-bg-dark)',
+                  color: 'var(--koto-text-primary)'
+                }}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
                 Need a new key?{' '}
                 <a
                   href="https://platform.openai.com/api-keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-indigo-600 hover:text-indigo-700"
+                  className="font-medium"
+                  style={{ color: 'var(--koto-sakura-pink)' }}
                 >
                   Generate one in the OpenAI dashboard
                 </a>
@@ -207,14 +226,19 @@ const Settings: React.FC = () => {
             </section>
 
             <section className="stack-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Brand Voices</h2>
-              <p className="text-sm text-slate-600">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Brand Voices</h2>
+              <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                 Manage your brand voices - create, edit, or delete voices to match your unique style.
               </p>
               <button
                 type="button"
                 onClick={handleOpenVoiceManager}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-4 text-sm font-semibold text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-4 text-sm font-semibold transition koto-button-hover focus:outline-none"
+                style={{
+                  borderColor: 'var(--koto-border)',
+                  backgroundColor: 'rgba(26, 29, 46, 0.3)',
+                  color: 'var(--koto-text-secondary)'
+                }}
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -226,14 +250,19 @@ const Settings: React.FC = () => {
 
             {brandVoices.length > 0 && (
               <section className="stack-sm">
-                <h2 className="text-lg font-semibold text-slate-900">Default brand voice</h2>
-                <p className="text-sm text-slate-600">
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Default brand voice</h2>
+                <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                   Choose which saved voice Kotodama selects automatically when you open the compose panel.
                 </p>
                 <select
                   value={defaultBrandVoiceId}
                   onChange={(event) => setDefaultBrandVoiceId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                  className="w-full rounded-xl border px-4 py-3 text-base shadow-sm focus:outline-none"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'var(--koto-bg-dark)',
+                    color: 'var(--koto-text-primary)'
+                  }}
                 >
                   <option value="">No default voice</option>
                   {brandVoices.map((voice) => (
@@ -246,17 +275,25 @@ const Settings: React.FC = () => {
             )}
 
             {error && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <div className="rounded-2xl border px-4 py-3 text-sm koto-animate-fadeIn" style={{
+                borderColor: 'var(--koto-error)',
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                color: 'var(--koto-error)'
+              }}>
                 {error}
               </div>
             )}
           </div>
 
-          <footer className="flex flex-col justify-between gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center">
+          <footer className="flex flex-col justify-between gap-3 border-t pt-6 sm:flex-row sm:items-center" style={{ borderColor: 'var(--koto-border)' }}>
             <button
               type="button"
               onClick={handleRerunOnboarding}
-              className="inline-flex items-center justify-center rounded-xl border border-indigo-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2 focus:ring-offset-white"
+              className="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition koto-button-hover focus:outline-none"
+              style={{
+                borderColor: 'var(--koto-border)',
+                color: 'var(--koto-sakura-pink)'
+              }}
             >
               Re-run onboarding
             </button>
@@ -264,11 +301,11 @@ const Settings: React.FC = () => {
               type="button"
               onClick={handleSave}
               disabled={!hasChanges || saveState === 'saving'}
-              className={`inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2 focus:ring-offset-white ${
-                !hasChanges || saveState === 'saving'
-                  ? 'cursor-not-allowed bg-slate-200 text-slate-500'
-                  : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700'
-              }`}
+              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white transition koto-button-hover focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                backgroundColor: !hasChanges || saveState === 'saving' ? 'var(--koto-border)' : 'var(--koto-sakura-pink)',
+                boxShadow: !hasChanges || saveState === 'saving' ? 'none' : '0 4px 12px rgba(232, 92, 143, 0.3)'
+              }}
             >
               {saveState === 'saving' ? 'Saving…' : 'Save changes'}
             </button>

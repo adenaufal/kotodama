@@ -161,50 +161,78 @@ Write a reply that:
     window.parent.postMessage({ type: 'close-panel' }, '*');
   };
 
+  const handleOpenSettings = () => {
+    // Open the extension settings page in a new tab
+    chrome.runtime.sendMessage({ type: 'open-settings' });
+  };
+
   const hasGeneratedContent =
     (Array.isArray(generatedContent) && generatedContent.length > 0) ||
     (!!generatedContent && !Array.isArray(generatedContent));
 
   return (
     <>
-      <div className="w-full min-h-screen bg-slate-950/5 text-slate-900">
+      <div className="w-full min-h-screen text-slate-900" style={{ backgroundColor: 'var(--koto-bg-dark)' }}>
         <div className="flex w-full flex-col h-full">
-        <div className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-500 via-indigo-500 to-fuchsia-500 px-6 pb-14 pt-4 text-white shadow-lg">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_55%)]" />
+        <div className="relative overflow-hidden rounded-b-3xl px-6 pb-14 pt-4 text-white shadow-lg" style={{
+          backgroundColor: 'var(--koto-deep-indigo)',
+          boxShadow: 'var(--koto-shadow-md)'
+        }}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]" />
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="stack-sm">
-              <p className="text-xs font-medium uppercase tracking-[0.3em] text-white/70">Kotodama</p>
-              <h1 className="text-2xl font-semibold leading-tight">AI Tweet Composer</h1>
+              <p className="text-xs font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-text-secondary)' }}>Kotodama</p>
+              <h1 className="text-2xl font-semibold leading-tight" style={{ color: 'var(--koto-text-primary)' }}>AI Tweet Composer</h1>
               {settings?.defaultProvider && (
-                <p className="text-xs text-white/70">
+                <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
                   Default provider:{' '}
-                  <span className="font-medium text-white">{settings.defaultProvider}</span>
+                  <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>{settings.defaultProvider}</span>
                 </p>
               )}
             </div>
-            <button
-              onClick={handleClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25"
-              aria-label="Close panel"
-            >
-              &times;
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleOpenSettings}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 koto-button-hover"
+                aria-label="Open settings"
+                title="Open settings"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              <button
+                onClick={handleClose}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25 koto-button-hover"
+                aria-label="Close panel"
+              >
+                &times;
+              </button>
+            </div>
           </div>
 
           {context.type === 'reply' && context.tweetContext && (
-            <div className="relative z-10 mt-6 rounded-2xl border border-white/10 bg-white/15 p-4 backdrop-blur">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Replying to</p>
-              <p className="mt-1 text-sm font-medium text-white">@{context.tweetContext.username}</p>
-              <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-relaxed text-white/80 whitespace-pre-wrap">{context.tweetContext.text}</p>
+            <div className="relative z-10 mt-6 rounded-2xl border p-4 backdrop-blur koto-animate-fadeIn" style={{
+              borderColor: 'var(--koto-border)',
+              backgroundColor: 'rgba(54, 59, 82, 0.5)'
+            }}>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>Replying to</p>
+              <p className="mt-1 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>@{context.tweetContext.username}</p>
+              <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--koto-text-secondary)' }}>{context.tweetContext.text}</p>
             </div>
           )}
         </div>
 
         <div className="-mt-10 flex-1 overflow-y-auto px-6 pb-0">
-          <div className="stack rounded-3xl border border-white/70 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur-sm">
+          <div className="stack rounded-3xl border p-6 shadow-2xl backdrop-blur-sm" style={{
+            borderColor: 'var(--koto-border)',
+            backgroundColor: 'var(--koto-surface)',
+            boxShadow: 'var(--koto-shadow-lg)'
+          }}>
             <div className="stack">
               <div className="stack-sm">
-                <label className="text-sm font-semibold text-slate-700">
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
                   What would you like to share?
                 </label>
                 <textarea
@@ -215,23 +243,33 @@ Write a reply that:
                       ? 'Briefly describe the tone or key points for your reply...'
                       : 'Share the idea, tone, or key points you want your tweet to convey...'
                   }
-                  className="min-h-[120px] w-full resize-none rounded-2xl border border-slate-200 bg-white/80 p-4 text-sm leading-relaxed text-slate-800 shadow-inner outline-none transition focus:border-transparent focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-white"
+                  className="min-h-[120px] w-full resize-none rounded-2xl border p-4 text-sm leading-relaxed shadow-inner outline-none transition"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'var(--koto-bg-dark)',
+                    color: 'var(--koto-text-primary)'
+                  }}
                 />
               </div>
 
               {context.type === 'compose' && (
-                <div className="stack-sm rounded-2xl bg-slate-50/80 p-4">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <div className="stack-sm rounded-2xl p-4" style={{ backgroundColor: 'rgba(26, 29, 46, 0.5)' }}>
+                  <label className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
                     <input
                       type="checkbox"
                       checked={isThread}
                       onChange={(event) => setIsThread(event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400"
+                      className="h-4 w-4 rounded"
+                      style={{ accentColor: 'var(--koto-sakura-pink)' }}
                     />
                     Turn this into a thread
                   </label>
                   {isThread && (
-                    <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-medium text-slate-700">
+                    <div className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium" style={{
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)',
+                      color: 'var(--koto-text-primary)'
+                    }}>
                       <span>Posts:</span>
                       <input
                         type="number"
@@ -243,7 +281,12 @@ Write a reply that:
                         }
                         min="2"
                         max="10"
-                        className="h-8 w-16 rounded-full border border-slate-200 bg-white px-2 text-center text-sm font-semibold text-slate-900 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-300"
+                        className="h-8 w-16 rounded-full border px-2 text-center text-sm font-semibold outline-none"
+                        style={{
+                          borderColor: 'var(--koto-border)',
+                          backgroundColor: 'var(--koto-bg-dark)',
+                          color: 'var(--koto-text-primary)'
+                        }}
                       />
                     </div>
                   )}
@@ -251,12 +294,17 @@ Write a reply that:
               )}
 
               <div className="stack-sm">
-                <label className="text-sm font-semibold text-slate-700">Brand voice</label>
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Brand voice</label>
                 <div className="relative">
                   <select
                     value={selectedVoiceId}
                     onChange={(event) => setSelectedVoiceId(event.target.value)}
-                    className="w-full appearance-none rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 px-4 py-3 text-sm font-medium text-slate-800 shadow-sm outline-none transition focus:border-transparent focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-white"
+                    className="w-full appearance-none rounded-2xl border px-4 py-3 text-sm font-medium shadow-sm outline-none transition"
+                    style={{
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)',
+                      color: 'var(--koto-text-primary)'
+                    }}
                   >
                     <option value="">Select a voice...</option>
                     {brandVoices.map((voice) => (
@@ -265,7 +313,7 @@ Write a reply that:
                       </option>
                     ))}
                   </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center" style={{ color: 'var(--koto-text-secondary)' }}>
                     v
                   </span>
                 </div>
@@ -275,7 +323,11 @@ Write a reply that:
                 <button
                   onClick={handleGenerate}
                   disabled={isLoading || !prompt.trim() || !selectedVoiceId}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  style={{
+                    backgroundColor: isLoading || !prompt.trim() || !selectedVoiceId ? 'var(--koto-border)' : 'var(--koto-sakura-pink)',
+                    boxShadow: isLoading || !prompt.trim() || !selectedVoiceId ? 'none' : '0 4px 12px rgba(232, 92, 143, 0.3)'
+                  }}
                 >
                   {isLoading ? 'Crafting magic...' : 'Generate with AI'}
                 </button>
@@ -285,7 +337,11 @@ Write a reply that:
                     setGeneratedContent('');
                     setError(null);
                   }}
-                  className="inline-flex items-center justify-center rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-sm font-semibold transition koto-button-hover focus:outline-none"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    color: 'var(--koto-text-secondary)'
+                  }}
                   type="button"
                 >
                   Clear
@@ -293,23 +349,28 @@ Write a reply that:
               </div>
 
               {error && (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-600 shadow-sm">
+                <div className="rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn" style={{
+                  borderColor: 'var(--koto-error)',
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  color: 'var(--koto-error)'
+                }}>
                   {error}
                 </div>
               )}
 
               {hasGeneratedContent && !isLoading && (
-                <div className="stack">
+                <div className="stack koto-animate-fadeIn">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-semibold text-slate-900">Generated suggestions</h3>
-                      <p className="text-xs text-slate-500">
+                      <h3 className="text-base font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Generated suggestions</h3>
+                      <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
                         Click insert to drop your favorite version into X.
                       </p>
                     </div>
                     <button
                       onClick={handleGenerate}
-                      className="text-sm font-semibold text-indigo-500 transition hover:text-indigo-600"
+                      className="text-sm font-semibold transition"
+                      style={{ color: 'var(--koto-sakura-pink)' }}
                     >
                       Regenerate
                     </button>
@@ -320,29 +381,40 @@ Write a reply that:
                       {generatedContent.map((tweet, index) => (
                         <div
                           key={index}
-                          className="stack-sm rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                          className="stack-sm rounded-2xl border p-4 shadow-sm"
+                          style={{
+                            borderColor: 'var(--koto-border)',
+                            backgroundColor: 'var(--koto-bg-dark)'
+                          }}
                         >
-                          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>
                             <span>Suggestion {index + 1}</span>
                             <span>{tweet.length} characters</span>
                           </div>
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{tweet}</p>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--koto-text-primary)' }}>{tweet}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="stack-sm rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
-                      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="stack-sm rounded-2xl border p-4 shadow-sm" style={{
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)'
+                    }}>
+                      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>
                         <span>Suggested copy</span>
                         <span>{generatedContent.length} characters</span>
                       </div>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{generatedContent}</p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--koto-text-primary)' }}>{generatedContent}</p>
                     </div>
                   )}
 
                   <button
                     onClick={handleInsert}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover focus:outline-none"
+                    style={{
+                      backgroundColor: 'var(--koto-success)',
+                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+                    }}
                   >
                     Insert to X
                   </button>
@@ -351,7 +423,7 @@ Write a reply that:
             </div>
           </div>
 
-          <div className="mt-6 text-center text-xs text-slate-400">
+          <div className="mt-6 text-center text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
             Powered by Kotodama - Crafted with AI assistance
           </div>
         </div>

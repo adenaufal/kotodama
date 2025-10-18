@@ -71,6 +71,9 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
     case 'delete-brand-voice':
       return handleDeleteBrandVoice(message.payload);
 
+    case 'open-settings':
+      return handleOpenSettings();
+
     default:
       throw new Error(`Unknown message type: ${message.type}`);
   }
@@ -272,6 +275,29 @@ async function handleListBrandVoices(): Promise<MessageResponse> {
 async function handleDeleteBrandVoice(payload: { id: string }): Promise<MessageResponse> {
   try {
     await db.brandVoices.delete(payload.id);
+    return {
+      success: true,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+async function handleOpenSettings(): Promise<MessageResponse> {
+  try {
+    // Check if settings tab already exists
+    const tabs = await chrome.tabs.query({ url: SETTINGS_URL });
+    if (tabs.length > 0 && tabs[0].id) {
+      // Focus existing tab
+      await chrome.tabs.update(tabs[0].id, { active: true });
+      await chrome.windows.update(tabs[0].windowId!, { focused: true });
+    } else {
+      // Create new tab
+      await chrome.tabs.create({ url: SETTINGS_URL });
+    }
     return {
       success: true,
     };

@@ -1,0 +1,187 @@
+/* Kotodama Design Tokens */
+/* Based on: docs/reference/UIUX.md */
+
+:root {
+  /* === Primary Palette === */
+  --koto-deep-indigo: #2D3250;
+  --koto-sakura-pink: #E85C8F;
+  --koto-gold-amber: #F4A261;
+
+  /* === Neutral Palette === */
+  --koto-bg-dark: #1A1D2E;
+  --koto-bg-light: #F8F9FC;
+  --koto-surface: #363B52;
+  --koto-border: #424863;
+  --koto-text-primary: #E8E9F0;
+  --koto-text-secondary: #9BA0B5;
+
+  /* === Semantic Colors === */
+  --koto-success: #4CAF50;
+  --koto-warning: #FF9800;
+  --koto-error: #F44336;
+  --koto-info: #2196F3;
+
+  /* === Typography === */
+  --koto-font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  --koto-font-mono: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
+
+  /* Type Scale */
+  --koto-text-h-large: 24px;
+  --koto-text-h-medium: 18px;
+  --koto-text-body: 14px;
+  --koto-text-body-small: 12px;
+  --koto-text-caption: 11px;
+  --koto-text-label: 13px;
+
+  /* Font Weights */
+  --koto-weight-normal: 400;
+  --koto-weight-medium: 500;
+  --koto-weight-semibold: 600;
+
+  /* === Spacing Scale (8px base) === */
+  --koto-space-xs: 4px;
+  --koto-space-sm: 8px;
+  --koto-space-md: 16px;
+  --koto-space-lg: 24px;
+  --koto-space-xl: 32px;
+  --koto-space-2xl: 48px;
+
+  /* === Border Radius === */
+  --koto-radius-sm: 6px;
+  --koto-radius-md: 8px;
+  --koto-radius-lg: 12px;
+  --koto-radius-full: 9999px;
+
+  /* === Shadows === */
+  --koto-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --koto-shadow-md: 0 4px 12px rgba(45, 50, 80, 0.3);
+  --koto-shadow-lg: 0 8px 24px rgba(45, 50, 80, 0.4);
+
+  /* === Component Specific === */
+  --koto-panel-width: 380px;
+  --koto-header-height: 56px;
+  --koto-action-bar-height: 72px;
+
+  /* === Animations === */
+  --koto-transition-fast: 0.15s ease;
+  --koto-transition-normal: 0.2s ease;
+  --koto-transition-slow: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* === Light Mode Overrides === */
+.light-mode {
+  --koto-bg-dark: #F8F9FC;
+  --koto-surface: #FFFFFF;
+  --koto-text-primary: #1A1D2E;
+  --koto-border: #E0E3EB;
+}
+
+/* === Animations === */
+@keyframes koto-slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes koto-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes koto-shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes koto-ripple {
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes koto-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === Accessibility === */
+*:focus-visible {
+  outline: 2px solid var(--koto-sakura-pink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* === Utility Classes === */
+.koto-text-primary {
+  color: var(--koto-text-primary);
+}
+
+.koto-text-secondary {
+  color: var(--koto-text-secondary);
+}
+
+.koto-bg-dark {
+  background-color: var(--koto-bg-dark);
+}
+
+.koto-bg-surface {
+  background-color: var(--koto-surface);
+}
+
+.koto-border {
+  border-color: var(--koto-border);
+}
+
+.koto-shadow-md {
+  box-shadow: var(--koto-shadow-md);
+}
+
+.koto-animate-slideIn {
+  animation: koto-slideIn var(--koto-transition-slow);
+}
+
+.koto-animate-fadeIn {
+  animation: koto-fadeIn var(--koto-transition-normal);
+}
+
+.koto-button-hover {
+  transition: transform var(--koto-transition-normal),
+              box-shadow var(--koto-transition-normal);
+}
+
+.koto-button-hover:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.koto-button-hover:active:not(:disabled) {
+  transform: translateY(0);
+}

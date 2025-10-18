@@ -157,22 +157,26 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
   const isEditing = editingVoice !== null || isCreating;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-      <div className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-        <div className="relative overflow-hidden bg-gradient-to-br from-sky-500 via-indigo-500 to-fuchsia-500 px-6 py-6 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_55%)]" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'rgba(26, 29, 46, 0.7)' }}>
+      <div className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn" style={{
+        borderColor: 'var(--koto-border)',
+        backgroundColor: 'var(--koto-surface)',
+        boxShadow: 'var(--koto-shadow-lg)'
+      }}>
+        <div className="relative overflow-hidden px-6 py-6 text-white" style={{ backgroundColor: 'var(--koto-deep-indigo)' }}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]" />
           <div className="relative z-10 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-semibold">
+              <h2 className="text-2xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
                 {isEditing ? (isCreating ? 'Create Brand Voice' : 'Edit Brand Voice') : 'Manage Brand Voices'}
               </h2>
-              <p className="mt-1 text-sm text-white/80">
+              <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                 {isEditing ? 'Configure your unique writing style' : 'Edit or remove your brand voices'}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25 koto-button-hover"
               aria-label="Close"
             >
               &times;
@@ -182,7 +186,11 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
 
         <div className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-600 shadow-sm">
+            <div className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn" style={{
+              borderColor: 'var(--koto-error)',
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              color: 'var(--koto-error)'
+            }}>
               {error}
             </div>
           )}
@@ -190,8 +198,8 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
           {isEditing ? (
             <div className="stack">
               <div className="stack-sm">
-                <label className="text-sm font-semibold text-slate-700">
-                  Name <span className="text-rose-500">*</span>
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                  Name <span style={{ color: 'var(--koto-error)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -199,13 +207,18 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Professional Tech Expert"
                   required
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                  className="w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'var(--koto-bg-dark)',
+                    color: 'var(--koto-text-primary)'
+                  }}
                 />
               </div>
 
               <div className="stack-sm">
-                <label className="text-sm font-semibold text-slate-700">
-                  Description <span className="text-rose-500">*</span>
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                  Description <span style={{ color: 'var(--koto-error)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -213,27 +226,38 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Brief description of this voice"
                   required
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                  className="w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'var(--koto-bg-dark)',
+                    color: 'var(--koto-text-primary)'
+                  }}
                 />
               </div>
 
               <div className="stack-sm">
-                <label className="text-sm font-semibold text-slate-700">Guidelines (optional)</label>
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Guidelines (optional)</label>
                 <textarea
                   value={formData.guidelines || ''}
                   onChange={(e) => setFormData({ ...formData, guidelines: e.target.value })}
                   placeholder="e.g., Always use emojis, Keep it casual, Focus on tech topics"
                   rows={3}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                  className="w-full resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'var(--koto-bg-dark)',
+                    color: 'var(--koto-text-primary)'
+                  }}
                 />
               </div>
 
               <div className="stack-sm">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700">Example Tweets</label>
+                  <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Example Tweets</label>
                   <button
                     onClick={addExampleTweet}
-                    className="text-xs font-semibold text-indigo-500 transition hover:text-indigo-600"
+                    className="text-xs font-semibold transition"
+                    style={{ color: 'var(--koto-sakura-pink)' }}
                   >
                     + Add Example
                   </button>
@@ -246,12 +270,18 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                         onChange={(e) => updateExampleTweet(index, e.target.value)}
                         placeholder={`Example ${index + 1}`}
                         rows={2}
-                        className="flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                        className="flex-1 resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                        style={{
+                          borderColor: 'var(--koto-border)',
+                          backgroundColor: 'var(--koto-bg-dark)',
+                          color: 'var(--koto-text-primary)'
+                        }}
                       />
                       {(formData.exampleTweets?.length || 0) > 1 && (
                         <button
                           onClick={() => removeExampleTweet(index)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-rose-500"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          style={{ color: 'var(--koto-text-secondary)' }}
                           aria-label="Remove example"
                         >
                           &times;
@@ -263,10 +293,10 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
               </div>
 
               <div className="stack-sm">
-                <label className="text-sm font-semibold text-slate-700">Tone Attributes</label>
-                <div className="stack-sm rounded-2xl bg-slate-50/80 p-4">
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Tone Attributes</label>
+                <div className="stack-sm rounded-2xl p-4" style={{ backgroundColor: 'rgba(26, 29, 46, 0.5)' }}>
                   <div className="stack-sm">
-                    <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                    <div className="flex items-center justify-between text-xs font-medium" style={{ color: 'var(--koto-text-secondary)' }}>
                       <span>Formality</span>
                       <span>{formData.toneAttributes?.formality || 50}</span>
                     </div>
@@ -285,11 +315,12 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                         })
                       }
                       className="w-full"
+                      style={{ accentColor: 'var(--koto-sakura-pink)' }}
                     />
                   </div>
 
                   <div className="stack-sm">
-                    <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                    <div className="flex items-center justify-between text-xs font-medium" style={{ color: 'var(--koto-text-secondary)' }}>
                       <span>Humor</span>
                       <span>{formData.toneAttributes?.humor || 50}</span>
                     </div>
@@ -308,11 +339,12 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                         })
                       }
                       className="w-full"
+                      style={{ accentColor: 'var(--koto-sakura-pink)' }}
                     />
                   </div>
 
                   <div className="stack-sm">
-                    <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                    <div className="flex items-center justify-between text-xs font-medium" style={{ color: 'var(--koto-text-secondary)' }}>
                       <span>Technicality</span>
                       <span>{formData.toneAttributes?.technicality || 50}</span>
                     </div>
@@ -331,6 +363,7 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                         })
                       }
                       className="w-full"
+                      style={{ accentColor: 'var(--koto-sakura-pink)' }}
                     />
                   </div>
                 </div>
@@ -340,13 +373,21 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex-1 rounded-full bg-gradient-to-r from-sky-500 via-indigo-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'var(--koto-sakura-pink)',
+                    boxShadow: '0 4px 12px rgba(232, 92, 143, 0.3)'
+                  }}
                 >
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
+                  className="rounded-full border px-6 py-3 text-sm font-semibold transition koto-button-hover"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    color: 'var(--koto-text-secondary)'
+                  }}
                 >
                   Cancel
                 </button>
@@ -356,48 +397,68 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
             <div className="stack">
               <button
                 onClick={handleCreate}
-                className="w-full rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 px-6 py-4 text-sm font-semibold text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 hover:text-indigo-600"
+                className="w-full rounded-2xl border-2 border-dashed px-6 py-4 text-sm font-semibold transition koto-button-hover"
+                style={{
+                  borderColor: 'var(--koto-border)',
+                  backgroundColor: 'rgba(26, 29, 46, 0.3)',
+                  color: 'var(--koto-text-secondary)'
+                }}
               >
                 + Create New Brand Voice
               </button>
 
               {voices.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
-                  <p className="text-sm text-slate-500">No brand voices yet. Create one to get started!</p>
+                <div className="rounded-2xl border px-6 py-8 text-center" style={{
+                  borderColor: 'var(--koto-border)',
+                  backgroundColor: 'rgba(26, 29, 46, 0.3)'
+                }}>
+                  <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>No brand voices yet. Create one to get started!</p>
                 </div>
               ) : (
                 <div className="stack-sm">
                   {voices.map((voice) => (
                     <div
                       key={voice.id}
-                      className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300"
+                      className="flex items-start gap-4 rounded-2xl border p-4 shadow-sm transition"
+                      style={{
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'var(--koto-bg-dark)'
+                      }}
                     >
                       <div className="flex-1">
-                        <h3 className="font-semibold text-slate-900">{voice.name}</h3>
+                        <h3 className="font-semibold" style={{ color: 'var(--koto-text-primary)' }}>{voice.name}</h3>
                         {voice.description && (
-                          <p className="mt-1 text-sm text-slate-600">{voice.description}</p>
+                          <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>{voice.description}</p>
                         )}
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
                           <span>Formality: {voice.toneAttributes.formality}</span>
                           <span>•</span>
                           <span>Humor: {voice.toneAttributes.humor}</span>
                           <span>•</span>
                           <span>Technicality: {voice.toneAttributes.technicality}</span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
                           {voice.exampleTweets.length} example{voice.exampleTweets.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEdit(voice)}
-                          className="rounded-full bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                          className="rounded-full px-4 py-2 text-xs font-semibold transition koto-button-hover"
+                          style={{
+                            backgroundColor: 'rgba(26, 29, 46, 0.5)',
+                            color: 'var(--koto-text-primary)'
+                          }}
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(voice.id)}
-                          className="rounded-full bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+                          className="rounded-full px-4 py-2 text-xs font-semibold transition koto-button-hover"
+                          style={{
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            color: 'var(--koto-error)'
+                          }}
                         >
                           Delete
                         </button>

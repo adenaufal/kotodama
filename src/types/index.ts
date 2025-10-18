@@ -104,8 +104,9 @@ export interface Message {
     | 'get-brand-voice'
     | 'save-brand-voice'
     | 'list-brand-voices'
-    | 'delete-brand-voice';
-  payload: any;
+    | 'delete-brand-voice'
+    | 'open-settings';
+  payload?: any;
 }
 
 export interface MessageResponse {
