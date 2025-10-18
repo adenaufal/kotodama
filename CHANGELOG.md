@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/adenaufal/kotodama/compare/v1.1.1...v1.2.0) (2025-10-18)
+
+
+### Features
+
+* add new UI components and onboarding flow ([20ca83b](https://github.com/adenaufal/kotodama/commit/20ca83ba7ed176fb848b1788375bb2aaa96fdb9d))
+
 ## [1.1.1](https://github.com/adenaufal/kotodama/compare/v1.1.0...v1.1.1) (2025-10-17)
 
 
