@@ -8,15 +8,59 @@ let isPanelOpen = false;
 
 const PANEL_TRANSITION_DURATION = 300;
 
+type ExtensionRuntime = typeof chrome.runtime | null;
+
+function resolveExtensionRuntime(): ExtensionRuntime {
+  const globals = globalThis as typeof globalThis & {
+    chrome?: typeof chrome;
+    browser?: typeof chrome;
+  };
+
+  if (globals.chrome?.runtime) {
+    return globals.chrome.runtime;
+  }
+
+  if (globals.browser?.runtime) {
+    return globals.browser.runtime;
+  }
+
+  return null;
+}
+
+const extensionRuntime = resolveExtensionRuntime();
+const KOTODAMA_ICON_URL = extensionRuntime?.getURL('icons/kotodama-button.svg') ?? '';
+const FALLBACK_ICON_SVG = `
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
+  </svg>
+`;
+
+function createKotodamaIcon(size = 20): HTMLElement {
+  if (!KOTODAMA_ICON_URL) {
+    const fallbackWrapper = document.createElement('span');
+    fallbackWrapper.innerHTML = FALLBACK_ICON_SVG.trim();
+    fallbackWrapper.style.display = 'inline-flex';
+    fallbackWrapper.style.pointerEvents = 'none';
+    return fallbackWrapper;
+  }
+
+  const icon = document.createElement('img');
+  icon.src = KOTODAMA_ICON_URL;
+  icon.alt = 'Kotodama logo';
+  icon.width = size;
+  icon.height = size;
+  icon.style.display = 'block';
+  icon.style.pointerEvents = 'none';
+  return icon;
+}
+
 function styleToolbarButton(button: HTMLButtonElement) {
   button.classList.add('kotodama-ai-button');
 
   // Icon-only button matching Twitter's style
-  button.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
-    </svg>
-  `;
+  button.innerHTML = '';
+  const icon = createKotodamaIcon(18);
+  button.appendChild(icon);
 
   // Match Twitter's action button style
   Object.assign(button.style, {
@@ -66,34 +110,34 @@ function createFloatingButton() {
   button.title = 'Compose with Kotodama';
 
   // Icon-only button
-  button.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
-    </svg>
-    <span style="margin-left: 8px; font-weight: 600;">Kotodama</span>
-  `;
+  button.innerHTML = '';
+  const iconWrapper = document.createElement('span');
+  iconWrapper.style.display = 'inline-flex';
+  iconWrapper.style.alignItems = 'center';
+  iconWrapper.style.justifyContent = 'center';
+  iconWrapper.appendChild(createKotodamaIcon(24));
+
+  button.append(iconWrapper);
 
   // Floating button style
   Object.assign(button.style, {
     position: 'fixed',
-    top: '80px',
+    top: '24px',
     right: '24px',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '44px',
-    padding: '0 20px',
+    width: '48px',
+    height: '48px',
+    padding: '0',
     borderRadius: '9999px',
     border: 'none',
     background: 'rgba(255, 255, 255, 0.95)',
-    color: 'rgb(29, 155, 240)',
     cursor: 'pointer',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
     transition: 'all 0.2s ease',
     outline: 'none',
     zIndex: '1000',
-    fontSize: '15px',
-    fontWeight: '600',
   } as CSSStyleDeclaration);
 
   button.addEventListener('mouseenter', () => {
@@ -170,22 +214,27 @@ function openPanel() {
     return;
   }
 
+  if (!extensionRuntime) {
+    console.error('Kotodama: extension runtime is unavailable in this context.');
+    return;
+  }
+
   panelIframe = document.createElement('iframe');
-  panelIframe.src = chrome.runtime.getURL('src/panel/index.html');
+  panelIframe.src = extensionRuntime.getURL('src/panel/index.html');
   panelIframe.id = 'kotodama-panel';
 
   Object.assign(panelIframe.style, {
     position: 'fixed',
     top: '72px',
     right: '24px',
-    width: 'min(420px, calc(100vw - 48px))',
-    height: 'min(720px, calc(100vh - 120px))',
-    minHeight: '480px',
+    width: 'min(520px, calc(100vw - 48px))',
+    height: 'min(800px, calc(100vh - 96px))',
+    minHeight: '600px',
     border: 'none',
     borderRadius: '20px',
     zIndex: '999999',
     boxShadow: '0 30px 80px rgba(15, 23, 42, 0.35)',
-    background: 'white',
+    background: 'transparent',
     overflow: 'hidden',
     transform: 'translateY(24px)',
     opacity: '0',

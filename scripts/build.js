@@ -12,6 +12,7 @@ const filesToCopy = [
   { from: 'public/icons/icon32.png', to: 'dist/icons/icon32.png' },
   { from: 'public/icons/icon48.png', to: 'dist/icons/icon48.png' },
   { from: 'public/icons/icon128.png', to: 'dist/icons/icon128.png' },
+  { from: 'public/icons/kotodama-button.svg', to: 'dist/icons/kotodama-button.svg' },
 ];
 
 console.log('Copying static files to dist...');

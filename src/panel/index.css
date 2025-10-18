@@ -23,7 +23,6 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: clamp(24px, 5vw, 48px);
 }
 
 #root {

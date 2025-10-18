@@ -40,7 +40,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/panel/index.html", "panel.js", "index.js", "index.css"],
+      "resources": [
+        "src/panel/index.html",
+        "panel.js",
+        "index.js",
+        "index.css",
+        "icons/kotodama-button.svg"
+      ],
       "matches": ["https://twitter.com/*", "https://x.com/*"]
     }
   ]

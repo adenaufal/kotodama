@@ -144,9 +144,9 @@ const Panel: React.FC = () => {
     (!!generatedContent && !Array.isArray(generatedContent));
 
   return (
-    <div className="page-shell bg-slate-950/5 text-slate-900">
-      <div className="flex w-full flex-col">
-        <div className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-500 via-indigo-500 to-fuchsia-500 px-6 pb-14 pt-8 text-white shadow-lg">
+    <div className="w-full min-h-screen bg-slate-950/5 text-slate-900">
+      <div className="flex w-full flex-col h-full">
+        <div className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-sky-500 via-indigo-500 to-fuchsia-500 px-6 pb-14 pt-4 text-white shadow-lg">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_55%)]" />
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="stack-sm">
@@ -177,7 +177,7 @@ const Panel: React.FC = () => {
           )}
         </div>
 
-        <div className="-mt-10 flex-1 overflow-y-auto px-6 pb-8">
+        <div className="-mt-10 flex-1 overflow-y-auto px-6 pb-0">
           <div className="stack rounded-3xl border border-white/70 bg-white/95 p-6 shadow-2xl shadow-slate-900/10 backdrop-blur-sm">
             <div className="stack">
               <div className="stack-sm">

@@ -2,21 +2,20 @@ import { GenerateRequest, GenerateResponse, BrandVoice, UserProfile } from '../t
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Model Selection Strategy for Maximum Free Token Usage
-// 1M token group - Use for standard quality
-const DEFAULT_MODEL = 'gpt-5-2025-08-07'; // Latest GPT-5 for best quality
-const QUALITY_MODEL = 'gpt-4o-2024-11-20'; // Latest GPT-4o as quality-focused option
+// Model Selection Strategy - Using actual available OpenAI models
+// Standard quality models (support temperature)
+const DEFAULT_MODEL = 'gpt-4o-2024-11-20'; // Latest GPT-4o for best quality
+const QUALITY_MODEL = 'gpt-4o-2024-08-06'; // Alternative GPT-4o
 
-// 10M token group - Use for fast/cheap operations
-const FAST_MODEL = 'gpt-5-mini-2025-08-07'; // Latest mini for speed
-const ULTRA_FAST_MODEL = 'gpt-5-nano-2025-08-07'; // Nano for maximum speed
+// Fast/cheap operations (support temperature)
+const FAST_MODEL = 'gpt-4o-mini'; // Latest mini for speed
 const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18'; // Stable fallback
 
-// Reasoning models (1M group)
+// Reasoning models (do NOT support temperature, top_p, logprobs)
 const REASONING_MODEL = 'o1-2024-12-17'; // Latest o1 for complex reasoning
 
-// Coding models (10M group)
-const CODING_MODEL = 'codex-mini-latest'; // For code generation tasks
+// Note: GPT-5 models don't exist yet as of January 2025
+// o1-mini is available as an alternative reasoning model if needed
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -24,9 +23,64 @@ interface OpenAIMessage {
 }
 
 const FIXED_TEMPERATURE_MODEL_PREFIXES = ['o1']; // Reasoning models require the default temperature (see https://platform.openai.com/docs/guides/reasoning#parameters)
+const modelsRequiringDefaultTemperature = new Set<string>();
 
 function canAdjustTemperature(modelName: string): boolean {
+  if (modelsRequiringDefaultTemperature.has(modelName)) {
+    return false;
+  }
+
   return !FIXED_TEMPERATURE_MODEL_PREFIXES.some((prefix) => modelName.startsWith(prefix));
+}
+
+function isTemperatureUnsupportedError(message?: string): boolean {
+  if (!message) {
+    return false;
+  }
+
+  const normalized = message.toLowerCase();
+  const mentionsTemperature = normalized.includes('temperature');
+  const indicatesDefaultOnly =
+    normalized.includes('default value') ||
+    normalized.includes('default (1) value') ||
+    normalized.includes('value must be 1') ||
+    normalized.includes('set to 1') ||
+    normalized.includes('only 1 value') ||
+    normalized.includes('only one value') ||
+    normalized.includes('fixed at 1');
+  const indicatesUnsupported =
+    normalized.includes('not support') ||
+    normalized.includes('not allowed') ||
+    normalized.includes('must be the default') ||
+    normalized.includes('cannot be changed') ||
+    normalized.includes('please remove') ||
+    normalized.includes('remove the temperature') ||
+    normalized.includes('unsupported parameter');
+
+  return (
+    (mentionsTemperature && indicatesDefaultOnly) ||
+    (mentionsTemperature && indicatesUnsupported) ||
+    normalized.includes('"temperature" does not support') ||
+    normalized.includes('temperature is fixed') ||
+    normalized.includes("temperature' is fixed") ||
+    normalized.includes('temperature must be the default') ||
+    normalized.includes('temperature parameter is not supported') ||
+    normalized.includes('temperature parameter is not allowed') ||
+    normalized.includes('temperature cannot be changed')
+  );
+}
+
+async function extractOpenAIErrorMessage(response: Response): Promise<{ message?: string; raw: string }> {
+  const raw = await response.text();
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      message: parsed?.error?.message ?? parsed?.message ?? raw,
+      raw,
+    };
+  } catch {
+    return { message: raw, raw };
+  }
 }
 
 function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile): string {
@@ -98,11 +152,11 @@ export async function generateWithOpenAI(
   if (request.fastMode === true) {
     model = FAST_MODEL;
   } else if (request.fastMode === 'ultra') {
-    model = ULTRA_FAST_MODEL;
+    model = FAST_MODEL; // Use same fast model for ultra mode
   } else if (request.reasoning === true) {
     model = REASONING_MODEL;
   } else if (request.coding === true) {
-    model = CODING_MODEL;
+    model = DEFAULT_MODEL; // Use default model for coding (GPT-4o is good at code)
   }
 
   const messages: OpenAIMessage[] = [
@@ -116,14 +170,15 @@ export async function generateWithOpenAI(
     },
   ];
 
-  async function requestWithModel(modelName: string): Promise<GenerateResponse> {
+  async function requestWithModel(modelName: string, allowCustomTemperature = true): Promise<GenerateResponse> {
+    const includeTemperature = allowCustomTemperature && canAdjustTemperature(modelName);
     const requestBody: Record<string, unknown> = {
       model: modelName,
       messages,
       max_completion_tokens: isThread ? 1500 : 300,
     };
 
-    if (canAdjustTemperature(modelName)) {
+    if (includeTemperature) {
       requestBody.temperature = 0.7;
     }
 
@@ -137,8 +192,14 @@ export async function generateWithOpenAI(
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'OpenAI API request failed');
+      const { message } = await extractOpenAIErrorMessage(response);
+
+      if (includeTemperature && isTemperatureUnsupportedError(message)) {
+        modelsRequiringDefaultTemperature.add(modelName);
+        return requestWithModel(modelName, false);
+      }
+
+      throw new Error(message || 'OpenAI API request failed');
     }
 
     const data = await response.json();
@@ -194,36 +255,55 @@ export async function analyzeTwitterProfile(
   tweets: string[],
   apiKey: string
 ): Promise<{ avgLength: number; commonPhrases: string[]; tone: any }> {
-  const messages: OpenAIMessage[] = [
-    {
-      role: 'system',
-      content: 'You are analyzing Twitter profiles. Analyze the writing style, tone, and patterns from the provided tweets. Return a JSON object with avgLength (number), commonPhrases (array of strings), and tone (object with formality, humor, technicality scores 0-100).',
-    },
-    {
-      role: 'user',
-      content: `Analyze these tweets:\n\n${tweets.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
-    },
-  ];
-
   try {
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+    const messages: OpenAIMessage[] = [
+      {
+        role: 'system',
+        content: 'You are analyzing Twitter profiles. Analyze the writing style, tone, and patterns from the provided tweets. Return a JSON object with avgLength (number), commonPhrases (array of strings), and tone (object with formality, humor, technicality scores 0-100).',
       },
-      body: JSON.stringify({
+      {
+        role: 'user',
+        content: `Analyze these tweets:\n\n${tweets.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
+      },
+    ];
+
+    async function requestAnalysis(allowCustomTemperature = true): Promise<Response> {
+      const includeTemperature = allowCustomTemperature && canAdjustTemperature(FAST_MODEL);
+      const body: Record<string, unknown> = {
         model: FAST_MODEL, // Use faster, cheaper model for analysis
         messages,
         max_completion_tokens: 500,
-        ...(canAdjustTemperature(FAST_MODEL) ? { temperature: 0.3 } : {}),
         response_format: { type: 'json_object' },
-      }),
-    });
+      };
 
-    if (!response.ok) {
-      throw new Error('Profile analysis failed');
+      if (includeTemperature) {
+        body.temperature = 0.3;
+      }
+
+      const response = await fetch(OPENAI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const { message } = await extractOpenAIErrorMessage(response);
+
+        if (includeTemperature && isTemperatureUnsupportedError(message)) {
+          modelsRequiringDefaultTemperature.add(FAST_MODEL);
+          return requestAnalysis(false);
+        }
+
+        throw new Error(message || 'Profile analysis failed');
+      }
+
+      return response;
     }
+
+    const response = await requestAnalysis();
 
     const data = await response.json();
     return JSON.parse(data.choices[0].message.content);

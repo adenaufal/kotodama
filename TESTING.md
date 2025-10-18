@@ -1224,29 +1224,57 @@ Use this checklist for systematic testing before each release:
 
 ### Performance
 - [ ] Button injection latency < 500ms
+  - **How to test:** Open DevTools Console, refresh Twitter, look for timestamp logs or add: `console.time('button-inject')` at start of `injectAIButton()` and `console.timeEnd('button-inject')` at end
 - [ ] Panel opens within 300ms
+  - **How to test:** Click button and visually observe - should feel instant. Or add timing logs in content script `openPanel()` function
 - [ ] Generation completes within 10 seconds (typical)
+  - **How to test:** Time from clicking "Generate with AI" to seeing results. Should be 2-5 seconds for normal requests
 - [ ] No memory leaks (test with 50+ generations)
+  - **How to test:** Open DevTools → Performance tab → Memory → Take heap snapshot, generate 50 tweets, take another snapshot, compare memory growth (should be minimal)
 - [ ] Extension doesn't slow down Twitter page
+  - **How to test:** Use Twitter normally (scroll, click, interact) - should feel the same with/without extension loaded
 
 ### Security & Privacy
 - [ ] API keys encrypted in storage (inspect chrome.storage.local)
+  - **How to test:** Open DevTools Console (any page), run:
+    ```javascript
+    chrome.storage.local.get(['settings'], (result) => {
+      console.log('Settings:', result);
+      // Look for 'apiKey' - should be encrypted blob, not plain 'sk-...'
+    });
+    ```
 - [ ] No API keys in console logs
+  - **How to test:** Open Console on Twitter, generate tweets, search console for "sk-" - should find nothing
 - [ ] No telemetry or tracking
+  - **How to test:** DevTools → Network tab → Generate tweet → Verify only requests to api.openai.com (or configured AI provider)
 - [ ] No external requests except to AI APIs
+  - **How to test:** Network tab filtering - should only see requests to AI APIs (OpenAI/Gemini/Claude)
 - [ ] Extension isolated from Twitter's context
+  - **How to test:** Check manifest.json has minimal permissions, content script doesn't modify Twitter's global objects
 
 ### Cross-Browser Testing
 - [ ] Chrome (latest version)
+  - **How to test:** Check version at `chrome://version/`, should work on Chrome 120+
 - [ ] Chrome (one version behind)
+  - **How to test:** Optional - install Chrome Beta/Dev channel or use older version
 - [ ] Edge (latest version)
+  - **How to test:** Load extension at `edge://extensions/`, test same as Chrome
 - [ ] Chromium-based browsers (Brave, Vivaldi, Opera)
+  - **How to test:** Load unpacked extension in each browser's extension page (same as Chrome)
 
 ### Multi-Language Testing
 - [ ] Works on Twitter with non-English UI
+  - **How to test:** Change Twitter language in Settings → Display → Language → Save
+  - **Expected:** Extension button still appears, panel still works (UI may be English-only for now)
 - [ ] Generates content in requested language
+  - **How to test:** In prompt field, write: "Generate a tweet in [Spanish/French/Japanese] about coding"
+  - **Expected:** AI should respond in requested language
+  - **Note:** Quality depends on AI model's multilingual capabilities
 - [ ] Emoji handling correct
+  - **How to test:** Generate tweets with emoji, insert to Twitter, verify they appear correctly
 - [ ] Right-to-left text (Arabic, Hebrew)
+  - **How to test:** Prompt: "Generate a tweet in Arabic about technology"
+  - **Expected:** Text direction should be RTL when inserted into Twitter
 
 ---
 
