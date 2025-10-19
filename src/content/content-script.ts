@@ -363,10 +363,10 @@ function openPanel() {
 
   Object.assign(panelIframe.style, {
     position: 'fixed',
-    top: '72px',
-    right: '24px',
-    width: 'min(520px, calc(100vw - 48px))',
-    height: 'min(800px, calc(100vh - 96px))',
+    top: '80px',
+    right: '40px',
+    width: 'min(520px, calc(100vw - 80px))',
+    height: 'min(800px, calc(100vh - 120px))',
     minHeight: '600px',
     border: 'none',
     borderRadius: '20px',
