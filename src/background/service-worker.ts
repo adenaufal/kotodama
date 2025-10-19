@@ -104,7 +104,8 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
       request,
       settings.apiKeys.openai,
       brandVoice,
-      targetProfile
+      targetProfile,
+      settings.defaultModel
     );
 
     // Save generated tweet to history

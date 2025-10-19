@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BrandVoice, UserSettings } from '../types';
 import BrandVoiceManager from './BrandVoiceManager';
+import { OPENAI_MODELS, getModelById } from '../constants/models';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -11,6 +12,8 @@ const Settings: React.FC = () => {
   const [initialOpenaiKey, setInitialOpenaiKey] = useState('');
   const [defaultBrandVoiceId, setDefaultBrandVoiceId] = useState('');
   const [initialBrandVoiceId, setInitialBrandVoiceId] = useState('');
+  const [defaultModel, setDefaultModel] = useState('');
+  const [initialDefaultModel, setInitialDefaultModel] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -27,12 +30,15 @@ const Settings: React.FC = () => {
           const loadedSettings = settingsResponse.data as UserSettings;
           const existingOpenAiKey = loadedSettings.apiKeys.openai ?? '';
           const existingVoiceId = loadedSettings.defaultBrandVoiceId ?? '';
+          const existingModel = loadedSettings.defaultModel ?? '';
 
           setSettings(loadedSettings);
           setOpenaiKey(existingOpenAiKey);
           setInitialOpenaiKey(existingOpenAiKey);
           setDefaultBrandVoiceId(existingVoiceId);
           setInitialBrandVoiceId(existingVoiceId);
+          setDefaultModel(existingModel);
+          setInitialDefaultModel(existingModel);
         } else {
           throw new Error(settingsResponse.error || 'Unable to load settings');
         }
@@ -84,6 +90,7 @@ const Settings: React.FC = () => {
           openai: trimmedKey ? trimmedKey : undefined,
         },
         defaultBrandVoiceId: defaultBrandVoiceId || undefined,
+        defaultModel: defaultModel || undefined,
       };
 
       await chrome.runtime.sendMessage({
@@ -94,6 +101,7 @@ const Settings: React.FC = () => {
       setSettings(updatedSettings);
       setInitialOpenaiKey(trimmedKey);
       setInitialBrandVoiceId(defaultBrandVoiceId);
+      setInitialDefaultModel(defaultModel);
       setSaveState('saved');
     } catch (saveError) {
       console.error('Failed to save settings', saveError);
@@ -134,8 +142,8 @@ const Settings: React.FC = () => {
 
   const hasChanges = useMemo(() => {
     const trimmedKey = openaiKey.trim();
-    return trimmedKey !== initialOpenaiKey || defaultBrandVoiceId !== initialBrandVoiceId;
-  }, [defaultBrandVoiceId, initialBrandVoiceId, initialOpenaiKey, openaiKey]);
+    return trimmedKey !== initialOpenaiKey || defaultBrandVoiceId !== initialBrandVoiceId || defaultModel !== initialDefaultModel;
+  }, [defaultBrandVoiceId, initialBrandVoiceId, initialOpenaiKey, openaiKey, defaultModel, initialDefaultModel]);
 
   if (isLoading) {
     return (
@@ -273,6 +281,40 @@ const Settings: React.FC = () => {
                 </select>
               </section>
             )}
+
+            <section className="stack-sm">
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--koto-text-primary)' }}>AI Model</h2>
+              <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
+                Choose which OpenAI model to use for generation. Different models offer different trade-offs between quality, speed, and cost.
+              </p>
+              <select
+                value={defaultModel}
+                onChange={(event) => setDefaultModel(event.target.value)}
+                className="w-full rounded-xl border px-4 py-3 text-base shadow-sm focus:outline-none"
+                style={{
+                  borderColor: 'var(--koto-border)',
+                  backgroundColor: 'var(--koto-bg-dark)',
+                  color: 'var(--koto-text-primary)'
+                }}
+              >
+                <option value="">Auto (Best Available)</option>
+                {OPENAI_MODELS.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} - {model.description}
+                  </option>
+                ))}
+              </select>
+              {defaultModel && getModelById(defaultModel) && (
+                <div className="rounded-xl px-4 py-3 text-xs" style={{
+                  backgroundColor: 'rgba(26, 29, 46, 0.5)',
+                  color: 'var(--koto-text-secondary)'
+                }}>
+                  <strong>Selected:</strong> {getModelById(defaultModel)?.name}
+                  {' • '}
+                  <strong>Category:</strong> {getModelById(defaultModel)?.category}
+                </div>
+              )}
+            </section>
 
             {error && (
               <div className="rounded-2xl border px-4 py-3 text-sm koto-animate-fadeIn" style={{

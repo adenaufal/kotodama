@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GenerateRequest, BrandVoice, UserSettings } from '../types';
+import { getModelById } from '../constants/models';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -183,12 +184,26 @@ Write a reply that:
             <div className="stack-sm">
               <p className="text-xs font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-text-secondary)' }}>Kotodama</p>
               <h1 className="text-2xl font-semibold leading-tight" style={{ color: 'var(--koto-text-primary)' }}>AI Tweet Composer</h1>
-              {settings?.defaultProvider && (
-                <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                  Default provider:{' '}
-                  <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>{settings.defaultProvider}</span>
-                </p>
-              )}
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
+                {settings?.defaultProvider && (
+                  <span>
+                    Provider:{' '}
+                    <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>{settings.defaultProvider}</span>
+                  </span>
+                )}
+                {settings?.defaultModel && getModelById(settings.defaultModel) && (
+                  <span>
+                    Model:{' '}
+                    <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>{getModelById(settings.defaultModel)?.name}</span>
+                  </span>
+                )}
+                {!settings?.defaultModel && (
+                  <span>
+                    Model:{' '}
+                    <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>Auto</span>
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
               <button

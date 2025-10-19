@@ -143,12 +143,15 @@ export async function generateWithOpenAI(
   request: GenerateRequest,
   apiKey: string,
   brandVoice: BrandVoice,
-  targetProfile?: UserProfile
+  targetProfile?: UserProfile,
+  preferredModel?: string
 ): Promise<GenerateResponse> {
   const isThread = request.isThread || false;
 
   // Select model based on request parameters
-  let model = DEFAULT_MODEL;
+  let model = preferredModel || DEFAULT_MODEL;
+
+  // Override with mode-specific models if modes are set
   if (request.fastMode === true) {
     model = FAST_MODEL;
   } else if (request.fastMode === 'ultra') {
