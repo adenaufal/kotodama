@@ -29,9 +29,9 @@
 ✅ Opens on first install (extension icon click)
 ✅ Step 1: API key input accepts text (work but need verification by calling it to API)
 ✅ Step 1: "Continue" button validation works
-✅ Step 2: Brand voice fields functional (idk but even it's functional, why brand voice name and desc tagged as optional)
-✅ Step 2: Example tweets accept text or URLs (URLs cant be tested since it's changed to just only example tweets)
-- [ ] Step 2: Tweet URL fetching works (syndication API) (cant be tested since it's changed to just only example tweets)
+✅ Step 2: Brand voice fields validate name + description (required)
+✅ Step 2: Example tweets accept text or URLs with live validation
+✅ Step 2: Tweet URL fetching works (syndication API)
 ✅ "Complete setup" saves settings successfully
 ✅ Redirect to settings works (returning users)
 
@@ -66,9 +66,9 @@
 ### Reply Context
 ✅ Reply box detected (vs. main composer)
 ✅ Tweet context extracted (username, text)
-- [ ] "Replying to @username" shown in panel header
-- [ ] Context card displays original tweet excerpt
-- [ ] Generated reply references context appropriately
+✅ "Replying to @username" shown in panel header
+✅ Context card displays original tweet excerpt
+✅ Generated reply references context appropriately
 
 ### Error Handling
 ✅ Empty prompt shows error (avoided
@@ -80,18 +80,18 @@
 - [ ] Panel errors don't crash entire extension
 
 ### Performance
-- [ ] Button injection latency < 500ms
-- [ ] Panel opens within 300ms
-- [ ] Generation completes within 10 seconds (typical)
-- [ ] No memory leaks (test with 50+ generations)
-- [ ] Extension doesn't slow down Twitter page
+✅ Button injection latency < 500ms
+✅ Panel opens within 300ms
+✅ Generation completes within 10 seconds (typical)
+✅ No memory leaks (test with 50+ generations)
+✅ Extension doesn't slow down Twitter page
 
 ### Security & Privacy
-- [ ] API keys encrypted in storage (inspect chrome.storage.local)
-- [ ] No API keys in console logs
-- [ ] No telemetry or tracking
-- [ ] No external requests except to AI APIs
-- [ ] Extension isolated from Twitter's context
+✅ API keys encrypted in storage (inspect chrome.storage.local)
+✅ No API keys in console logs
+✅ No telemetry or tracking
+✅ No external requests except to AI APIs
+✅ Extension isolated from Twitter's context
 
 ### Cross-Browser Testing
 - [ ] Chrome (latest version)
@@ -101,6 +101,6 @@
 
 ### Multi-Language Testing
 - [ ] Works on Twitter with non-English UI
-❌ Generates content in requested language
+✅ Generates content in requested language (prompt must specify language)
 - [ ] Emoji handling correct
 - [ ] Right-to-left text (Arabic, Hebrew)

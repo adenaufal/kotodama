@@ -10,6 +10,101 @@ interface ContextData {
   };
 }
 
+interface ReplyTemplate {
+  id: string;
+  label: string;
+  icon: string;
+  prompt: string;
+  category: 'supportive' | 'thoughtful' | 'engaging' | 'professional' | 'casual' | 'appreciative';
+}
+
+const REPLY_TEMPLATES: ReplyTemplate[] = [
+  {
+    id: 'supportive-encourage',
+    label: 'Encouraging',
+    icon: '💪',
+    prompt: 'Write an encouraging and supportive reply that shows empathy and offers positive reinforcement.',
+    category: 'supportive',
+  },
+  {
+    id: 'supportive-empathy',
+    label: 'Empathetic',
+    icon: '🤝',
+    prompt: 'Write an empathetic reply that acknowledges their feelings and shows understanding.',
+    category: 'supportive',
+  },
+  {
+    id: 'thoughtful-insight',
+    label: 'Add Insight',
+    icon: '💡',
+    prompt: 'Share a thoughtful insight or perspective that adds value to their point.',
+    category: 'thoughtful',
+  },
+  {
+    id: 'thoughtful-analysis',
+    label: 'Analytical',
+    icon: '🔍',
+    prompt: 'Provide a deeper analysis or breakdown of the topic they mentioned.',
+    category: 'thoughtful',
+  },
+  {
+    id: 'engaging-question',
+    label: 'Ask Question',
+    icon: '❓',
+    prompt: 'Ask an engaging follow-up question that deepens the conversation.',
+    category: 'engaging',
+  },
+  {
+    id: 'engaging-share',
+    label: 'Share Experience',
+    icon: '📖',
+    prompt: 'Share a relevant personal experience or story that relates to their tweet.',
+    category: 'engaging',
+  },
+  {
+    id: 'professional-network',
+    label: 'Network',
+    icon: '🤝',
+    prompt: 'Write a professional networking-focused reply that opens doors for collaboration.',
+    category: 'professional',
+  },
+  {
+    id: 'professional-expertise',
+    label: 'Share Expertise',
+    icon: '🎯',
+    prompt: 'Offer professional expertise or industry insights related to their topic.',
+    category: 'professional',
+  },
+  {
+    id: 'casual-friendly',
+    label: 'Friendly Chat',
+    icon: '😊',
+    prompt: 'Write a casual, friendly reply like chatting with a friend.',
+    category: 'casual',
+  },
+  {
+    id: 'casual-humor',
+    label: 'Light Humor',
+    icon: '😄',
+    prompt: 'Add light humor or a playful take on their tweet.',
+    category: 'casual',
+  },
+  {
+    id: 'appreciative-thanks',
+    label: 'Say Thanks',
+    icon: '🙏',
+    prompt: 'Express genuine gratitude and appreciation for their post.',
+    category: 'appreciative',
+  },
+  {
+    id: 'appreciative-agree',
+    label: 'Show Agreement',
+    icon: '✅',
+    prompt: 'Show agreement and amplify their message with added context.',
+    category: 'appreciative',
+  },
+];
+
 const Panel: React.FC = () => {
   const [context, setContext] = useState<ContextData>({ type: null });
   const [prompt, setPrompt] = useState('');
@@ -21,6 +116,7 @@ const Panel: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     loadInitialData();
@@ -52,6 +148,10 @@ const Panel: React.FC = () => {
       if (settingsResponse.success) {
         setSettings(settingsResponse.data);
         setSelectedVoiceId(settingsResponse.data.defaultBrandVoiceId || '');
+        // Load theme preference from settings
+        if (settingsResponse.data.ui?.theme) {
+          setTheme(settingsResponse.data.ui.theme === 'auto' ? 'dark' : settingsResponse.data.ui.theme);
+        }
       }
 
       const voicesResponse = await chrome.runtime.sendMessage({ type: 'list-brand-voices' });
@@ -167,19 +267,50 @@ Write a reply that:
     chrome.runtime.sendMessage({ type: 'open-settings' });
   };
 
+  const handleToggleTheme = async () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+
+    // Save theme preference to settings
+    if (settings) {
+      const updatedSettings: UserSettings = {
+        ...settings,
+        ui: {
+          ...settings.ui,
+          theme: newTheme as 'light' | 'dark',
+        },
+      };
+
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'save-settings',
+          payload: updatedSettings,
+        });
+        setSettings(updatedSettings);
+      } catch (err) {
+        console.error('Failed to save theme preference:', err);
+      }
+    }
+  };
+
+  const handleTemplateClick = (template: ReplyTemplate) => {
+    setPrompt(template.prompt);
+  };
+
   const hasGeneratedContent =
     (Array.isArray(generatedContent) && generatedContent.length > 0) ||
     (!!generatedContent && !Array.isArray(generatedContent));
 
   return (
     <>
-      <div className="w-full min-h-screen text-slate-900" style={{ backgroundColor: 'var(--koto-bg-dark)' }}>
+      <div className={`w-full min-h-screen text-slate-900 ${theme === 'light' ? 'light-mode' : ''}`} style={{ backgroundColor: 'var(--koto-bg-dark)' }}>
         <div className="flex w-full flex-col h-full">
-        <div className="relative overflow-hidden rounded-b-3xl px-6 pb-14 pt-4 text-white shadow-lg" style={{
+        <div className="relative overflow-hidden rounded-b-3xl px-8 pb-14 pt-6 shadow-lg" style={{
           backgroundColor: 'var(--koto-deep-indigo)',
-          boxShadow: 'var(--koto-shadow-md)'
+          boxShadow: 'var(--koto-shadow-md)',
+          color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
         }}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]" />
+          <div className={`absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]' : ''}`} />
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="stack-sm">
               <p className="text-xs font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-text-secondary)' }}>Kotodama</p>
@@ -207,8 +338,32 @@ Write a reply that:
             </div>
             <div className="flex gap-2">
               <button
+                onClick={handleToggleTheme}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition koto-button-hover"
+                style={{
+                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                  color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
+                }}
+                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              >
+                {theme === 'light' ? (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+              <button
                 onClick={handleOpenSettings}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 koto-button-hover"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition koto-button-hover"
+                style={{
+                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                  color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
+                }}
                 aria-label="Open settings"
                 title="Open settings"
               >
@@ -219,7 +374,11 @@ Write a reply that:
               </button>
               <button
                 onClick={handleClose}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25 koto-button-hover"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
+                style={{
+                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                  color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
+                }}
                 aria-label="Close panel"
               >
                 &times;
@@ -228,19 +387,94 @@ Write a reply that:
           </div>
 
           {context.type === 'reply' && context.tweetContext && (
-            <div className="relative z-10 mt-6 rounded-2xl border p-4 backdrop-blur koto-animate-fadeIn" style={{
-              borderColor: 'var(--koto-border)',
-              backgroundColor: 'rgba(54, 59, 82, 0.5)'
-            }}>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>Replying to</p>
-              <p className="mt-1 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>@{context.tweetContext.username}</p>
-              <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--koto-text-secondary)' }}>{context.tweetContext.text}</p>
-            </div>
+            <>
+              <div className="relative z-10 mt-6 rounded-2xl border p-4 backdrop-blur koto-animate-fadeIn" style={{
+                borderColor: 'var(--koto-border)',
+                backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.8)' : 'rgba(54, 59, 82, 0.5)'
+              }}>
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>Replying to</p>
+                <p className="mt-1 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>@{context.tweetContext.username}</p>
+                <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--koto-text-secondary)' }}>{context.tweetContext.text}</p>
+              </div>
+
+              <div className="relative z-10 mt-4 koto-animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap" style={{ color: 'var(--koto-text-secondary)' }}>
+                    Quick reply:
+                  </label>
+                  <div className="relative flex-1">
+                    <select
+                      onChange={(e) => {
+                        const template = REPLY_TEMPLATES.find(t => t.id === e.target.value);
+                        if (template) {
+                          handleTemplateClick(template);
+                          e.target.value = ''; // Reset dropdown after selection
+                        }
+                      }}
+                      className="w-full appearance-none rounded-xl border px-3 py-2 pr-8 text-xs font-medium shadow-sm outline-none transition"
+                      style={{
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'var(--koto-bg-dark)',
+                        color: 'var(--koto-text-primary)'
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="">Choose a template...</option>
+                      <optgroup label="Supportive">
+                        {REPLY_TEMPLATES.filter(t => t.category === 'supportive').map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.icon} {template.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Thoughtful">
+                        {REPLY_TEMPLATES.filter(t => t.category === 'thoughtful').map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.icon} {template.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Engaging">
+                        {REPLY_TEMPLATES.filter(t => t.category === 'engaging').map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.icon} {template.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Professional">
+                        {REPLY_TEMPLATES.filter(t => t.category === 'professional').map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.icon} {template.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Casual">
+                        {REPLY_TEMPLATES.filter(t => t.category === 'casual').map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.icon} {template.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Appreciative">
+                        {REPLY_TEMPLATES.filter(t => t.category === 'appreciative').map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.icon} {template.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center" style={{ color: 'var(--koto-text-secondary)' }}>
+                      ▾
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
-        <div className="-mt-10 flex-1 overflow-y-auto px-6 pb-0">
-          <div className="stack rounded-3xl border p-6 shadow-2xl backdrop-blur-sm" style={{
+        <div className="-mt-10 flex-1 overflow-y-auto px-8 pb-6">
+          <div className="stack rounded-3xl border p-8 shadow-2xl backdrop-blur-sm" style={{
             borderColor: 'var(--koto-border)',
             backgroundColor: 'var(--koto-surface)',
             boxShadow: 'var(--koto-shadow-lg)'

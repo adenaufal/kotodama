@@ -28,30 +28,30 @@ npm run type-check
 
 2. **Background Service Worker** ([src/background/service-worker.ts](src/background/service-worker.ts))
    - Processes messages from content script and panel
-   - Makes API calls to OpenAI
+   - Makes API calls to OpenAI (Gemini/Claude clients exist but are not yet wired in)
    - Manages data storage (IndexedDB)
    - Handles encryption/decryption
 
 3. **Panel UI** ([src/panel/](src/panel/))
    - React-based side panel
-   - Tweet composition interface
-   - Shows generated content
-   - Allows editing before insertion
+   - Tweet and thread composition interface with reply templates
+   - Shows generated content and context cards
+   - Includes theme toggle, quick actions, and insertion controls
 
 4. **Onboarding** ([src/onboarding/](src/onboarding/))
    - First-time setup wizard
-   - API key configuration
-   - Brand voice creation
+   - API key configuration (encrypted locally)
+   - Brand voice creation with markdown import and tweet URL helpers
 
 ### Data Layer
 
 #### IndexedDB (via Dexie)
 - **brandVoices**: User-defined writing styles
 - **userProfiles**: Analyzed Twitter user profiles
-- **generatedTweets**: History of generated content
+- **generatedTweets**: History of generated content (only persisted when `rememberHistory` is enabled in settings)
 
 #### Chrome Storage
-- **user_settings**: Configuration and encrypted API keys
+- **user_settings**: Encrypted API keys, UI preferences (theme, panel width, button position), feature flags, and default voice/model selections
 
 ### Message Flow
 
@@ -147,13 +147,15 @@ npm run build
 
 ## Adding New Features
 
-### Adding API Provider (e.g., Gemini)
+### Wiring Additional Providers (Gemini / Claude)
 
-1. Create `src/api/gemini.ts`
-2. Implement generation function matching OpenAI pattern
-3. Update `src/background/service-worker.ts` to handle new provider
-4. Add UI toggle in panel
-5. Update types in `src/types/index.ts`
+Gemini (`src/api/gemini.ts`) and Claude (`src/api/claude.ts`) clients already exist. To surface them in the product:
+
+1. Extend `GenerateRequest` usage in the panel to pass the selected `provider`.
+2. Update `src/background/service-worker.ts` to route requests to the appropriate client and manage API keys/cookies.
+3. Persist provider choice in settings (`src/settings/Settings.tsx`) and expose UI controls.
+4. Handle provider-specific options (fast/quality modes) in both UI and request building.
+5. Add storage migrations if additional credentials are needed.
 
 ### Adding New UI Component
 
@@ -196,8 +198,8 @@ npm run build
 
 ## Release Process
 
-1. Update version in `manifest.json` and `package.json`
-2. Run `npm run build`
+1. Merge the automated `release-please` PR — it bumps `package.json`, updates `CHANGELOG.md`, and tags the release.
+2. Run `npm run build` locally (or rely on the CI artifact) to produce `dist/`.
 3. Test thoroughly in clean browser profile
 4. Create release notes
 5. Package `dist` folder as ZIP

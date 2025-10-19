@@ -1,10 +1,10 @@
 # Kotodama Agent Handbook
 
 ## Project Overview
-- **Purpose:** Kotodama is a Chrome/Edge extension that helps users compose tweets and replies that reflect their brand voice while leveraging AI assistance from providers like OpenAI, Gemini, and Claude.
+- **Purpose:** Kotodama is a Chrome/Edge extension that helps users compose tweets and replies that reflect their brand voice while leveraging OpenAI today (Gemini and Claude clients are prepared but not yet wired).
 - **Tech Stack:** React 19, TypeScript 5.9 (strict mode), Vite 7, Tailwind CSS 4, Zustand 5 for state, Dexie.js 4 for IndexedDB persistence, Web Crypto API for encryption, and Node.js 20+ toolchain.
 - **Key Directories:**
-  - `src/api/` – API integrations for AI providers (e.g., `openai.ts`).
+  - `src/api/` – AI provider clients (`openai.ts` active; `gemini.ts`/`claude.ts` prototypes).
   - `src/background/` – Service worker entry (`service-worker.ts`) handling messaging, encryption, and API calls.
   - `src/content/` – Content script that injects UI into Twitter/X and coordinates messaging.
   - `src/panel/` – React UI for the compose panel, including `App.tsx`, `Panel.tsx`, and UI components.

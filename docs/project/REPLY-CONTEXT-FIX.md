@@ -46,7 +46,7 @@ Screenshot shows:
 
 ## Changes Made
 
-### 1. Improved Reply Detection ([src/content/content-script.ts:162-198](src/content/content-script.ts#L162-L198))
+### 1. Improved Reply Detection ([src/content/content-script.ts](src/content/content-script.ts))
 
 **Before:**
 ```typescript
@@ -69,7 +69,7 @@ const replyingToSelectors = [
 // More robust detection logic
 ```
 
-### 2. Removed Text Truncation ([src/panel/Panel.tsx:41-45](src/panel/Panel.tsx#L41-L45))
+### 2. Removed Text Truncation ([src/panel/Panel.tsx](src/panel/Panel.tsx))
 
 **Before:**
 ```typescript
@@ -86,7 +86,7 @@ setPrompt(
 setPrompt('');
 ```
 
-### 3. Full Tweet Display ([src/panel/Panel.tsx:239](src/panel/Panel.tsx#L239))
+### 3. Full Tweet Display ([src/panel/Panel.tsx](src/panel/Panel.tsx))
 
 **Before:**
 ```typescript

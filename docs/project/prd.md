@@ -81,21 +81,21 @@ Twitter/X users, particularly professionals, content creators, and businesses, f
 
 - **Reply Generation**
   - Context-aware replies based on original tweet
-  - Automatic analysis of tweet author's style (20-30 recent tweets)
+  - Context card summarising author handle and excerpt
   - Adaptation to match conversation tone
 
 #### 2. Brand Voice Management
 - **Voice Definition Methods**
-  - Example tweets input (minimum 5-10 examples)
-  - Text description input (100-500 words)
-  - Document upload (.txt, .pdf format)
+  - Example tweets input (minimum 3-5 examples)
+  - Text description input (short paragraph)
+  - Tweet URL ingestion + Markdown import helper
 - **Voice Persistence**
   - Save and manage multiple brand voices
   - Quick switching between voices
 
 #### 3. AI Integration
 - **OpenAI/ChatGPT Support** (Priority 1)
-  - GPT-4o, GPT-4o-mini, and GPT-4-turbo model options
+  - GPT-4o (latest), GPT-4o-mini, and `o1` reasoning options
   - Secure API key storage
   - Token usage tracking
 

@@ -21,16 +21,21 @@ Complete reference for all AI provider integrations in Kotodama.
 
 ```typescript
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const DEFAULT_MODEL = 'gpt-4o';
+const DEFAULT_MODEL = 'gpt-4o-2024-11-20';
 const FAST_MODEL = 'gpt-4o-mini';
+const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18';
+const REASONING_MODEL = 'o1-2024-12-17';
 ```
 
 ### Models
 
-| Model | Use Case | Context | Speed | Cost |
-|-------|----------|---------|-------|------|
-| `gpt-4o` | Default generation | 128K tokens | Medium | High |
-| `gpt-4o-mini` | Fast mode, analysis | 128K tokens | Fast | Low |
+| Model | Use Case | Context | Notes |
+|-------|----------|---------|-------|
+| `gpt-4o-2024-11-20` | Default generation | 128K tokens | Primary path |
+| `gpt-4o-2024-08-06` | Alternate quality | 128K tokens | Selectable as default model |
+| `gpt-4o-mini` | Fast mode | 128K tokens | Used when `fastMode = true` |
+| `gpt-4o-mini-2024-07-18` | Fast fallback | 128K tokens | Auto retry if the latest mini fails |
+| `o1-2024-12-17` | Complex reasoning | 128K tokens | Triggered when `reasoning = true`; temperature omitted |
 
 ### Functions
 
@@ -45,6 +50,11 @@ Generates tweets or threads using OpenAI's GPT models.
 - `targetProfile?: UserProfile` - Optional target user profile
 
 **Returns:** `Promise<GenerateResponse>`
+
+**Behaviour highlights:**
+- Automatically falls back to `gpt-4o-mini-2024-07-18` if the preferred fast model rejects the request.
+- Removes the `temperature` parameter when OpenAI returns a fixed-temperature error (typically for `o1`).
+- Persists generation history to IndexedDB only when `features.rememberHistory` is enabled.
 
 **Example:**
 ```typescript
@@ -90,20 +100,24 @@ console.log(analysis.tone); // Tone attributes
 
 ## Google Gemini Integration
 
+> **Status:** The Gemini client is implemented but not yet wired into the service worker. Use these helpers when adding full multi-provider support.
+
 ### Configuration
 
 ```typescript
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const DEFAULT_MODEL = 'gemini-2.5-pro';
 const FAST_MODEL = 'gemini-2.5-flash';
+const ULTRA_FAST_MODEL = 'gemini-2.5-flash-lite';
 ```
 
 ### Models
 
-| Model | Use Case | Context | Speed | Cost |
-|-------|----------|---------|-------|------|
-| `gemini-2.5-pro` | Complex reasoning, large context | 2M tokens | Medium | Medium |
-| `gemini-2.5-flash` | Speed and efficiency | 1M tokens | Very Fast | Very Low |
+| Model | Use Case | Context | Notes |
+|-------|----------|---------|-------|
+| `gemini-2.5-pro` | Complex reasoning, large context | 2M tokens | Default model |
+| `gemini-2.5-flash` | Speed and efficiency | 1M tokens | Used when `fastMode = true` |
+| `gemini-2.5-flash-lite` | Ultra fast | 1M tokens | Explicit fallback and `fastMode = 'ultra'` |
 
 ### Functions
 
@@ -118,6 +132,10 @@ Generates tweets or threads using Google's Gemini models.
 - `targetProfile?: UserProfile` - Optional target user profile
 
 **Returns:** `Promise<GenerateResponse>`
+
+**Notes:**
+- Automatically falls back to `gemini-2.5-flash-lite` if the preferred model fails.
+- Thread responses are parsed into string arrays by stripping numbering.
 
 **Example:**
 ```typescript
@@ -148,25 +166,33 @@ Analyzes a Twitter profile's writing style using Gemini.
 
 **Returns:** `Promise<{ avgLength: number; commonPhrases: string[]; tone: ToneAttributes }>`
 
-**Note:** Automatically uses `gemini-2.5-flash` for cost efficiency.
+**Note:** Not yet wired into production flows; uses `gemini-2.5-flash` when invoked.
 
 ---
 
 ## Anthropic Claude Integration
 
+> **Status:** The Claude client supports both API-key and cookie-based auth, but is not yet exposed in the shipping UI or service worker.
+
 ### Configuration
 
 ```typescript
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const DEFAULT_MODEL = 'claude-3-5-sonnet-20241022';
+const CLAUDE_WEB_URL = 'https://claude.ai/api/organizations';
+const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
 const CLAUDE_VERSION = '2023-06-01';
 ```
 
 ### Models
 
-| Model | Use Case | Context | Speed | Cost |
-|-------|----------|---------|-------|------|
-| `claude-3-5-sonnet-20241022` | Balanced performance | 200K tokens | Medium | Medium |
+| Model | Use Case | Context | Notes |
+|-------|----------|---------|-------|
+| `claude-sonnet-4-5-20250929` | Default balanced model | 200K tokens | `DEFAULT_MODEL` |
+| `claude-opus-4-20250514` | High quality (`quality = 'opus'`) | 200K tokens | Slower, richer responses |
+| `claude-opus-4-1-20250805` | Maximum quality (`quality = 'opus-max'`) | 200K tokens | Highest-quality path |
+| `claude-3-5-haiku-20241022` | Fast mode (`fastMode = true`) | 200K tokens | Lower latency |
+| `claude-3-haiku-20240307` | Ultra fast (`fastMode = 'ultra'`) | 200K tokens | Fallback option |
+| `claude-haiku-4-5-20251001` | Custom fast (`fastMode = 'haiku-45'`) | 200K tokens | Balanced speed/quality |
 
 ### Functions
 
@@ -181,6 +207,11 @@ Generates tweets or threads using Anthropic's Claude models.
 - `targetProfile?: UserProfile` - Optional target user profile
 
 **Returns:** `Promise<GenerateResponse>`
+
+**Parameters of note:**
+- `authType`: `'api'` (default) uses direct Anthropic API with `apiKey`; `'cookie'` tunnels through claude.ai web endpoints.
+- `cookie`: required when `authType = 'cookie'`.
+- `fastMode`/`quality`: map to the models listed above.
 
 **Example:**
 ```typescript

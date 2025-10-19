@@ -5,9 +5,10 @@ interface BrandVoiceManagerProps {
   voices: BrandVoice[];
   onClose: () => void;
   onRefresh: () => void;
+  theme?: 'light' | 'dark';
 }
 
-const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, onRefresh }) => {
+const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, onRefresh, theme = 'light' }) => {
   const [editingVoice, setEditingVoice] = useState<BrandVoice | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,14 +158,17 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
   const isEditing = editingVoice !== null || isCreating;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'rgba(26, 29, 46, 0.7)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(26, 29, 46, 0.7)' }}>
       <div className="relative mx-4 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn" style={{
         borderColor: 'var(--koto-border)',
         backgroundColor: 'var(--koto-surface)',
         boxShadow: 'var(--koto-shadow-lg)'
       }}>
-        <div className="relative overflow-hidden px-6 py-6 text-white" style={{ backgroundColor: 'var(--koto-deep-indigo)' }}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]" />
+        <div className="relative overflow-hidden px-6 py-6" style={{
+          backgroundColor: 'var(--koto-deep-indigo)',
+          color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
+        }}>
+          <div className={`absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]' : ''}`} />
           <div className="relative z-10 flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
@@ -176,7 +180,11 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
             </div>
             <button
               onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-lg text-white transition hover:bg-white/25 koto-button-hover"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
+              style={{
+                backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
+                color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
+              }}
               aria-label="Close"
             >
               &times;

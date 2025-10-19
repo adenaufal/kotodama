@@ -1,277 +1,111 @@
-# 🚀 Kotodama Quick Reference Card
+# Kotodama Quick Reference Card
 
-One-page reference for all 19 AI models and their usage.
-
----
-
-## 📱 Quick Model Selection
-
-```
-Need best quality? → Claude Opus 4.1
-Need fastest speed? → Gemini Flash Lite
-Need longest context? → Gemini 2.5 Pro (2M)
-Need free unlimited? → Claude (cookie)
-Need best free tier? → OpenAI GPT-5 Mini (10M/day)
-Need code generation? → OpenAI Codex Mini
-Need complex reasoning? → OpenAI o1
-```
+One-page cheatsheet for working on Kotodama v1.3.0. Updated: 2025-10-18.
 
 ---
 
-## 🎯 Model Cheat Sheet
+## Panel Overview
 
-### OpenAI (Provider: 'openai')
-
-| Model | How to Use | Speed | Cost | Best For |
-|-------|-----------|-------|------|----------|
-| **GPT-5** | Default | ⭐⭐⭐ | 💰💰💰 | Quality |
-| **GPT-5 Mini** | `fastMode: true` | ⭐⭐⭐⭐⭐ | 💰 | Fast |
-| **GPT-5 Nano** | `fastMode: 'ultra'` | ⭐⭐⭐⭐⭐ | 💰 | Ultra Fast |
-| **o1** | `reasoning: true` | ⭐⭐ | 💰💰💰💰 | Reasoning |
-| **Codex Mini** | `coding: true` | ⭐⭐⭐⭐⭐ | 💰 | Code |
-
-**Free Tier**: 1M (quality) + 10M (fast) = 11M tokens/day
-
-### Gemini (Provider: 'gemini')
-
-| Model | How to Use | Speed | Cost | Best For |
-|-------|-----------|-------|------|----------|
-| **Gemini 2.5 Pro** | Default | ⭐⭐⭐ | 💰💰 | Long Context (2M) |
-| **Gemini Flash** | `fastMode: true` | ⭐⭐⭐⭐⭐ | 💰 | Fast Value |
-| **Flash Lite** ⭐ | `fastMode: 'ultra'` | ⭐⭐⭐⭐⭐ | 💰 | Cheapest |
-
-**Free Tier**: 1500 requests/day (~3M tokens)
-
-### Claude (Provider: 'claude')
-
-| Model | How to Use | Speed | Cost | Best For |
-|-------|-----------|-------|------|----------|
-| **Sonnet 4.5** | Default | ⭐⭐⭐ | 💰💰💰 | Balanced |
-| **Sonnet 4** | Default (backup) | ⭐⭐⭐ | 💰💰💰 | Balanced |
-| **Opus 4.1** | `quality: 'opus-max'` | ⭐⭐ | 💰💰💰💰💰 | Best Quality |
-| **Opus 4** | `quality: 'opus'` | ⭐⭐ | 💰💰💰💰 | High Quality |
-| **Haiku 4.5** | `fastMode: 'haiku-45'` | ⭐⭐⭐⭐ | 💰 | Fast Balanced |
-| **Haiku 3.5** | `fastMode: true` | ⭐⭐⭐⭐⭐ | 💰 | Fast |
-| **Haiku 3** | `fastMode: 'ultra'` | ⭐⭐⭐⭐⭐ | 💰 | Ultra Fast |
-
-**Free Tier** (Cookie): Unlimited (rate limited)
+- **Sparkle button (✨)** appears on every compose or reply box.
+- **Header controls**
+  - 🌗 Theme toggle (light ↔ dark)
+  - ⚙️ Settings dashboard (brand voices, defaults, rerun onboarding)
+  - ✖ Close panel
+- **Context card** (reply mode) displays the original tweet and author handle.
+- **Reply templates** populate the prompt with pre-written intents (supportive, analytical, humorous, etc.).
+- **Thread toggle** switches between single tweets and numbered threads (2–10 items).
+- **Insert to X** posts the generated text back into Twitter/X.
 
 ---
 
-## 💻 Code Snippets
+## Generation Payload (Service Worker)
 
-### Basic Generation
 ```typescript
-const request: GenerateRequest = {
-  prompt: "Your prompt here",
-  brandVoiceId: "voice-123",
-  provider: 'openai' | 'gemini' | 'claude'
-};
+interface GenerateRequest {
+  prompt: string;
+  brandVoiceId: string;
+  targetProfileId?: string;
+  isThread?: boolean;
+  threadLength?: number;
+  fastMode?: boolean | 'ultra';
+  reasoning?: boolean;
+  coding?: boolean;
+}
 ```
 
-### Fast Mode
-```typescript
-// Fast
-fastMode: true
+- **Mandatory:** `prompt`, `brandVoiceId`.
+- **Threads:** set `isThread = true` and `threadLength` (default 5).
+- **Fast mode:** `fastMode = true` uses `gpt-4o-mini`. `fastMode = 'ultra'` is accepted but currently maps to the same mini model.
+- **Reasoning:** `reasoning = true` routes to `o1-2024-12-17` (temperature is forced to 1).
+- **Coding:** `coding = true` keeps `gpt-4o-2024-11-20` but adjusts prompts to favour structured output.
+- **Target profiles** are stored as IndexedDB records and enrich the system prompt with common phrases and average tweet length.
 
-// Ultra Fast
-fastMode: 'ultra'
-
-// Claude Haiku 4.5
-fastMode: 'haiku-45'
-```
-
-### Quality Mode (Claude)
-```typescript
-// Opus 4
-quality: 'opus'
-
-// Opus 4.1 (best)
-quality: 'opus-max'
-```
-
-### Special Modes (OpenAI)
-```typescript
-// Reasoning
-reasoning: true  // Uses o1
-
-// Code
-coding: true     // Uses Codex
-```
-
-### Claude Cookie Auth
-```typescript
-// API method
-generateWithClaude(request, apiKey, brandVoice, undefined, 'api');
-
-// Cookie method (FREE!)
-generateWithClaude(request, '', brandVoice, undefined, 'cookie', cookieValue);
-```
+> The UI currently sends only `prompt`, `brandVoiceId`, `isThread`, and `threadLength`. Additional flags can be exercised from devtools or future UI iterations.
 
 ---
 
-## 🆓 Free Tier Strategy
+## Model Mapping (OpenAI)
 
-### Daily Schedule
-```
-06:00-12:00  OpenAI GPT-5      (1M tokens)    Quality work
-12:00-18:00  OpenAI GPT-5 Mini (10M tokens)   Bulk operations
-18:00-22:00  Gemini Flash Lite (1500 req)     Fast responses
-22:00-06:00  Claude Cookie     (unlimited)    Overflow work
-```
+| Scenario                           | Model ID                 | Notes                                                |
+|-----------------------------------|--------------------------|------------------------------------------------------|
+| Default quality                   | `gpt-4o-2024-11-20`      | Primary path                                         |
+| Alternate quality (`defaultModel`) | `gpt-4o-2024-08-06`      | Available via settings override                      |
+| Fast mode (`fastMode = true`)     | `gpt-4o-mini`            | Faster + cheaper                                     |
+| Fast fallback                     | `gpt-4o-mini-2024-07-18` | Triggered when mini path fails                       |
+| Reasoning (`reasoning = true`)    | `o1-2024-12-17`          | Temperature forced to 1 by the OpenAI API            |
 
-### Total Free Daily
-- **14M+ tokens** = **20,000+ tweets**
-- **Cost savings**: ~$150-300/day!
+Automatic fallback removes the `temperature` parameter if the API complains about fixed-temperature models.
 
 ---
 
-## 🔑 Getting Started
+## Brand Voice Essentials
 
-### 1. Get API Keys
+- **Stored fields:** name, description, optional guidelines, tone sliders (formality/humor/technicality), example tweets.
+- **Creation paths:**
+  1. Onboarding wizard (tweet URL auto-fetch + Markdown import).
+  2. Settings → Brand Voice Manager (create, edit, delete, add/remove examples).
+- **Defaults:** Onboarding sets a single voice and marks it as the default; settings lets you change or clear the default later.
+- **Storage:** IndexedDB via Dexie (`brandVoices` table). Deletions and edits update timestamps for auditing.
+
+---
+
+## Reply Workflow Cheatsheet
+
+1. Reply compose box triggers context capture through the content script.
+2. Panel shows **Replying to @handle** + original tweet text.
+3. Prompt is blank by default — choose a template to kick-start tone or type your own instructions.
+4. Service worker augments the prompt with context and sends to OpenAI.
+5. Button inserts the response at the cursor; panel remains open so you can tweak and re-insert.
+
+---
+
+## Settings Dashboard Shortcuts
+
+- **API key management:** update OpenAI key; blank values remove it.
+- **Default model:** choose between the available GPT-4o variants (populated from `OPENAI_MODELS`).
+- **Theme toggle:** persists to `settings.ui.theme` (`light`, `dark`, or `auto` → treated as light in UI).
+- **Brand Voice Manager:** modal with create/edit/delete, example tweet add/remove, tone slider adjustments.
+- **Rerun onboarding:** opens `src/onboarding/index.html?skipRedirect=1` for a fresh setup pass.
+
+---
+
+## Handy Dev Commands
+
 ```bash
-OpenAI:  https://platform.openai.com/api-keys
-Gemini:  https://ai.google.dev/gemini-api/docs/api-key
-Claude:  https://console.anthropic.com/
+npm run build        # Production build + static asset copy
+npm run dev          # Watch mode (rebuild on change)
+npm run type-check   # TypeScript noEmit check
+npm run lint         # ESLint over src/
+npm test             # Vitest suite
 ```
 
-### 2. Get Claude Cookie (Optional but FREE!)
-```
-1. Go to https://claude.ai
-2. Sign in
-3. Open DevTools (F12)
-4. Application → Cookies → sessionKey
-5. Copy the value
-```
-
-### 3. Configure Settings
-```typescript
-const settings: UserSettings = {
-  apiKeys: {
-    openai: "sk-...",
-    gemini: "AIza...",
-    claude: "sk-ant-..."
-  },
-  claudeCookie: "sessionKey=...",  // For free access!
-  claudeAuthType: 'cookie',
-  defaultProvider: 'gemini'  // Start with cheapest
-};
-```
+Reload the unpacked extension after each build to exercise the latest bundle.
 
 ---
 
-## 📊 Decision Matrix
+## Troubleshooting at Speed
 
-```
-┌─────────────────────────────────────────────┐
-│         Which Model Should I Use?           │
-└─────────────────────────────────────────────┘
-
-Quality Priority?
-├─ YES → Claude Opus 4.1 (quality: 'opus-max')
-└─ NO  ↓
-
-Speed Priority?
-├─ YES → Gemini Flash Lite (fastMode: 'ultra')
-└─ NO  ↓
-
-Long Context (>100K)?
-├─ YES → Gemini 2.5 Pro (2M context)
-└─ NO  ↓
-
-Code Generation?
-├─ YES → OpenAI Codex (coding: true)
-└─ NO  ↓
-
-Complex Reasoning?
-├─ YES → OpenAI o1 (reasoning: true)
-└─ NO  ↓
-
-Free/Unlimited?
-├─ YES → Claude Cookie (authType: 'cookie')
-└─ NO  ↓
-
-Default → Claude Sonnet 4.5 (balanced)
-```
-
----
-
-## ⚡ Speed Reference
-
-| Model | Simple Tweet | Thread (5) |
-|-------|--------------|------------|
-| Gemini Flash Lite | 0.5s | 1.2s |
-| GPT-5 Nano | 0.7s | 1.5s |
-| Claude Haiku 3 | 0.8s | 1.7s |
-| GPT-5 Mini | 1.0s | 2.2s |
-| Claude Haiku 3.5 | 1.1s | 2.3s |
-| GPT-5 | 2.0s | 4.5s |
-| Claude Sonnet 4.5 | 2.2s | 5.0s |
-| Claude Opus 4.1 | 4.0s | 9.0s |
-| o1 | 5.0s | 12.0s |
-
----
-
-## 💰 Cost Reference (Per 1M Tokens)
-
-| Model | Input | Output | Daily Free |
-|-------|--------|---------|------------|
-| GPT-5 Nano | $0.10 | $0.40 | 10M |
-| GPT-5 Mini | $0.15 | $0.60 | 10M |
-| Gemini Flash Lite | $0.05 | $0.20 | 1500 req |
-| Gemini Flash | $0.075 | $0.30 | 1500 req |
-| Claude Haiku 3 | $0.25 | $1.25 | Unlimited* |
-| Claude Haiku 3.5 | $0.80 | $4.00 | Unlimited* |
-| GPT-5 | $2.50 | $10.00 | 1M |
-| Gemini Pro | $1.25 | $5.00 | 1500 req |
-| Claude Sonnet 4.5 | $3.00 | $15.00 | Unlimited* |
-| Claude Opus 4 | $15.00 | $75.00 | Unlimited* |
-| o1 | $15.00 | $60.00 | 1M |
-
-\* With cookie authentication
-
----
-
-## 🎯 Common Use Cases
-
-```typescript
-// 1. Quick tweet (0.5s, free)
-{ provider: 'gemini', fastMode: 'ultra' }
-
-// 2. Quality thread (4.5s, 1M free)
-{ provider: 'openai', isThread: true, threadLength: 5 }
-
-// 3. Bulk generation (1s each, 10M free)
-{ provider: 'openai', fastMode: true }
-
-// 4. Code snippet (1s, 10M free)
-{ provider: 'openai', coding: true }
-
-// 5. Complex analysis (5s, 1M free)
-{ provider: 'openai', reasoning: true }
-
-// 6. Best quality (4s, free with cookie)
-{ provider: 'claude', quality: 'opus-max', authType: 'cookie' }
-
-// 7. Long document (2s, 1500 free)
-{ provider: 'gemini' } // 2M context
-
-// 8. Unlimited free (2.2s)
-{ provider: 'claude', authType: 'cookie' }
-```
-
----
-
-## 📞 Quick Links
-
-- **Model Details**: [MODEL_REFERENCE.md](MODEL_REFERENCE.md)
-- **API Examples**: [API_REFERENCE.md](API_REFERENCE.md)
-- **Full Update Log**: [UPDATES_FINAL_2025.md](UPDATES_FINAL_2025.md)
-- **Summary**: [SUMMARY.md](SUMMARY.md)
-
----
-
-**Print this page and keep it handy!** 📄
-
-**Last Updated**: October 17, 2025
-**Version**: 1.1.0
+- **Panel fails to open:** check DevTools console for `[Kotodama]` logs; ensure `dist/` HTML files exist.
+- **Reply context missing:** verify selectors in `src/content/content-script.ts` still match Twitter’s markup.
+- **Generation errors:** inspect service worker logs; temperature removal fallback typically resolves OpenAI fixed-temperature errors.
+- **Icons look blurry:** convert SVG placeholders to PNG before shipping to the Chrome Web Store.

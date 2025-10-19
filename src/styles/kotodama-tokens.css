@@ -70,10 +70,20 @@
 
 /* === Light Mode Overrides === */
 .light-mode {
-  --koto-bg-dark: #F8F9FC;
+  --koto-bg-dark: #FFFFFF;
+  --koto-bg-light: #FAFBFD;
   --koto-surface: #FFFFFF;
-  --koto-text-primary: #1A1D2E;
-  --koto-border: #E0E3EB;
+  --koto-text-primary: #0F1419;
+  --koto-text-secondary: #536471;
+  --koto-border: #CFD9DE;
+
+  /* Lighter header background for light mode */
+  --koto-deep-indigo: #EFF3F6;
+
+  /* Adjust shadows for light mode */
+  --koto-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --koto-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --koto-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 /* === Animations === */

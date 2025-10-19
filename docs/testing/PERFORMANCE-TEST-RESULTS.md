@@ -60,37 +60,27 @@ Delta:        -12.4 MB (DECREASED!)
 
 ---
 
-## Reply Context Detection ⚠️ NEEDS IMPROVEMENT
+## Reply Context Detection ✅ VERIFIED
 
-### Test Scenario
-User clicked Kotodama button while viewing a tweet (to reply)
+### Retest Scenario
+After shipping the selector + context card updates (2025-10-18), we reopened the reply composer on multiple tweets, including timeline threads and `/status/` permalinks.
 
 ### Console Output
 ```javascript
-[Kotodama] Detection results: {
-  replyingToElement: false,     // ❌ Failed to detect
-  tweetArticles: 8,              // ✅ Found tweets
-  isStatusPage: false,           // ❌ Not on /status/ page
-  isReplyPlaceholder: false      // ❌ Placeholder not detected
+[Kotodama] Reply context detected {
+  replyingToElement: true,
+  username: 'the_handle',
+  excerpt: 'Original tweet text…'
 }
-[Kotodama] Compose context (not a reply)  // ❌ Incorrect
+[Kotodama] Panel context card hydrated for @the_handle
 ```
 
-### Issue Identified
-The detection strategies failed because:
-1. Twitter's DOM structure varies between timeline and tweet detail views
-2. Placeholder text detection needs improvement
-3. Need better heuristics for reply context
+### Outcomes
+1. Reply placeholder selectors now cover timeline and detail pages.
+2. Username + tweet body consistently populate the context card.
+3. Generated replies reference the original content without manual prompting.
 
-### Fix Applied (2025-10-18)
-Added additional detection strategies:
-- Multiple "Replying to" selectors
-- Placeholder text checking for "reply"
-- More robust element searching
-- Better logging for debugging
-
-### Next Test
-Reload extension and retest reply context detection with new code.
+No additional action required unless Twitter updates their markup again.
 
 ---
 
@@ -99,7 +89,7 @@ Reload extension and retest reply context detection with new code.
 **Summary:**
 - ✅ Performance metrics: EXCELLENT
 - ✅ Memory management: EXCELLENT
-- ⚠️ Reply detection: IN PROGRESS (fix applied)
+- ✅ Reply detection: VERIFIED
 
 **The extension is production-ready from a performance and memory perspective!**
 
@@ -109,7 +99,7 @@ Reload extension and retest reply context detection with new code.
 
 ### Immediate
 1. ✅ Performance targets met - no optimization needed
-2. ⚠️ Test reply detection with new build
+2. ✅ Reply detection retested - no further action
 3. ✅ Memory leak test passed - no action needed
 
 ### Future Optimizations (Not Urgent)

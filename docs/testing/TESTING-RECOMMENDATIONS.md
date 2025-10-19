@@ -98,12 +98,12 @@ Multi-language generation works correctly **when explicitly stated in the prompt
 ```
 
 **Usage:**
-Users must explicitly specify the desired language in their prompt. The AI model (GPT-4/GPT-5) understands and follows language instructions correctly.
+Users must explicitly specify the desired language in their prompt. The OpenAI GPT-4o family understands and follows language instructions correctly.
 
 **No Changes Needed:**
 The current implementation works as intended. Language support depends on:
 1. User explicitly stating language in prompt
-2. AI model's multilingual capabilities (GPT-4/5 support 50+ languages)
+2. AI model's multilingual capabilities (GPT-4o supports 50+ languages)
 
 **Documentation Note:**
 Consider adding a tip in the UI or docs: "Specify your desired language in the prompt (e.g., 'Write in Spanish...')"

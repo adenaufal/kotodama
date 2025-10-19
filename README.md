@@ -4,23 +4,20 @@
 
 An intelligent Chrome/Edge browser extension that helps you compose tweets and replies that maintain your unique brand voice while adapting to your audience's communication style.
 
-## Features (v1.0 MVP)
+## Highlights (v1.3.0)
 
-- **🎨 Brand Voice Management**: Define your unique writing style with examples and descriptions
-- **✨ AI-Powered Generation**: Create original tweets and threads using OpenAI
-- **💬 Smart Replies**: Context-aware replies that adapt to the conversation
-- **🔒 Privacy-First**: All data stored locally, encrypted API keys
-- **⚡ Seamless Integration**: Floating button appears in Twitter/X compose boxes
-- **🎯 Thread Creation**: Generate complete threads from a single prompt
+- **🎨 Brand Voice Studio**: Create, import (Markdown or tweet links), edit, and delete brand voices with tone controls
+- **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-4o family with automatic fallback handling
+- **💬 Reply Intelligence**: Auto-captures tweet context, surfaces reply templates, and blends in with the original conversation
+- **🌓 Adaptive UI**: Refined design system with light/dark themes, design tokens, and smooth panel animations
+- **📚 Session Memory**: Optionally remember generation history and surface recent drafts for quick reuse
+- **🔒 Local-First Security**: API keys encrypted via Web Crypto; no data leaves the browser beyond OpenAI requests
 
 ## Prerequisites
 
-- Node.js 20+ and npm 10+
-- At least one AI API key:
-  - OpenAI API key ([Get one here](https://platform.openai.com/api-keys)) - Recommended
-  - Google Gemini API key ([Get one here](https://ai.google.dev/gemini-api/docs/api-key))
-  - Anthropic Claude API key ([Get one here](https://console.anthropic.com/))
-- Chrome or Edge browser (latest version)
+- Node.js 20+ (ships with npm 10+)
+- OpenAI API key for the GPT-4o family ([create one](https://platform.openai.com/api-keys))
+- Chrome or Edge browser (latest stable release)
 
 ## Installation
 
@@ -54,8 +51,8 @@ An intelligent Chrome/Edge browser extension that helps you compose tweets and r
 
 1. Click the Kotodama extension icon in your browser toolbar
 2. Follow the onboarding wizard:
-   - **Step 1**: Enter your OpenAI API key
-   - **Step 2**: Define your brand voice with examples or description
+   - **Step 1**: Securely add your OpenAI API key (encrypted before storage)
+   - **Step 2**: Define your brand voice — paste example tweets, drop tweet URLs to auto-fetch text, or import a Markdown file
 3. Navigate to Twitter/X and start composing!
 
 ## Usage
@@ -65,9 +62,10 @@ An intelligent Chrome/Edge browser extension that helps you compose tweets and r
 1. Go to Twitter/X and click on the tweet compose box
 2. A sparkle button (✨) will appear in the top-right corner
 3. Click the button to open the AI panel
-4. Enter your prompt (e.g., "Tweet about the importance of user research")
-5. Click "Generate" to create the tweet
-6. Review, edit if needed, and click "Insert to Twitter"
+4. Enter your prompt (e.g., "Tweet about the importance of user research") or pick a template
+5. Select a brand voice if you want to override the default
+6. Click "Generate" to create the tweet
+7. Review, edit if needed, and click "Insert to X"
 
 ### Creating Threads
 
@@ -82,42 +80,34 @@ An intelligent Chrome/Edge browser extension that helps you compose tweets and r
 
 1. Click "Reply" on any tweet
 2. The sparkle button appears in the reply box
-3. Click to open the AI panel (context is automatically captured)
-4. Enter your reply intent
-5. The AI will analyze the original tweet and generate a contextual reply
+3. Click to open the AI panel — the original tweet appears in the context card
+4. Pick a reply template (optional) or describe the response you want
+5. Generate — the AI blends the captured context with your brand voice
 6. Review and insert
+
+### Managing Brand Voices & Settings
+
+- Open the panel and click the gear icon to launch the settings dashboard
+- View, edit, or delete saved brand voices with real-time validation
+- Set a default voice and model, toggle dark/light mode, and rerun onboarding
 
 ## Project Structure
 
 ```
 kotodama/
 ├── src/
-│   ├── api/              # API integrations (OpenAI, Gemini, Claude)
-│   │   └── openai.ts     # OpenAI API client
-│   ├── background/       # Service worker
-│   │   └── service-worker.ts
-│   ├── content/          # Content script for Twitter DOM injection
-│   │   └── content-script.ts
-│   ├── panel/            # React UI for the side panel
-│   │   ├── App.tsx
-│   │   ├── Panel.tsx
-│   │   └── index.html
-│   ├── onboarding/       # First-time setup UI
-│   │   ├── App.tsx
-│   │   ├── Onboarding.tsx
-│   │   └── index.html
-│   ├── storage/          # Data persistence layer
-│   │   ├── db.ts         # IndexedDB schema
-│   │   ├── encryption.ts # API key encryption
-│   │   └── settings.ts   # Settings management
-│   └── types/            # TypeScript type definitions
-│       └── index.ts
-├── docs/                 # Documentation (see docs/README.md)
-│   ├── development/      # Development guides
-│   ├── guides/           # Quick-start and user guides
-│   ├── reference/        # API and technical references
-│   ├── testing/          # Testing documentation
-│   └── project/          # Project planning and history
+│   ├── api/              # AI provider clients (OpenAI wired today; Gemini/Claude prototypes)
+│   ├── background/       # Manifest V3 service worker
+│   ├── components/       # Shared React building blocks
+│   ├── constants/        # Model metadata and design tokens
+│   ├── content/          # Twitter/X DOM integration
+│   ├── onboarding/       # First-time setup flow
+│   ├── panel/            # Main composer UI
+│   ├── settings/         # Settings + brand voice manager UI
+│   ├── storage/          # IndexedDB schema & encryption helpers
+│   ├── styles/           # Global styles and theme variables
+│   └── types/            # Shared TypeScript definitions
+├── docs/                 # Documentation hub (see docs/README.md)
 ├── public/
 │   ├── manifest.json     # Chrome extension manifest
 │   └── icons/            # Extension icons
@@ -137,9 +127,11 @@ kotodama/
 Comprehensive documentation is available in the [docs/](docs/) directory:
 
 - **[Quick Start Guide](docs/guides/QUICKSTART.md)** - Get started quickly
+- **[Quick Reference](docs/guides/QUICK_REFERENCE.md)** - Panel shortcuts & request flags
 - **[Development Guide](docs/development/DEVELOPMENT.md)** - Development setup and workflows
 - **[Testing Guide](docs/testing/TESTING.md)** - Testing strategies and procedures
 - **[API Reference](docs/reference/API_REFERENCE.md)** - API documentation
+- **[Model Reference](docs/reference/MODEL_REFERENCE.md)** - Supported models & mappings
 - **[Full Documentation Index](docs/README.md)** - Complete documentation overview
 
 ## Development
@@ -170,9 +162,8 @@ Comprehensive documentation is available in the [docs/](docs/) directory:
 - **State Management**: Zustand 5
 - **Encryption**: Web Crypto API
 - **AI Models**:
-  - OpenAI GPT-4o, GPT-4o-mini
-  - Google Gemini 2.5 Pro, Gemini 2.5 Flash
-  - Anthropic Claude 3.5 Sonnet
+  - OpenAI `gpt-4o-2024-11-20` (default), `gpt-4o-mini`, and `o1-2024-12-17`
+  - Gemini and Claude clients exist but are not yet wired into the runtime
 
 ## Architecture
 
@@ -212,29 +203,29 @@ Content Script (inserts to Twitter)
 
 ## Roadmap
 
-### v1.1 (Planned)
-- Google Gemini API integration
-- Multiple suggestion generation (A/B options)
-- Tone adjustment sliders
-- Tweet performance tracking
+### Shipped in v1.3.0 (October 2025)
+- Brand voice manager with edit/delete and Markdown import
+- Reply context fixes with templates and performance logging
+- Design tokens refresh with light/dark switching
 
-### v1.2 (Planned)
-- Claude API integration
-- Profile management for frequent contacts
-- Advanced thread building
-- Import/export settings
+### Up Next
+1. Wire up Gemini and Claude providers end-to-end (service worker + UI selection)
+2. Multi-suggestion generation and side-by-side comparison
+3. Tone adjustment sliders with live preview
+4. Tweet performance tracking and export/import for voices
 
-### v2.0 (Future)
+### Longer Term
 - Multi-platform support (LinkedIn, Threads)
-- Analytics dashboard
+- Analytics dashboard and insights
 - Team collaboration features
-- Cloud sync (optional)
+- Optional cloud sync for settings
 
 ## Known Issues
 
-- Icon files are SVG placeholders (convert to PNG for production)
+- Icon files are SVG placeholders (convert to PNG before publishing)
+- Only the OpenAI provider is currently wired; Gemini/Claude clients are experimental
 - Twitter DOM selectors may break with Twitter UI updates
-- Profile tweet scraping not yet implemented (coming in v1.1)
+- Profile tweet scraping is still stubbed (manual tweet samples required)
 
 ## Contributing
 

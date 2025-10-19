@@ -18,6 +18,7 @@ const Settings: React.FC = () => {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [showVoiceManager, setShowVoiceManager] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     const loadData = async () => {
@@ -31,6 +32,7 @@ const Settings: React.FC = () => {
           const existingOpenAiKey = loadedSettings.apiKeys.openai ?? '';
           const existingVoiceId = loadedSettings.defaultBrandVoiceId ?? '';
           const existingModel = loadedSettings.defaultModel ?? '';
+          const existingTheme = loadedSettings.ui?.theme === 'auto' ? 'light' : (loadedSettings.ui?.theme ?? 'light');
 
           setSettings(loadedSettings);
           setOpenaiKey(existingOpenAiKey);
@@ -39,6 +41,7 @@ const Settings: React.FC = () => {
           setInitialBrandVoiceId(existingVoiceId);
           setDefaultModel(existingModel);
           setInitialDefaultModel(existingModel);
+          setTheme(existingTheme);
         } else {
           throw new Error(settingsResponse.error || 'Unable to load settings');
         }
@@ -140,6 +143,32 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleToggleTheme = async () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+
+    // Save theme preference immediately
+    if (settings) {
+      const updatedSettings = {
+        ...settings,
+        ui: {
+          ...settings.ui,
+          theme: newTheme,
+        },
+      };
+
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'save-settings',
+          payload: updatedSettings,
+        });
+        setSettings(updatedSettings);
+      } catch (err) {
+        console.error('Failed to save theme preference:', err);
+      }
+    }
+  };
+
   const hasChanges = useMemo(() => {
     const trimmedKey = openaiKey.trim();
     return trimmedKey !== initialOpenaiKey || defaultBrandVoiceId !== initialBrandVoiceId || defaultModel !== initialDefaultModel;
@@ -147,7 +176,7 @@ const Settings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page-shell">
+      <div className={`page-shell min-h-screen ${theme === 'light' ? 'light-mode' : ''}`} style={{ backgroundColor: 'var(--koto-bg-light)' }}>
         <div className="rounded-2xl px-8 py-6 text-center shadow-xl" style={{
           backgroundColor: 'var(--koto-surface)',
           boxShadow: 'var(--koto-shadow-lg)'
@@ -160,7 +189,7 @@ const Settings: React.FC = () => {
 
   if (!settings) {
     return (
-      <div className="page-shell">
+      <div className={`page-shell min-h-screen ${theme === 'light' ? 'light-mode' : ''}`} style={{ backgroundColor: 'var(--koto-bg-light)' }}>
         <div className="stack max-w-md rounded-2xl px-8 py-6 text-center shadow-xl" style={{
           backgroundColor: 'var(--koto-surface)',
           boxShadow: 'var(--koto-shadow-lg)'
@@ -175,19 +204,43 @@ const Settings: React.FC = () => {
   }
 
   return (
-    <div className="page-shell">
+    <div className={`page-shell min-h-screen ${theme === 'light' ? 'light-mode' : ''}`} style={{ backgroundColor: 'var(--koto-bg-light)' }}>
       <div className="stack w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="stack rounded-3xl p-8 shadow-2xl ring-1 sm:p-10" style={{
           backgroundColor: 'var(--koto-surface)',
           boxShadow: 'var(--koto-shadow-lg)',
           borderColor: 'var(--koto-border)'
         }}>
-          <header className="stack-sm">
-            <p className="text-sm font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-sakura-pink)' }}>Settings</p>
-            <h1 className="text-3xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Manage your Kotodama configuration</h1>
-            <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-              Update your API connections and defaults. These preferences sync locally on this browser only.
-            </p>
+          <header className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-sakura-pink)' }}>Settings</p>
+                <h1 className="text-3xl font-semibold leading-tight" style={{ color: 'var(--koto-text-primary)' }}>Manage your Kotodama configuration</h1>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--koto-text-secondary)' }}>
+                  Update your API connections and defaults. These preferences sync locally on this browser only.
+                </p>
+              </div>
+              <button
+                onClick={handleToggleTheme}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full transition koto-button-hover"
+                style={{
+                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--koto-text-primary)'
+                }}
+                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              >
+                {theme === 'light' ? (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </header>
 
           <div className="stack">
@@ -360,6 +413,7 @@ const Settings: React.FC = () => {
           voices={brandVoices}
           onClose={handleCloseVoiceManager}
           onRefresh={handleRefreshVoices}
+          theme={theme}
         />
       )}
     </div>

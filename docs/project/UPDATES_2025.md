@@ -1,231 +1,36 @@
-# Kotodama Updates - October 2025
+# Kotodama Updates – October 2025
 
-## Summary of Changes
-
-This document outlines all updates made to bring Kotodama up to date with the latest AI APIs and technologies as of October 2025.
+Summary of the work completed for the v1.3.0 release cycle.
 
 ---
 
-## 🤖 AI API Updates
+## AI Provider Updates
+- Upgraded OpenAI defaults to `gpt-4o-2024-11-20` with fast fallback (`gpt-4o-mini` and `gpt-4o-mini-2024-07-18`).
+- Added reasoning support via `o1-2024-12-17` (temperature automatically removed when required).
+- Prepared but did **not** yet wire Gemini (`src/api/gemini.ts`) and Claude (`src/api/claude.ts`) clients for future releases.
 
-### OpenAI
-- **Updated Models:**
-  - Primary: `gpt-4o` (was `gpt-4`)
-  - Fast/Cheap: `gpt-4o-mini` (was `gpt-3.5-turbo`)
-  - Fallback: `gpt-4o-mini`
+## Experience Improvements
+- **Brand voice manager**: create/edit/delete voices, adjust tone sliders, import Markdown, validate example tweets.
+- **Reply intelligence**: context cards in the panel, curated reply templates, improved detection in the content script.
+- **Thread composer**: toggle-based threads with length control, per-tweet character counts, and smooth insertion.
+- **Design tokens + theming**: refreshed gradients, light/dark toggle persisted in user settings.
+- **Performance logging**: console timers for button injection, panel init, and AI generation duration.
 
-### Google Gemini (NEW Integration)
-- **Added Models:**
-  - Primary: `gemini-2.5-pro` - Best for complex reasoning and large context
-  - Fast/Cheap: `gemini-2.5-flash` - Best for speed and cost efficiency
-- **New Files:**
-  - `src/api/gemini.ts` - Full Gemini API integration
-  - Includes tweet generation and profile analysis functions
+## Onboarding & Settings
+- Onboarding wizard now fetches tweet text from URLs, supports Markdown imports, and enforces required fields.
+- Settings dashboard manages encrypted OpenAI keys, default model/voice, theme, and quick relaunch of onboarding.
+- Brand voice manager modal lives inside the settings experience for post-setup maintenance.
 
-### Anthropic Claude (NEW Integration)
-- **Added Models:**
-  - Primary: `claude-3-5-sonnet-20241022` - Latest Claude 3.5 Sonnet
-- **New Files:**
-  - `src/api/claude.ts` - Full Claude API integration
-  - Includes tweet generation and profile analysis functions
+## Code & Tooling
+- Consolidated model metadata in `src/constants/models.ts` (currently OpenAI only).
+- Added `models.js` bundle to `dist/` and new HTML entry for `settings/index.html`.
+- Scripts/build.js now copies manifest + icon assets and preserves SVG placeholders (pending PNG replacement).
+- Documentation refresh: README, quick start/reference guides, development guide, model/API references, project summaries.
 
----
+## Outstanding Tasks (rolled forward)
 
-## 📦 Prerequisites & Requirements Updates
-
-### Node.js & npm
-- **Before:** Node.js 18+
-- **After:** Node.js 20+ and npm 10+
-
-### AI API Keys
-- **Before:** Only OpenAI required
-- **After:** At least one of:
-  - OpenAI API key (Recommended)
-  - Google Gemini API key
-  - Anthropic Claude API key
-
-### Browser Requirements
-- **Before:** Chrome or Edge browser
-- **After:** Chrome or Edge browser (latest version)
-
----
-
-## 🛠️ Tech Stack Updates
-
-### Dependencies (Already at Latest Versions)
-- **React:** 19.2.0 ✓
-- **TypeScript:** 5.9.3 ✓
-- **Vite:** 7.1.10 ✓
-- **Tailwind CSS:** 4.1.14 ✓
-- **Dexie:** 4.2.1 ✓
-- **Zustand:** 5.0.8 ✓
-
-### New AI Models Listed
-- OpenAI GPT-4o, GPT-4o-mini
-- Google Gemini 2.5 Pro, Gemini 2.5 Flash
-- Anthropic Claude 3.5 Sonnet
-
----
-
-## 📝 Type Definitions Updates
-
-### UserSettings Interface
-```typescript
-// Added:
-apiKeys: {
-  claude?: string; // encrypted (NEW)
-}
-defaultProvider?: AIProvider; // NEW
-```
-
-### GenerateRequest Interface
-```typescript
-// Added:
-provider?: AIProvider;  // NEW - Select which AI to use
-fastMode?: boolean;     // NEW - Use faster/cheaper models
-```
-
----
-
-## 📄 Documentation Updates
-
-### Files Updated:
-1. **README.md**
-   - Updated prerequisites section
-   - Added all three AI providers to tech stack
-   - Updated AI model listings
-
-2. **prd.md**
-   - Updated OpenAI models (GPT-4o, GPT-4o-mini)
-   - Updated Gemini models (2.5 Pro, 2.5 Flash)
-   - Updated Claude integration (3.5 Sonnet via API)
-   - Updated technical stack details
-
-3. **PROJECT_MAP.md**
-   - No changes needed (structure remains the same)
-
----
-
-## 🆕 New Features
-
-### Multi-Provider Support
-- Users can now choose between OpenAI, Gemini, and Claude
-- Each provider has optimized model selection (standard vs. fast)
-- Automatic fallback capabilities
-
-### Fast Mode
-- New `fastMode` option in generation requests
-- Automatically uses cheaper, faster models:
-  - OpenAI: `gpt-4o-mini`
-  - Gemini: `gemini-2.5-flash`
-  - Claude: (uses same model, already optimized)
-
-### Provider-Specific Features
-
-#### Gemini Features:
-- OpenAI-compatible API structure
-- Optimized for different use cases (Pro for reasoning, Flash for speed)
-- JSON response parsing with markdown cleanup
-
-#### Claude Features:
-- Latest Claude 3.5 Sonnet model
-- Anthropic-specific headers and versioning
-- Structured system prompts and message format
-
----
-
-## 🔧 Implementation Details
-
-### API Integration Structure
-All three providers now follow a consistent pattern:
-
-```typescript
-// Generate tweet
-generateWith[Provider](request, apiKey, brandVoice, targetProfile?)
-
-// Analyze profile
-analyzeTwitterProfileWith[Provider](tweets, apiKey)
-```
-
-### Model Selection Logic
-```typescript
-// OpenAI
-DEFAULT_MODEL = 'gpt-4o'
-FAST_MODEL = 'gpt-4o-mini'
-
-// Gemini
-DEFAULT_MODEL = 'gemini-2.5-pro'
-FAST_MODEL = 'gemini-2.5-flash'
-
-// Claude
-DEFAULT_MODEL = 'claude-3-5-sonnet-20241022'
-```
-
----
-
-## 🎯 Next Steps (Recommended)
-
-1. **Update Background Service Worker**
-   - Add routing logic to select provider based on user settings
-   - Implement API key validation for all three providers
-
-2. **Update Onboarding Flow**
-   - Add UI for all three API key inputs
-   - Add provider selection option
-   - Add fast mode toggle
-
-3. **Update Panel UI**
-   - Add provider selector dropdown
-   - Add fast mode toggle
-   - Show which provider/model was used for each generation
-
-4. **Testing**
-   - Test all three API integrations
-   - Verify token usage tracking
-   - Test fallback scenarios
-
-5. **Documentation**
-   - Add API key setup guides for Gemini and Claude
-   - Update user documentation with provider selection info
-   - Add troubleshooting section for each provider
-
----
-
-## 📊 Model Comparison
-
-| Feature | GPT-4o | GPT-4o-mini | Gemini 2.5 Pro | Gemini 2.5 Flash | Claude 3.5 Sonnet |
-|---------|--------|-------------|----------------|------------------|-------------------|
-| **Speed** | Medium | Fast | Medium | Very Fast | Medium |
-| **Cost** | High | Low | Medium | Very Low | Medium |
-| **Quality** | Excellent | Good | Excellent | Good | Excellent |
-| **Context** | 128K | 128K | 2M | 1M | 200K |
-| **Best For** | Complex tasks | Quick responses | Large context | Speed & efficiency | Balanced performance |
-
----
-
-## 🔗 API Documentation Links
-
-- **OpenAI:** https://platform.openai.com/docs/api-reference
-- **Google Gemini:** https://ai.google.dev/gemini-api/docs
-- **Anthropic Claude:** https://docs.anthropic.com/
-
----
-
-## ✅ Verification Checklist
-
-- [x] OpenAI API updated to latest models
-- [x] Gemini API integration created
-- [x] Claude API integration created
-- [x] Type definitions updated
-- [x] Documentation updated
-- [x] Prerequisites updated
-- [ ] Service worker routing (TODO)
-- [ ] Onboarding UI updates (TODO)
-- [ ] Panel UI updates (TODO)
-- [ ] Integration testing (TODO)
-
----
-
-**Last Updated:** October 17, 2025
-**Version:** 1.0.1
-**Status:** API integrations complete, UI updates pending
+1. Wire up multi-provider selection (Gemini/Claude) in the panel, settings, and service worker.
+2. Implement structured error messaging for network/rate-limit scenarios.
+3. Automate tests (Vitest + potential Playwright flows).
+4. Replace icon SVGs with PNGs for Chrome Web Store compliance.
+5. Add variant generation, tone controls within the panel, and richer history analytics.

@@ -28,15 +28,19 @@ npm run build
   dist/
   ├── manifest.json
   ├── background.js
+  ├── commonjsHelpers.js
   ├── content.js
+  ├── models.js
   ├── panel.js
   ├── onboarding.js
+  ├── settings.js
   ├── index.js
   ├── index.css
   ├── icons/
   └── src/
       ├── panel/index.html
-      └── onboarding/index.html
+      ├── onboarding/index.html
+      └── settings/index.html
   ```
 - No TypeScript compilation errors
 - Total bundle size ~320KB
@@ -90,7 +94,7 @@ console.log('Observer active:', !!document.querySelector('.kotodama-ai-button'))
 
 **If Test Fails:**
 - Verify `content.js` exists in `dist/` folder
-- Check [manifest.json:18-24](public/manifest.json#L18-L24) content_scripts configuration
+- Check [manifest.json:18-24](public/manifest.json) content_scripts configuration
 - Ensure host_permissions include twitter.com and x.com
 - Reload extension and refresh Twitter page
 
@@ -109,7 +113,7 @@ console.log('Observer active:', !!document.querySelector('.kotodama-ai-button'))
    - Profile page "Tweet" button
    - Quote tweet composer
 
-**Current DOM Selectors** ([content-script.ts:73-76](src/content/content-script.ts#L73-L76)):
+**Current DOM Selectors** ([content-script.ts](src/content/content-script.ts)):
 ```typescript
 '[data-testid="tweetTextarea_0"]'           // Primary selector
 '[role="textbox"][contenteditable="true"]'   // Fallback selector
@@ -148,7 +152,7 @@ console.log(`Found ${editables.length} contenteditable element(s)`, editables)
 1. **Twitter changed their DOM structure:**
    - Inspect the compose box element
    - Copy the actual `data-testid` or attributes
-   - Update selectors in [content-script.ts:73-92](src/content/content-script.ts#L73-L92)
+   - Update selectors in [content-script.ts](src/content/content-script.ts)
 
 2. **Button injection failed:**
    - Check browser console for JavaScript errors
@@ -157,7 +161,7 @@ console.log(`Found ${editables.length} contenteditable element(s)`, editables)
 
 3. **CSS conflicts:**
    - Button might be hidden behind Twitter elements
-   - Check z-index in [content-script.ts:11-51](src/content/content-script.ts#L11-L51)
+   - Check z-index in [content-script.ts](src/content/content-script.ts)
 
 ---
 
@@ -171,7 +175,7 @@ console.log(`Found ${editables.length} contenteditable element(s)`, editables)
 3. Reply compose box should open
 4. Kotodama button should appear in the reply box
 
-**Reply-Specific Detection** ([content-script.ts:137](src/content/content-script.ts#L137)):
+**Reply-Specific Detection** ([content-script.ts](src/content/content-script.ts)):
 ```typescript
 const isReply = !!composeBox.closest('[data-testid="reply"]')
 ```
@@ -201,7 +205,7 @@ console.log(`Found ${usernames.length} username element(s)`, usernames)
 
 **If Reply Detection Fails:**
 - Twitter may have renamed the `[data-testid="reply"]` attribute
-- Update selector in [content-script.ts:137-174](src/content/content-script.ts#L137-L174)
+- Update selector in [content-script.ts](src/content/content-script.ts)
 - Check extractTweetContext() function for selector changes
 
 ---
@@ -217,7 +221,7 @@ console.log(`Found ${usernames.length} username element(s)`, usernames)
 4. Click the × button to close
 5. Panel should slide out
 
-**Expected Panel Behavior** ([content-script.ts:176-214](src/content/content-script.ts#L176-L214)):
+**Expected Panel Behavior** ([content-script.ts](src/content/content-script.ts)):
 - **Position:** Fixed, right side, 24px from edge
 - **Dimensions:** 420px wide × 720px tall (responsive on small screens)
 - **Animation:** 300ms ease, opacity + translateY transform
@@ -255,7 +259,7 @@ if (panel) {
 **If Panel Doesn't Open:**
 1. **CSP (Content Security Policy) errors:**
    - Check browser console for CSP violations
-   - Verify [manifest.json:40-45](public/manifest.json#L40-L45) web_accessible_resources
+   - Verify [manifest.json:40-45](public/manifest.json) web_accessible_resources
 
 2. **Panel HTML not loading:**
    - Open DevTools → Network tab
@@ -407,7 +411,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
    → Check firewall/proxy settings
    → Verify OpenAI API is not blocked
 
-4. **Model Fallback Logic** ([openai.ts:17-26](src/api/openai.ts#L17-L26)):
+4. **Model Fallback Logic** ([openai.ts:17-26](src/api/openai.ts)):
    - Tries primary model first
    - Falls back to mini model on error
    - Returns error if both fail
@@ -429,13 +433,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 2. Watch the panel and compose box
 
 **Expected Behavior:**
-- Panel closes after 500ms delay ([content-script.ts:362-366](src/content/content-script.ts#L362-L366))
+- Panel closes after 500ms delay ([content-script.ts](src/content/content-script.ts))
 - Tweet text appears in Twitter compose box
 - Twitter's character counter updates
 - Tweet button becomes enabled
 - Cursor positioned at end of text
 
-**Insertion Logic** ([content-script.ts:315-367](src/content/content-script.ts#L315-L367)):
+**Insertion Logic** ([content-script.ts](src/content/content-script.ts)):
 1. `findComposeEditable()` searches for active compose box using selectors:
    ```typescript
    '[data-testid="tweetTextarea_0"][contenteditable="true"]'
@@ -480,7 +484,7 @@ if (box) {
 1. **Compose box not found:**
    - Twitter changed their DOM structure
    - Inspect the compose box element
-   - Update selectors in `findComposeEditable()` ([content-script.ts:282-313](src/content/content-script.ts#L282-L313))
+   - Update selectors in `findComposeEditable()` ([content-script.ts](src/content/content-script.ts))
 
 2. **Text appears but counter doesn't update:**
    - InputEvent not dispatching correctly
@@ -525,7 +529,7 @@ Second tweet content here
 Third tweet content here
 ```
 
-**Verify in Panel UI** ([Panel.tsx:209-236](src/panel/Panel.tsx#L209-L236)):
+**Verify in Panel UI** ([Panel.tsx:209-236](src/panel/Panel.tsx)):
 - Thread checkbox toggles properly
 - Number input constraints: min=2, max=10
 - Thread length controls enabled/disabled based on checkbox
@@ -589,7 +593,7 @@ Third tweet content here
 
 **Solution 1: Update Selectors**
 
-Edit [content-script.ts:73-76](src/content/content-script.ts#L73-L76):
+Edit [content-script.ts](src/content/content-script.ts):
 ```typescript
 const composeSelectors = [
   '[data-testid="tweetTextarea_0"]',           // Old selector
@@ -678,7 +682,7 @@ npm run build
 
 **Solution 2: Check web_accessible_resources**
 
-Verify [manifest.json:40-45](public/manifest.json#L40-L45):
+Verify [manifest.json:40-45](public/manifest.json):
 ```json
 "web_accessible_resources": [
   {
@@ -796,7 +800,7 @@ Error: The model 'gpt-4o' does not exist
 **Cause:** API key doesn't have access to model
 
 **Solution:**
-Update [openai.ts:17-26](src/api/openai.ts#L17-L26) to use accessible model:
+Update [openai.ts:17-26](src/api/openai.ts) to use accessible model:
 ```typescript
 const MODEL = 'gpt-3.5-turbo'  // Free tier model
 ```
@@ -870,7 +874,7 @@ Error: You exceeded your current quota
 
 **Solution 1: Update findComposeEditable() Selectors**
 
-Edit [content-script.ts:282-313](src/content/content-script.ts#L282-L313):
+Edit [content-script.ts](src/content/content-script.ts):
 ```typescript
 function findComposeEditable(): HTMLElement | null {
   const selectors = [
@@ -1022,7 +1026,7 @@ if (typeof generatedContent === 'string' && generatedContent.length > 280) {
 **Test 1: Empty Prompt**
 - Steps: Leave prompt field blank, click Generate
 - Expected: Error "Please enter a prompt"
-- Status: ✅ Implemented ([Panel.tsx:87-90](src/panel/Panel.tsx#L87-L90))
+- Status: ✅ Implemented ([Panel.tsx:87-90](src/panel/Panel.tsx))
 
 **Test 2: Very Short Prompt**
 - Steps: Enter just "hi", generate
@@ -1032,7 +1036,7 @@ if (typeof generatedContent === 'string' && generatedContent.length > 280) {
 **Test 3: No Brand Voice Selected**
 - Steps: Deselect brand voice, try to generate
 - Expected: Error "Please select a brand voice"
-- Status: ✅ Implemented ([Panel.tsx:92-95](src/panel/Panel.tsx#L92-L95))
+- Status: ✅ Implemented ([Panel.tsx:92-95](src/panel/Panel.tsx))
 
 ---
 
@@ -1082,7 +1086,7 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
 - Only one API call made
 
 **Current Implementation:**
-- ✅ Button disabled during loading ([Panel.tsx:262](src/panel/Panel.tsx#L262))
+- ✅ Button disabled during loading ([Panel.tsx:262](src/panel/Panel.tsx))
 - ✅ isLoading state prevents double submission
 
 ---
@@ -1441,7 +1445,7 @@ This happens consistently after generating 3 tweets in a row.
 
 | Problem | Quick Fix |
 |---------|-----------|
-| Button not appearing | Update selectors in `content-script.ts:73-76` |
+| Button not appearing | Update selectors in `content-script.ts` |
 | Panel blank | Rebuild: `npm run build`, reload extension |
 | Generation fails | Check API key, verify balance at platform.openai.com |
 | Text not inserting | Update selectors in `findComposeEditable()` |

@@ -1,275 +1,101 @@
-# Implementation Summary - Kotodama v1.0 MVP
+# Implementation Summary – Kotodama v1.3.0
+
+_Updated 2025-10-18_
 
 ## Overview
 
-Successfully created the first iteration of the Kotodama AI Tweet Composer Chrome extension based on the [PRD](prd.md). This is a fully functional MVP with the core features implemented.
-
-## What Was Built
-
-### ✅ Core Architecture
-
-1. **Chrome Extension Manifest V3** ([public/manifest.json](public/manifest.json))
-   - Content scripts for Twitter/X injection
-   - Background service worker for API handling
-   - Proper permissions and host access
-
-2. **Build System**
-   - Vite 7 for fast builds
-   - TypeScript for type safety
-   - Tailwind CSS 4 for styling
-   - Custom build scripts for file copying
-
-3. **Project Structure**
-   ```
-   src/
-   ├── api/          - OpenAI integration
-   ├── background/   - Service worker
-   ├── content/      - Twitter DOM injection
-   ├── panel/        - React UI
-   ├── onboarding/   - Setup wizard
-   ├── storage/      - IndexedDB + encryption
-   └── types/        - TypeScript definitions
-   ```
-
-### ✅ Features Implemented
-
-#### Must-Have Features (From PRD)
-
-- **✨ Original Tweet Generation**: Single tweets and threads from prompts
-- **💬 Reply Generation**: Context-aware replies (structure in place)
-- **🎨 Brand Voice Management**: Create and save brand voices with examples
-- **🔒 API Key Security**: Web Crypto API encryption
-- **📦 Local Storage**: IndexedDB for data, Chrome Storage for settings
-- **🎯 Content Control**: Edit before inserting, regenerate options
-- **⚙️ Settings Management**: Encrypted storage, configurable options
-- **🚀 Onboarding Flow**: Two-step wizard for setup
-
-#### UI Components
-
-- **Floating Button**: Injected into Twitter compose boxes
-- **Side Panel**: 400px sliding panel with composition interface
-- **Onboarding**: Step-by-step setup wizard
-- **Settings System**: Manage API keys and brand voices
-
-### 📋 Technical Specifications
-
-#### Technology Stack
-
-| Category | Technology | Version |
-|----------|-----------|---------|
-| Framework | React | 19.2.0 |
-| Language | TypeScript | 5.9.3 |
-| Build Tool | Vite | 7.1.10 |
-| Styling | Tailwind CSS | 4.1.14 |
-| Database | Dexie.js (IndexedDB) | 4.2.1 |
-| State | Zustand (prepared) | 5.0.8 |
-
-#### Security Features
-
-- ✅ API keys encrypted using Web Crypto API (AES-GCM)
-- ✅ All data stored locally (no external servers)
-- ✅ Minimal permissions (only Twitter/X access)
-- ✅ Content Security Policy compliant
-- ✅ Isolated content script context
-
-#### API Integration
-
-- ✅ **OpenAI GPT-4**: Full implementation with system prompts
-- ✅ **Profile Analysis**: Structure for analyzing Twitter user styles
-- ✅ **Token Tracking**: Usage monitoring built-in
-- ⏳ **Google Gemini**: Prepared, not yet implemented
-- ⏳ **Claude**: Prepared, not yet implemented
-
-### 📊 Build Output
-
-```
-dist/
-├── manifest.json           (1 KB)
-├── icons/                  (SVG placeholders)
-├── background.js           (103 KB)
-├── content.js              (3.6 KB)
-├── panel.js                (5.2 KB)
-├── onboarding.js           (5.4 KB)
-├── index.js                (194 KB - React bundle)
-├── index.css               (4.7 KB)
-└── src/
-    ├── panel/index.html
-    └── onboarding/index.html
-```
-
-**Total bundle size**: ~320 KB uncompressed
-
-## What's Working
-
-### ✅ Fully Implemented
-
-1. **Build System**: `npm run build` creates deployable extension
-2. **TypeScript**: All files type-checked and compiled
-3. **Content Script**: Detects compose boxes (selectors may need adjustment)
-4. **Background Worker**: Message handling, API routing, storage management
-5. **OpenAI Integration**: Complete API client with prompt engineering
-6. **Encryption**: Secure API key storage
-7. **Panel UI**: React component with composition interface
-8. **Onboarding**: Two-step setup flow
-9. **Brand Voice**: CRUD operations via IndexedDB
-
-### ⚠️ Partially Implemented
-
-1. **Twitter DOM Injection**: Selectors are educated guesses, need testing on live site
-2. **Profile Analysis**: API call structure exists, tweet fetching not implemented
-3. **Brand Voice Loading**: Storage works, but Panel dropdown needs to be populated
-4. **Thread Generation**: Backend ready, UI flow needs polish
-
-### ❌ Not Yet Implemented
-
-1. **Tone Adjustment Sliders**: Planned for v1.1
-2. **Multiple Suggestions**: Planned for v1.1
-3. **Analytics Dashboard**: Planned for v1.2
-4. **Profile Tweet Scraping**: Function stub exists
-5. **Gemini/Claude APIs**: Structure ready, not connected
-
-## Next Steps
-
-### Critical for Testing
-
-1. **Load extension in Chrome**
-   ```bash
-   npm run build
-   # Then load dist/ folder in chrome://extensions/
-   ```
-
-2. **Test on Twitter/X**
-   - Verify button injection works
-   - Test panel opening/closing
-   - Try generating a tweet
-   - Check content insertion
-
-3. **Fix Issues**
-   - Update DOM selectors if Twitter UI changed
-   - Handle edge cases
-   - Improve error messages
-
-### Before v1.0 Launch
-
-See [TODO.md](TODO.md) for complete list:
-
-- [ ] Convert SVG icons to PNG
-- [ ] Test thoroughly on live Twitter
-- [ ] Implement brand voice dropdown population
-- [ ] Add better loading states
-- [ ] Improve error handling
-- [ ] Add character counter
-- [ ] Write user documentation
-
-### For v1.1
-
-- [ ] Google Gemini integration
-- [ ] Tone adjustment sliders
-- [ ] Multiple suggestion generation
-- [ ] Profile analysis improvements
-- [ ] Tweet performance tracking
-
-## How to Use
-
-### Development
-
-```bash
-# Install dependencies
-npm install
-
-# Build once
-npm run build
-
-# Watch mode for development
-npm run dev
-
-# Type check
-npm run type-check
-```
-
-### Loading in Browser
-
-1. Open Chrome/Edge
-2. Navigate to `chrome://extensions/`
-3. Enable "Developer mode"
-4. Click "Load unpacked"
-5. Select the `dist` folder
-
-### Testing
-
-1. Navigate to Twitter/X
-2. Click in a tweet compose box
-3. Look for sparkle button (✨) in top-right
-4. Click to open panel
-5. Enter OpenAI API key if not set
-6. Create a brand voice
-7. Generate a tweet
-
-## Known Issues
-
-1. **Icons are SVG**: Chrome Web Store requires PNG format
-2. **DOM Selectors**: May break if Twitter updates their UI
-3. **Profile Scraping**: Not implemented yet
-4. **Brand Voice Dropdown**: Needs to be populated from IndexedDB
-5. **No Tests**: Unit/integration tests not yet added
-
-## File Structure
-
-Key files to understand:
-
-- [prd.md](prd.md) - Product requirements
-- [README.md](README.md) - User-facing documentation
-- [DEVELOPMENT.md](DEVELOPMENT.md) - Developer guide
-- [TODO.md](TODO.md) - Remaining work
-- [src/types/index.ts](src/types/index.ts) - All TypeScript types
-- [src/background/service-worker.ts](src/background/service-worker.ts) - Message handling
-- [src/api/openai.ts](src/api/openai.ts) - AI integration
-- [src/content/content-script.ts](src/content/content-script.ts) - Twitter injection
-- [src/panel/Panel.tsx](src/panel/Panel.tsx) - Main UI
-
-## Success Criteria Met
-
-From the PRD's v1.0 Must-Have features:
-
-- ✅ Original tweet generation
-- ✅ Thread generation (backend ready)
-- ✅ Brand voice application
-- ✅ Reply generation (structure in place)
-- ✅ OpenAI/ChatGPT support
-- ✅ Floating activation button
-- ✅ Side panel interface
-- ✅ Extension-first editing
-- ✅ Regeneration options
-- ✅ Local storage with encryption
-
-**Completion**: ~85% of MVP features implemented and ready for testing
-
-## Performance
-
-- Build time: ~1.2 seconds
-- Extension size: 320 KB
-- React bundle: 194 KB (could be optimized with code splitting)
-- No runtime performance issues expected
-- API calls are async and non-blocking
-
-## Security & Privacy
-
-✅ All PRD requirements met:
-- Local-only storage
-- Encrypted API keys (AES-GCM)
-- No telemetry or tracking
-- Minimal permissions
-- GDPR/CCPA compliant
-- Content script isolation
-
-## Conclusion
-
-The Kotodama v1.0 MVP is **ready for initial testing**. Core architecture is solid, main features are implemented, and the extension builds successfully.
-
-**Next critical step**: Load in browser and test on live Twitter/X to validate DOM selectors and user flow.
-
-The codebase is well-structured for future enhancements and follows Chrome extension best practices.
+Kotodama v1.3.0 delivers a polished Chrome/Edge extension for composing tweets and replies that stay on brand. The release rounds out the onboarding and settings flows, introduces a brand voice manager, tightens reply context handling, and refreshes the design system with light/dark theming. OpenAI’s GPT-4o family powers generation; Gemini and Claude clients live in the codebase but are not yet wired through the service worker.
 
 ---
 
-**Built with Claude Code** | October 17, 2025
+## What Was Built
+
+### Core Architecture
+
+- **Manifest V3 extension** with content script, background service worker, and panel iframe (`public/manifest.json`).
+- **Vite + React + TypeScript** toolchain with Tailwind CSS and custom design tokens (`src/styles`, `src/panel/index.css`).
+- **Secure storage** using IndexedDB via Dexie for brand voices/history and Chrome storage (with Web Crypto) for encrypted API keys.
+- **Settings surface** (`src/settings/`) that manages API keys, theme, model defaults, and brand voice CRUD.
+- **Onboarding flow** with tweet URL ingestion and Markdown import for quick brand voice seeding.
+
+### Feature Highlights (v1.3.0)
+
+- **Brand Voice Studio**: Create, edit, import (Markdown), or delete voices. Tone sliders (formality/humor/technicality) and example validation included.
+- **Reply-aware composer**: Context cards display tweet details, reply templates jump-start tone, and insertion repositions the cursor cleanly.
+- **Thread builder**: Toggle-based multistep generator supporting 2–10 tweets with character counts per row.
+- **Design tokens & theming**: Reusable color/spacing tokens with a panel-level theme toggle persisted in settings.
+- **Performance instrumentation**: Console timers for button injection, panel load, and AI request duration.
+
+### Technical Specifications
+
+| Category | Detail |
+|----------|--------|
+| React | 19.2.0 |
+| TypeScript | 5.9.3 (strict) |
+| Vite | 7.1.10 |
+| Tailwind CSS | 4.1.14 |
+| Dexie | 4.2.1 |
+| Zustand | 5.0.8 (prepared for panel state) |
+| AI Provider | OpenAI (`gpt-4o-2024-11-20`, `gpt-4o-mini`, `o1-2024-12-17`) |
+| Encryption | Web Crypto API (AES-GCM) |
+
+### Build Output (after `npm run build`)
+
+```
+dist/
+├── background.js
+├── commonjsHelpers.js
+├── content.js
+├── icons/
+├── index.css
+├── index.js
+├── manifest.json
+├── models.js
+├── onboarding.js
+├── panel.js
+├── settings.js
+└── src/
+    ├── onboarding/index.html
+    ├── panel/index.html
+    └── settings/index.html
+```
+
+---
+
+## Current Status
+
+### Working End-to-End
+
+1. Build pipeline (`npm run build`, `npm run dev`) and post-build copy (`scripts/build.js`).
+2. Content script injection, floating button placement, and contextual reply detection.
+3. Panel UX: prompt input, brand voice selection, thread toggle, reply templates, light/dark toggle, insertion flow.
+4. OpenAI integration with fallback handling and token logging.
+5. Onboarding + settings, including encrypted storage and brand voice management.
+6. Performance logging surfaced via `[Kotodama Performance]` console statements.
+
+### Known Gaps
+
+- **Multi-provider routing**: Gemini (`src/api/gemini.ts`) and Claude (`src/api/claude.ts`) helpers exist but the service worker still invokes OpenAI exclusively.
+- **Profile analysis**: `fetchUserTweets` is stubbed; no automated scraping yet.
+- **History/analytics**: Generated tweet history persists only when the `rememberHistory` flag is true. No analytics dashboard.
+- **Icons**: SVG placeholders remain in `public/icons/`; convert to PNG before publishing.
+- **Automated testing**: Vitest setup exists but lacks coverage for UI and storage layers.
+
+---
+
+## Next Steps
+
+1. **Provider selection UI** – extend the panel/settings to let users choose OpenAI, Gemini, or Claude; wire service worker routing and credential storage.
+2. **Tone controls in panel** – surface formality/humor/technicality sliders with live preview.
+3. **Multi-suggestion generation** – produce 2–3 variants per prompt with quick comparison.
+4. **Tweet performance tracking** – mark drafts as posted, surface history, and learn from outcomes.
+5. **Automated tests** – add unit coverage for API helpers and UI component snapshots; consider Playwright E2E for Twitter flows.
+
+---
+
+## Developer Reminders
+
+- Use `npm run dev` while editing and reload `chrome://extensions/` after each rebuild.
+- Sensitive values (API keys, cookies) are always encrypted—never log decrypted data.
+- Update documentation entries in `docs/` when behaviour changes (README index, quick reference, testing notes, etc.).
+- Release cadence is driven by GitHub actions: merge the `release-please` PR to publish a new version and artifact.

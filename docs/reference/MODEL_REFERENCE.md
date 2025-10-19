@@ -1,416 +1,120 @@
-# Model Reference - All Supported AI Models
+# Model Reference (v1.3.0)
 
-Complete reference for all AI models supported in Kotodama with their specifications and optimal use cases.
+Updated 2025-10-18 — aligns with the shipping Kotodama codebase.
 
----
-
-## Table of Contents
-
-1. [OpenAI Models](#openai-models)
-2. [Google Gemini Models](#google-gemini-models)
-3. [Anthropic Claude Models](#anthropic-claude-models)
-4. [Model Selection Guide](#model-selection-guide)
-5. [Token Limits & Costs](#token-limits--costs)
-6. [Free Tier Optimization](#free-tier-optimization)
+Kotodama currently routes all AI generation through OpenAI’s GPT-4o family. Gemini and Claude clients exist in `src/api/`, but the service worker still targets OpenAI exclusively. This reference documents what is live today and what’s ready for the next integration step.
 
 ---
 
-## OpenAI Models
+## 1. OpenAI Models in Use
 
-### Model Categories
+| ID | Friendly Name | Typical Use | Notes |
+|----|---------------|-------------|-------|
+| `gpt-4o-2024-11-20` | GPT-4o (Latest) | Default path for tweets, threads, replies | Configurable as the default model in settings |
+| `gpt-4o-2024-08-06` | GPT-4o (August 2024) | Alternate quality model | Optional override via settings |
+| `gpt-4o-mini` | GPT-4o Mini | Fast mode (`fastMode = true`) | Lower cost, lower latency |
+| `gpt-4o-mini-2024-07-18` | GPT-4o Mini (July 2024) | Fallback | Auto-retry when the latest mini fails |
+| `o1-2024-12-17` | OpenAI o1 | Reasoning (`reasoning = true`) | Temperature removed automatically |
 
-#### 1M Token Group (Standard Quality)
+All OpenAI requests hit `https://api.openai.com/v1/chat/completions`. Thread requests cap `max_completion_tokens` at 1500; single tweets use 300.
 
-| Model | Use Case | Context | Speed | Cost Tier |
-|-------|----------|---------|-------|-----------|
-| **gpt-5-2025-08-07** ⭐ | Default - Best overall quality | 128K | Medium | High |
-| **gpt-4o-2024-11-20** | Backup quality model | 128K | Medium | High |
-| **o1-2024-12-17** | Complex reasoning | 128K | Slow | High |
+### Token & Cost Reference (check [OpenAI pricing](https://openai.com/pricing) for updates)
 
-#### 10M Token Group (Fast/Cheap)
+| Model | Context Window | Approx. Input / Output Cost (per 1M tokens) |
+|-------|----------------|---------------------------------------------|
+| `gpt-4o-2024-11-20` | 128K tokens | $5.00 / $15.00 |
+| `gpt-4o-mini` | 128K tokens | $0.15 / $0.60 |
+| `o1-2024-12-17` | 128K tokens | $15.00 / $60.00 |
 
-| Model | Use Case | Context | Speed | Cost Tier |
-|-------|----------|---------|-------|-----------|
-| **gpt-5-mini-2025-08-07** ⭐ | Fast mode - Latest mini | 128K | Fast | Low |
-| **gpt-5-nano-2025-08-07** | Ultra fast - Maximum speed | 128K | Very Fast | Very Low |
-| **gpt-4o-mini-2024-07-18** | Stable fallback | 128K | Fast | Low |
-| **codex-mini-latest** | Code generation | 128K | Fast | Low |
+> Costs are indicative; always confirm the latest pricing before budgeting usage.
 
-### How to Use
+---
+
+## 2. Request Flags & Behaviour
 
 ```typescript
-// Default quality (GPT-5)
-const request: GenerateRequest = {
-  prompt: "Create a tweet about AI",
-  brandVoiceId: "voice-123"
-};
-
-// Fast mode (GPT-5 Mini)
-const request: GenerateRequest = {
-  prompt: "Quick tweet",
-  brandVoiceId: "voice-123",
-  fastMode: true
-};
-
-// Ultra fast mode (GPT-5 Nano)
-const request: GenerateRequest = {
-  prompt: "Super quick",
-  brandVoiceId: "voice-123",
-  fastMode: 'ultra'
-};
-
-// Reasoning mode (o1)
-const request: GenerateRequest = {
-  prompt: "Complex analysis",
-  brandVoiceId: "voice-123",
-  reasoning: true
-};
-
-// Coding mode (Codex)
-const request: GenerateRequest = {
-  prompt: "Generate code snippet",
-  brandVoiceId: "voice-123",
-  coding: true
-};
-```
-
-### Fallback Strategy
-
-1. Try primary model (e.g., gpt-5-2025-08-07)
-2. If fails, fallback to gpt-4o-mini-2024-07-18
-3. Error handling at application level
-
----
-
-## Google Gemini Models
-
-### Model Selection
-
-| Model | Use Case | Context | Speed | Cost Tier |
-|-------|----------|---------|-------|-----------|
-| **gemini-2.5-pro** ⭐ | Default - Complex reasoning | 2M tokens | Medium | Medium |
-| **gemini-2.5-flash** | Fast mode - Efficient | 1M tokens | Very Fast | Very Low |
-| **gemini-2.5-flash-lite** | Ultra fast - Cheapest | 1M tokens | Ultra Fast | Minimal |
-
-### Key Features
-
-- **Largest Context**: 2M tokens with Pro model
-- **Fastest**: Flash Lite is the fastest model
-- **Best Value**: Flash models offer exceptional cost/performance
-
-### How to Use
-
-```typescript
-// Default quality (Gemini 2.5 Pro)
-const request: GenerateRequest = {
-  prompt: "Analyze this long document",
-  brandVoiceId: "voice-123",
-  provider: 'gemini'
-};
-
-// Fast mode (Gemini Flash)
-const request: GenerateRequest = {
-  prompt: "Quick response",
-  brandVoiceId: "voice-123",
-  provider: 'gemini',
-  fastMode: true
-};
-
-// Ultra fast mode (Flash Lite)
-const request: GenerateRequest = {
-  prompt: "Instant response",
-  brandVoiceId: "voice-123",
-  provider: 'gemini',
-  fastMode: 'ultra'
-};
-```
-
-### Fallback Strategy
-
-1. Try primary model (Pro or Flash based on fastMode)
-2. If fails, fallback to gemini-2.5-flash-lite
-3. Error handling at application level
-
----
-
-## Anthropic Claude Models
-
-### Model Families
-
-#### Sonnet Models (Balanced Performance)
-
-| Model | API Name | Use Case | Context | Speed |
-|-------|----------|----------|---------|-------|
-| **Claude Sonnet 4.5** ⭐ | claude-sonnet-4-5-20250929 | Default - Latest & best | 200K | Medium |
-| **Claude Sonnet 4** | claude-sonnet-4-20250514 | Balanced performance | 200K | Medium |
-| **Claude Sonnet 3.7** | claude-3-7-sonnet-20250219 | Proven reliability | 200K | Medium |
-
-#### Opus Models (Maximum Quality)
-
-| Model | API Name | Use Case | Context | Speed |
-|-------|----------|----------|---------|-------|
-| **Claude Opus 4.1** | claude-opus-4-1-20250805 | Best quality available | 200K | Slow |
-| **Claude Opus 4** | claude-opus-4-20250514 | High quality reasoning | 200K | Slow |
-
-#### Haiku Models (Speed & Efficiency)
-
-| Model | API Name | Use Case | Context | Speed |
-|-------|----------|----------|---------|-------|
-| **Claude Haiku 4.5** | claude-haiku-4-5-20251001 | Fast balanced | 200K | Fast |
-| **Claude Haiku 3.5** ⭐ | claude-3-5-haiku-20241022 | Fast mode default | 200K | Very Fast |
-| **Claude Haiku 3** | claude-3-haiku-20240307 | Ultra fast fallback | 200K | Ultra Fast |
-
-### Authentication Methods
-
-#### 1. API Key (Recommended)
-
-```typescript
-const response = await generateWithClaude(
-  request,
-  apiKey, // Your Anthropic API key
-  brandVoice,
-  targetProfile,
-  'api' // Authentication type
-);
-```
-
-#### 2. Cookie (Web Account)
-
-```typescript
-const response = await generateWithClaude(
-  request,
-  '', // Empty for cookie auth
-  brandVoice,
-  targetProfile,
-  'cookie', // Authentication type
-  cookieValue // Your claude.ai session cookie
-);
-```
-
-### How to Use
-
-```typescript
-// Default (Sonnet 4.5)
-const request: GenerateRequest = {
-  prompt: "Create a tweet",
-  brandVoiceId: "voice-123",
-  provider: 'claude'
-};
-
-// Fast mode (Haiku 3.5)
-const request: GenerateRequest = {
-  prompt: "Quick tweet",
-  brandVoiceId: "voice-123",
-  provider: 'claude',
-  fastMode: true
-};
-
-// Ultra fast mode (Haiku 3)
-const request: GenerateRequest = {
-  prompt: "Super quick",
-  brandVoiceId: "voice-123",
-  provider: 'claude',
-  fastMode: 'ultra'
-};
-
-// Haiku 4.5 mode
-const request: GenerateRequest = {
-  prompt: "Fast balanced",
-  brandVoiceId: "voice-123",
-  provider: 'claude',
-  fastMode: 'haiku-45'
-};
-
-// Opus 4 quality mode
-const request: GenerateRequest = {
-  prompt: "Best quality",
-  brandVoiceId: "voice-123",
-  provider: 'claude',
-  quality: 'opus'
-};
-
-// Opus 4.1 maximum quality
-const request: GenerateRequest = {
-  prompt: "Maximum quality",
-  brandVoiceId: "voice-123",
-  provider: 'claude',
-  quality: 'opus-max'
-};
-```
-
-### Fallback Strategy
-
-1. Try primary model (based on quality/fastMode)
-2. If fails, fallback to claude-3-haiku-20240307
-3. Error handling at application level
-
----
-
-## Model Selection Guide
-
-### Use Case Matrix
-
-| Scenario | Recommended Model | Reason |
-|----------|------------------|---------|
-| **Long documents** | Gemini 2.5 Pro | 2M context window |
-| **Speed priority** | Gemini Flash Lite | Fastest overall |
-| **Quality priority** | Claude Opus 4.1 | Best reasoning |
-| **Code generation** | OpenAI Codex Mini | Specialized for code |
-| **Cost priority** | Gemini Flash Lite | Cheapest per token |
-| **Balanced** | Claude Sonnet 4.5 | Great all-rounder |
-| **Free tier max** | OpenAI GPT-5 Mini | 10M tokens/day |
-| **Complex reasoning** | OpenAI o1 | Purpose-built |
-
-### Decision Tree
-
-```
-Need maximum quality?
-├─ Yes → Claude Opus 4.1
-└─ No → Need speed?
-    ├─ Yes → Gemini Flash Lite
-    └─ No → Need long context?
-        ├─ Yes → Gemini 2.5 Pro
-        └─ No → Use Claude Sonnet 4.5 (balanced)
-```
-
----
-
-## Token Limits & Costs
-
-### OpenAI Pricing (Approximate)
-
-#### 1M Token Group
-| Model | Input | Output | Daily Free |
-|-------|--------|---------|------------|
-| GPT-5 | $2.50/1M | $10.00/1M | 1M tokens |
-| GPT-4o | $2.50/1M | $10.00/1M | 1M tokens |
-| o1 | $15.00/1M | $60.00/1M | 1M tokens |
-
-#### 10M Token Group
-| Model | Input | Output | Daily Free |
-|-------|--------|---------|------------|
-| GPT-5 Mini | $0.15/1M | $0.60/1M | 10M tokens |
-| GPT-5 Nano | $0.10/1M | $0.40/1M | 10M tokens |
-| GPT-4o Mini | $0.15/1M | $0.60/1M | 10M tokens |
-| Codex Mini | $0.15/1M | $0.60/1M | 10M tokens |
-
-### Gemini Pricing
-
-| Model | Input | Output | Daily Free |
-|-------|--------|---------|------------|
-| Gemini 2.5 Pro | $1.25/1M | $5.00/1M | Flash: 1500/day |
-| Gemini 2.5 Flash | $0.075/1M | $0.30/1M | 1500 RPD |
-| Gemini Flash Lite | $0.05/1M | $0.20/1M | Included in Flash |
-
-### Claude Pricing
-
-| Model | Input | Output | Daily Free |
-|-------|--------|---------|------------|
-| Sonnet 4.5 | $3.00/1M | $15.00/1M | Limited |
-| Opus 4.1 | $15.00/1M | $75.00/1M | Very Limited |
-| Haiku 3.5 | $0.80/1M | $4.00/1M | Limited |
-| Haiku 3 | $0.25/1M | $1.25/1M | Limited |
-
-**Note**: Prices are approximate and subject to change. Check official pricing pages.
-
----
-
-## Free Tier Optimization
-
-### Strategy for Maximum Free Usage
-
-#### Daily Rotation Schedule
-
-**Morning (High Quality Needed)**
-- Use: OpenAI GPT-5 (1M tokens free)
-- Tasks: Important tweets, threads, analysis
-
-**Afternoon (Bulk Operations)**
-- Use: OpenAI GPT-5 Mini (10M tokens free)
-- Tasks: Quick tweets, drafts, testing
-
-**Evening (Remaining Work)**
-- Use: Gemini Flash Lite (Free tier)
-- Tasks: Overflow, quick responses
-
-**Night (Minimal Usage)**
-- Use: Claude Haiku via Cookie (Free account)
-- Tasks: Final edits, simple tasks
-
-### Token Estimation
-
-**Average Tweet Generation:**
-- Input: ~500 tokens (system prompt + user prompt)
-- Output: ~100 tokens (tweet)
-- Total: ~600 tokens per tweet
-
-**With Free Tiers:**
-- OpenAI 1M: ~1,666 tweets/day
-- OpenAI 10M: ~16,666 tweets/day
-- Gemini: ~1,500 requests/day
-- Claude Cookie: Unlimited (rate limited)
-
-**Total Possible**: 20,000+ tweets per day across all providers!
-
-### Best Practices
-
-1. **Start with Cheapest**: Gemini Flash Lite first
-2. **Escalate as Needed**: Move to higher quality if needed
-3. **Track Usage**: Monitor daily token consumption
-4. **Rotate Providers**: Spread load across all three
-5. **Use Fallbacks**: Always have backup provider configured
-
----
-
-## Provider Configuration
-
-### Settings Structure
-
-```typescript
-interface UserSettings {
-  apiKeys: {
-    openai?: string;
-    gemini?: string;
-    claude?: string;
-  };
-  claudeCookie?: string;
-  claudeAuthType?: 'api' | 'cookie';
-  defaultProvider?: 'openai' | 'gemini' | 'claude';
+interface GenerateRequest {
+  prompt: string;
+  brandVoiceId: string;
+  targetProfileId?: string;
+  isThread?: boolean;
+  threadLength?: number;
+  fastMode?: boolean | 'ultra';
+  reasoning?: boolean;
+  coding?: boolean;
 }
 ```
 
-### Setup Priority
-
-1. **Set up all three providers** for maximum flexibility
-2. **Configure Claude cookie** for unlimited free usage
-3. **Set default provider** to cheapest (Gemini Flash Lite)
-4. **Enable automatic fallback** to other providers
-
----
-
-## Model Comparison Chart
-
-### Performance Matrix
-
-| Metric | GPT-5 | GPT-5 Mini | Gemini Pro | Gemini Flash Lite | Claude Sonnet 4.5 | Claude Haiku 3.5 | Claude Opus 4.1 |
-|--------|-------|-----------|------------|-------------------|-------------------|------------------|-----------------|
-| **Quality** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Speed** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ |
-| **Cost** | 💰💰💰 | 💰 | 💰💰 | 💰 | 💰💰💰 | 💰 | 💰💰💰💰💰 |
-| **Context** | 128K | 128K | 2M | 1M | 200K | 200K | 200K |
-| **Free Tier** | 1M/day | 10M/day | 1500/day | 1500/day | Limited | Limited | Very Limited |
-
-### Recommendation Summary
-
-🏆 **Overall Best**: Claude Sonnet 4.5 (balanced quality/speed)
-⚡ **Fastest**: Gemini 2.5 Flash Lite
-💎 **Best Quality**: Claude Opus 4.1
-💰 **Best Value**: Gemini 2.5 Flash
-🆓 **Best Free**: OpenAI GPT-5 Mini (10M tokens/day)
-📚 **Longest Context**: Gemini 2.5 Pro (2M tokens)
+- **`fastMode = true`** → `gpt-4o-mini`
+- **`fastMode = 'ultra'`** → `gpt-4o-mini` (placeholder until additional models are introduced)
+- **`reasoning = true`** → `o1-2024-12-17`
+- **`coding = true`** → stays on GPT-4o but frames prompts for structured/code output
+- **Threads**: `isThread = true` transforms the UI response into an array of tweets after stripping numbering
+- **Fallback logic**:
+  - Mini requests retry with `gpt-4o-mini-2024-07-18`
+  - Reasoning requests remove the `temperature` parameter when the API raises an error about fixed-temperature models
 
 ---
 
-**Last Updated**: October 17, 2025
-**Status**: All models tested and verified
-**Coverage**: 15 models across 3 providers
+## 3. Brand Voice Influence
+
+Every request builds a system prompt that includes:
+
+- Brand voice description and guidelines
+- Example tweets (numbered)
+- Tone sliders (formality, humor, technicality)
+- Optional target profile data (average length, common phrases)
+
+For replies, the user prompt is prefixed with the original tweet text and username to ensure context-aware responses.
+
+---
+
+## 4. Preparing for Gemini & Claude
+
+The following pieces are already in the repository and can be activated once multi-provider selection is introduced:
+
+| Provider | File | Status |
+|----------|------|--------|
+| Google Gemini | `src/api/gemini.ts` | Generates content, supports Pro/Flash/Flash-Lite, auto-fallback |
+| Anthropic Claude | `src/api/claude.ts` | Supports API-key and cookie auth; handles Sonnet, Opus, Haiku variants |
+| Model metadata | `src/constants/models.ts` | Currently OpenAI-only; extend with Gemini/Claude entries |
+
+To complete the integration:
+1. Add provider selection UI in the panel and settings.
+2. Teach the service worker to branch on `request.provider` and pull the right credentials.
+3. Persist any new secret types (Gemini key, Claude key/cookie) with encryption.
+4. Update documentation, tests, and telemetry once real usage is confirmed.
+
+---
+
+## 5. Testing Tips
+
+- **OpenAI requests**: Inspect the service worker console for `[Kotodama Performance]` logs to confirm model selection and timing.
+- **Thread parsing**: For debugging, log the raw string returned before the newline split to verify numbering.
+- **Reasoning mode**: Expect longer response times; keep prompts concise to stay within token limits.
+- **Fallback verification**: Temporarily force an invalid temperature on `o1` to watch the retry logic remove it.
+
+---
+
+## 6. Quick Reference Snippets
+
+```typescript
+// Standard tweet
+await generateWithOpenAI({ prompt, brandVoiceId }, openaiKey, voice);
+
+// Fast mode from devtools
+await chrome.runtime.sendMessage({
+  type: 'generate',
+  payload: { prompt, brandVoiceId, fastMode: true }
+});
+
+// Thread (5 tweets)
+await chrome.runtime.sendMessage({
+  type: 'generate',
+  payload: { prompt, brandVoiceId, isThread: true, threadLength: 5 }
+});
+```
+
+---
+
+Need more detail? Pair this document with `docs/reference/API_REFERENCE.md` for function signatures and `docs/guides/QUICK_REFERENCE.md` for UI-centric shortcuts.
