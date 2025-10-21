@@ -131,6 +131,12 @@ const Panel: React.FC = () => {
 
   const handleMessage = (event: MessageEvent) => {
     if (event.data.type === 'context') {
+      console.log('[Kotodama Panel] Received context:', {
+        type: event.data.context,
+        hasTweetContext: !!event.data.tweetContext,
+        tweetContext: event.data.tweetContext,
+      });
+
       setContext({
         type: event.data.context,
         tweetContext: event.data.tweetContext,
@@ -140,6 +146,8 @@ const Panel: React.FC = () => {
         // Don't set the prompt automatically - let user see context and write their own
         // The context card will show the full tweet
         setPrompt('');
+      } else if (event.data.context === 'reply' && !event.data.tweetContext) {
+        console.warn('[Kotodama Panel] Reply context but no tweet data received');
       }
     }
   };
@@ -268,15 +276,25 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
   };
 
   const handleInsert = (content?: string) => {
-    if (!generatedContent) {
+    // Determine what content to insert
+    let text: string;
+
+    if (typeof content === 'string') {
+      // Specific content provided (from individual tweet button)
+      text = content;
+    } else if (typeof generatedContent === 'string') {
+      // Single generated tweet
+      text = generatedContent;
+    } else if (Array.isArray(generatedContent) && generatedContent.length > 0) {
+      // Multiple tweets - join them
+      text = generatedContent.join('\n\n');
+    } else {
+      // No valid content
+      console.warn('[Kotodama] No content to insert');
       return;
     }
 
-    const text = content || (
-      typeof generatedContent === 'string'
-        ? generatedContent
-        : generatedContent.join('\n\n')
-    );
+    console.log('[Kotodama] Inserting content via postMessage:', text.substring(0, 50) + '...');
 
     window.parent.postMessage(
       {
@@ -760,7 +778,7 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
                   )}
 
                   <button
-                    onClick={handleInsert}
+                    onClick={() => handleInsert()}
                     className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover focus:outline-none"
                     style={{
                       backgroundColor: 'var(--koto-success)',

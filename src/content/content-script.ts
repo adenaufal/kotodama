@@ -163,6 +163,7 @@ function createFloatingButton() {
     const replyingToSelectors = [
       '[data-testid="inlineReplyingTo"]',
       '[aria-label*="Replying to"]',
+      '.css-1rynq56.r-bcqeeo.r-qvutc0.r-37j5jr.r-a023e6.r-rjixqe.r-16dba41.r-1awozwy.r-6koalj.r-1h0z5md.r-o7ynqc.r-clp7b1.r-3s2u2q',
     ];
     let replyingToElement = null;
     for (const selector of replyingToSelectors) {
@@ -175,25 +176,35 @@ function createFloatingButton() {
 
     // Strategy 2: Check for compose box placeholder text containing "reply"
     const composeBox = document.querySelector('[data-testid="tweetTextarea_0"]');
-    const placeholder = composeBox?.getAttribute('data-text') || composeBox?.getAttribute('placeholder') || '';
+    const placeholder = composeBox?.getAttribute('data-text') || composeBox?.getAttribute('placeholder') || composeBox?.getAttribute('aria-label') || '';
     const isReplyPlaceholder = placeholder.toLowerCase().includes('reply');
 
     // Strategy 3: Check if the compose box is within a reply container
     const isInReplyContainer = !!composeBox?.closest('[data-testid="reply"]');
 
+    // Strategy 4: Look for tweet articles on the page
+    const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
+    const hasTweetAbove = tweetArticles.length > 0;
+
+    // Strategy 5: Check URL pattern for reply pages
+    const isReplyURL = window.location.pathname.includes('/status/') && composeBox !== null;
+
     console.log('[Kotodama] Detection results:', {
       replyingToElement: !!replyingToElement,
       isReplyPlaceholder,
       isInReplyContainer,
+      hasTweetAbove,
+      isReplyURL,
       placeholder: placeholder.substring(0, 50),
+      tweetArticleCount: tweetArticles.length,
     });
 
-    // Determine if this is a reply context - use stricter criteria
-    // Only treat as reply if we have EXPLICIT reply indicators
+    // Determine if this is a reply context
     const isReplyContext = (
       replyingToElement !== null ||
       isInReplyContainer ||
-      (isReplyPlaceholder && placeholder.toLowerCase().startsWith('post your reply'))
+      (isReplyPlaceholder && placeholder.toLowerCase().includes('post your reply')) ||
+      (isReplyURL && hasTweetAbove)
     );
 
     if (isReplyContext) {
@@ -201,11 +212,23 @@ function createFloatingButton() {
       currentContext = 'reply';
 
       // Try to find the tweet we're replying to
-      const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
       if (tweetArticles.length > 0) {
-        currentTweetContext = await extractTweetContextFromPage(tweetArticles[0] as HTMLElement);
+        // Find the first tweet that's not a reply (the original tweet)
+        let targetTweet = tweetArticles[0] as HTMLElement;
+
+        // If there are multiple tweets, try to find the main one
+        for (let i = 0; i < tweetArticles.length; i++) {
+          const article = tweetArticles[i] as HTMLElement;
+          // Skip if this is our own compose area
+          if (article.contains(composeBox)) continue;
+          targetTweet = article;
+          break;
+        }
+
+        currentTweetContext = await extractTweetContextFromPage(targetTweet);
         console.log('[Kotodama] Extracted context:', currentTweetContext);
       } else {
+        console.warn('[Kotodama] Reply context detected but no tweet found');
         currentTweetContext = null;
       }
     } else {
@@ -308,13 +331,19 @@ async function extractTweetContextFromPage(tweetArticle: HTMLElement): Promise<a
 
   // Extract tweet text
   const tweetTextElement = tweetArticle.querySelector('[data-testid="tweetText"]');
-  const tweetText = tweetTextElement?.textContent || '';
+  const tweetText = tweetTextElement?.textContent?.trim() || '';
 
-  // Extract username - try multiple selectors
+  if (!tweetText) {
+    console.warn('[Kotodama] No tweet text found in article');
+    return null;
+  }
+
+  // Extract username - try multiple selectors with improved logic
   let username = '';
   const usernameSelectors = [
-    '[data-testid="User-Name"] a[role="link"]',
-    '[data-testid="User-Name"] span',
+    '[data-testid="User-Name"] a[role="link"][href^="/"]',
+    '[data-testid="User-Name"] a[href^="/"]',
+    'a[role="link"][href^="/"][href*="status"]',
     'a[role="link"][href^="/"]',
   ];
 
@@ -322,21 +351,43 @@ async function extractTweetContextFromPage(tweetArticle: HTMLElement): Promise<a
     const element = tweetArticle.querySelector(selector);
     if (element) {
       const href = element.getAttribute('href');
-      if (href && href.startsWith('/')) {
-        username = href.substring(1).split('/')[0];
-        break;
-      }
-      const text = element.textContent;
-      if (text) {
-        username = text.replace('@', '').trim();
-        if (username && username !== '') break;
+      if (href && href.startsWith('/') && !href.startsWith('/i/')) {
+        // Extract username from href, handle both /username and /username/status/123 formats
+        const pathParts = href.substring(1).split('/');
+        const potentialUsername = pathParts[0];
+        // Validate it looks like a username (not a special path)
+        if (potentialUsername && !['compose', 'home', 'explore', 'notifications', 'messages', 'settings', 'search'].includes(potentialUsername)) {
+          username = potentialUsername.replace('@', '').trim();
+          console.log('[Kotodama] Found username from href:', username);
+          break;
+        }
       }
     }
   }
 
+  // Fallback: try to get username from text content
+  if (!username) {
+    const userNameElement = tweetArticle.querySelector('[data-testid="User-Name"]');
+    if (userNameElement) {
+      const spans = userNameElement.querySelectorAll('span');
+      for (const span of spans) {
+        const text = span.textContent?.trim() || '';
+        if (text.startsWith('@')) {
+          username = text.substring(1);
+          console.log('[Kotodama] Found username from @mention:', username);
+          break;
+        }
+      }
+    }
+  }
+
+  if (!username) {
+    console.warn('[Kotodama] Could not extract username from tweet');
+  }
+
   const context = {
     text: tweetText,
-    username,
+    username: username || 'unknown',
     timestamp: new Date().toISOString(),
   };
 
@@ -507,65 +558,111 @@ function insertTweetContent(content: string) {
 
   console.log('[Kotodama] Inserting content:', content);
 
-  // Clear existing content first
-  composeEditable.textContent = '';
+  // Focus the element first to activate Twitter's editor
   composeEditable.focus();
 
-  // Try using execCommand first (more reliable for maintaining Twitter's state)
-  let inserted = false;
-  try {
-    // Position cursor at the start
-    const selection = window.getSelection();
-    if (selection) {
-      const range = document.createRange();
-      range.selectNodeContents(composeEditable);
-      range.collapse(true); // Collapse to start
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-
-    // Try to insert using execCommand
-    inserted = document.execCommand('insertText', false, content);
-    console.log('[Kotodama] execCommand insertText result:', inserted);
-  } catch (error) {
-    console.warn('[Kotodama] Failed to use execCommand for insertion', error);
-  }
-
-  // Fallback to direct textContent setting
-  if (!inserted || composeEditable.textContent !== content) {
-    console.log('[Kotodama] Using textContent fallback');
-    composeEditable.textContent = content;
-  }
-
-  // Dispatch input events to notify Twitter's React components
-  composeEditable.dispatchEvent(new InputEvent('input', {
-    bubbles: true,
-    cancelable: true,
-    inputType: 'insertText',
-    data: content,
-  }));
-
-  // Also dispatch a change event for good measure
-  composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
-
-  // Position cursor at the end
+  // Select the existing contents so our paste replaces everything cleanly
   const selection = window.getSelection();
   if (selection) {
     const range = document.createRange();
     range.selectNodeContents(composeEditable);
-    range.collapse(false); // Collapse to end
     selection.removeAllRanges();
     selection.addRange(range);
   }
 
-  // Verify insertion
-  console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
-  console.log('[Kotodama] Expected length:', content.length);
+  // Try delivering the text via a synthetic paste event so X updates its Draft.js state
+  let pasteHandled = false;
+  if (typeof ClipboardEvent === 'function' && typeof DataTransfer === 'function') {
+    try {
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', content);
+      const pasteEvent = new ClipboardEvent('paste', {
+        clipboardData,
+        bubbles: true,
+        cancelable: true,
+      });
 
-  if (panelIframe) {
-    setTimeout(() => {
-      hidePanel();
-    }, 500);
+      // dispatchEvent returns false when preventDefault() is called, which signals X handled the paste
+      const dispatchResult = composeEditable.dispatchEvent(pasteEvent);
+      pasteHandled = pasteEvent.defaultPrevented || !dispatchResult;
+      console.log('[Kotodama] Paste event dispatched. Handled by X:', pasteHandled);
+    } catch (error) {
+      console.warn('[Kotodama] Clipboard paste simulation failed:', error);
+    }
+  }
+
+  const finalizeInsertion = () => {
+    const currentText = composeEditable.textContent || '';
+    const expected = content;
+    const textMatches = currentText.trim() === expected.trim();
+
+    if (!textMatches) {
+      console.log('[Kotodama] Paste did not populate editor, falling back to execCommand');
+      try {
+        document.execCommand('selectAll', false);
+      } catch (error) {
+        console.warn('[Kotodama] execCommand selectAll failed:', error);
+      }
+
+      let inserted = false;
+      try {
+        inserted = document.execCommand('insertText', false, content);
+        console.log('[Kotodama] execCommand insertText result:', inserted);
+      } catch (error) {
+        console.warn('[Kotodama] execCommand insertText threw:', error);
+      }
+
+      if (!inserted) {
+        composeEditable.textContent = content;
+      }
+
+      // Let React know something changed when we rely on the fallback
+      try {
+        const inputEvent = new InputEvent('input', {
+          bubbles: true,
+          cancelable: true,
+          inputType: 'insertText',
+          data: content,
+        });
+        composeEditable.dispatchEvent(inputEvent);
+      } catch (error) {
+        console.warn('[Kotodama] Synthetic input event failed:', error);
+      }
+
+      composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Ensure placeholder and cursor state look correct
+    composeEditable.setAttribute('data-text', 'true');
+
+    // Push the cursor to the end for convenience
+    const afterSelection = window.getSelection();
+    if (afterSelection) {
+      const afterRange = document.createRange();
+      afterRange.selectNodeContents(composeEditable);
+      afterRange.collapse(false);
+      afterSelection.removeAllRanges();
+      afterSelection.addRange(afterRange);
+    }
+
+    console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
+    console.log('[Kotodama] Expected length:', content.length);
+    console.log('[Kotodama] Match:', composeEditable.textContent === content);
+
+    // Close panel after successful insertion
+    if (panelIframe) {
+      setTimeout(() => {
+        hidePanel();
+      }, 600);
+    }
+  };
+
+  // Give X a moment to process the paste before deciding on the fallback path
+  if (pasteHandled) {
+    requestAnimationFrame(finalizeInsertion);
+  } else {
+    // If paste wasn't handled, run fallback immediately
+    finalizeInsertion();
   }
 }
 
