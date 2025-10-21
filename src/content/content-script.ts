@@ -418,13 +418,42 @@ function openPanel() {
   panelIframe.src = extensionRuntime.getURL('src/panel/index.html');
   panelIframe.id = 'kotodama-panel';
 
+  // Responsive sizing based on viewport
+  const viewportWidth = window.innerWidth;
+
+  // Adjust dimensions for smaller screens
+  let panelWidth: string;
+  let panelHeight: string;
+  let panelTop: string;
+  let panelRight: string;
+
+  if (viewportWidth <= 1366) {
+    // Small screens (13-14 inch laptops, 720p-1080p)
+    panelWidth = 'min(400px, calc(100vw - 40px))';
+    panelHeight = 'min(650px, calc(100vh - 80px))';
+    panelTop = '60px';
+    panelRight = '20px';
+  } else if (viewportWidth <= 1920) {
+    // Medium screens (15-17 inch laptops, 1080p-1440p)
+    panelWidth = 'min(460px, calc(100vw - 60px))';
+    panelHeight = 'min(720px, calc(100vh - 100px))';
+    panelTop = '70px';
+    panelRight = '30px';
+  } else {
+    // Large screens (1440p+)
+    panelWidth = 'min(520px, calc(100vw - 80px))';
+    panelHeight = 'min(800px, calc(100vh - 120px))';
+    panelTop = '80px';
+    panelRight = '40px';
+  }
+
   Object.assign(panelIframe.style, {
     position: 'fixed',
-    top: '80px',
-    right: '40px',
-    width: 'min(520px, calc(100vw - 80px))',
-    height: 'min(800px, calc(100vh - 120px))',
-    minHeight: '600px',
+    top: panelTop,
+    right: panelRight,
+    width: panelWidth,
+    height: panelHeight,
+    minHeight: '500px',
     border: 'none',
     borderRadius: '20px',
     zIndex: '999999',
@@ -561,7 +590,7 @@ function insertTweetContent(content: string) {
   // Focus the element first to activate Twitter's editor
   composeEditable.focus();
 
-  // Select the existing contents so our paste replaces everything cleanly
+  // Select everything so we can replace it in one go
   const selection = window.getSelection();
   if (selection) {
     const range = document.createRange();
@@ -570,100 +599,70 @@ function insertTweetContent(content: string) {
     selection.addRange(range);
   }
 
-  // Try delivering the text via a synthetic paste event so X updates its Draft.js state
-  let pasteHandled = false;
-  if (typeof ClipboardEvent === 'function' && typeof DataTransfer === 'function') {
-    try {
-      const clipboardData = new DataTransfer();
-      clipboardData.setData('text/plain', content);
-      const pasteEvent = new ClipboardEvent('paste', {
-        clipboardData,
-        bubbles: true,
-        cancelable: true,
-      });
+  try {
+    document.execCommand('delete', false);
+  } catch (error) {
+    console.warn('[Kotodama] execCommand delete failed:', error);
+  }
 
-      // dispatchEvent returns false when preventDefault() is called, which signals X handled the paste
-      const dispatchResult = composeEditable.dispatchEvent(pasteEvent);
-      pasteHandled = pasteEvent.defaultPrevented || !dispatchResult;
-      console.log('[Kotodama] Paste event dispatched. Handled by X:', pasteHandled);
-    } catch (error) {
-      console.warn('[Kotodama] Clipboard paste simulation failed:', error);
+  // Split content into lines and insert via execCommand to mimic real typing
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.length > 0) {
+      const inserted = document.execCommand('insertText', false, line);
+      if (!inserted) {
+        composeEditable.append(document.createTextNode(line));
+      }
+    }
+
+    if (i < lines.length - 1) {
+      try {
+        document.execCommand('insertParagraph', false);
+      } catch {
+        composeEditable.append(document.createElement('br'));
+      }
     }
   }
 
-  const finalizeInsertion = () => {
-    const currentText = composeEditable.textContent || '';
-    const expected = content;
-    const textMatches = currentText.trim() === expected.trim();
+  // Ensure placeholder state and aria label stay accurate
+  composeEditable.setAttribute('data-text', 'true');
+  if (composeEditable.hasAttribute('aria-label')) {
+    composeEditable.setAttribute('aria-label', 'Tweet text');
+  }
 
-    if (!textMatches) {
-      console.log('[Kotodama] Paste did not populate editor, falling back to execCommand');
-      try {
-        document.execCommand('selectAll', false);
-      } catch (error) {
-        console.warn('[Kotodama] execCommand selectAll failed:', error);
-      }
+  // Fire the events Twitter listens for to enable the Post button
+  composeEditable.dispatchEvent(new Event('input', { bubbles: true }));
+  composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
+  composeEditable.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End', code: 'End' }));
+  composeEditable.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'End', code: 'End' }));
 
-      let inserted = false;
-      try {
-        inserted = document.execCommand('insertText', false, content);
-        console.log('[Kotodama] execCommand insertText result:', inserted);
-      } catch (error) {
-        console.warn('[Kotodama] execCommand insertText threw:', error);
-      }
+  // Place cursor at the end
+  const finalSelection = window.getSelection();
+  if (finalSelection) {
+    const finalRange = document.createRange();
+    finalRange.selectNodeContents(composeEditable);
+    finalRange.collapse(false);
+    finalSelection.removeAllRanges();
+    finalSelection.addRange(finalRange);
+  }
 
-      if (!inserted) {
-        composeEditable.textContent = content;
-      }
+  console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
+  console.log('[Kotodama] Expected length:', content.length);
+  console.log('[Kotodama] Match:', composeEditable.textContent === content);
 
-      // Let React know something changed when we rely on the fallback
-      try {
-        const inputEvent = new InputEvent('input', {
-          bubbles: true,
-          cancelable: true,
-          inputType: 'insertText',
-          data: content,
-        });
-        composeEditable.dispatchEvent(inputEvent);
-      } catch (error) {
-        console.warn('[Kotodama] Synthetic input event failed:', error);
-      }
+  // Give React a nudge by blurring then refocusing
+  composeEditable.blur();
+  setTimeout(() => {
+    composeEditable.focus();
 
-      composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    // Ensure placeholder and cursor state look correct
-    composeEditable.setAttribute('data-text', 'true');
-
-    // Push the cursor to the end for convenience
-    const afterSelection = window.getSelection();
-    if (afterSelection) {
-      const afterRange = document.createRange();
-      afterRange.selectNodeContents(composeEditable);
-      afterRange.collapse(false);
-      afterSelection.removeAllRanges();
-      afterSelection.addRange(afterRange);
-    }
-
-    console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
-    console.log('[Kotodama] Expected length:', content.length);
-    console.log('[Kotodama] Match:', composeEditable.textContent === content);
-
-    // Close panel after successful insertion
     if (panelIframe) {
       setTimeout(() => {
         hidePanel();
       }, 600);
     }
-  };
-
-  // Give X a moment to process the paste before deciding on the fallback path
-  if (pasteHandled) {
-    requestAnimationFrame(finalizeInsertion);
-  } else {
-    // If paste wasn't handled, run fallback immediately
-    finalizeInsertion();
-  }
+  }, 50);
 }
 
 async function fetchUserTweets(_username: string): Promise<string[]> {
