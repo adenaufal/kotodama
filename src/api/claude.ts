@@ -180,10 +180,12 @@ async function generateWithClaudeWeb(
     const tokenUsage = Math.ceil(content.length / 4); // Rough estimate
 
     if (isThread) {
+      // Parse thread into individual tweets
+      // Split on numbered patterns like "1/" or "1." at the start of a line
+      // This preserves line breaks within each tweet
       const tweets = content
-        .split('\n')
-        .filter((line: string) => line.trim())
-        .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
+        .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
+        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
         .filter((tweet: string) => tweet.length > 0);
 
       return {
@@ -275,10 +277,11 @@ export async function generateWithClaude(
 
     if (isThread) {
       // Parse thread into individual tweets
+      // Split on numbered patterns like "1/" or "1." at the start of a line
+      // This preserves line breaks within each tweet
       const tweets = content
-        .split('\n')
-        .filter((line: string) => line.trim())
-        .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
+        .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
+        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
         .filter((tweet: string) => tweet.length > 0);
 
       return {
@@ -327,10 +330,12 @@ export async function generateWithClaude(
           const tokenUsage = data.usage.input_tokens + data.usage.output_tokens;
 
           if (isThread) {
+            // Parse thread into individual tweets
+            // Split on numbered patterns like "1/" or "1." at the start of a line
+            // This preserves line breaks within each tweet
             const tweets = content
-              .split('\n')
-              .filter((line: string) => line.trim())
-              .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
+              .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
+              .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
               .filter((tweet: string) => tweet.length > 0);
 
             return {

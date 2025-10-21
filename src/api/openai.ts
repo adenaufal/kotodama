@@ -211,10 +211,11 @@ export async function generateWithOpenAI(
 
     if (isThread) {
       // Parse thread into individual tweets
+      // Split on numbered patterns like "1/" or "1." at the start of a line
+      // This preserves line breaks within each tweet
       const tweets = content
-        .split('\n')
-        .filter((line: string) => line.trim())
-        .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
+        .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
+        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
         .filter((tweet: string) => tweet.length > 0);
 
       return {

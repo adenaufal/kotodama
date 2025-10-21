@@ -105,6 +105,8 @@ const REPLY_TEMPLATES: ReplyTemplate[] = [
   },
 ];
 
+type TweetLength = 'short' | 'medium' | 'long';
+
 const Panel: React.FC = () => {
   const [context, setContext] = useState<ContextData>({ type: null });
   const [prompt, setPrompt] = useState('');
@@ -117,6 +119,7 @@ const Panel: React.FC = () => {
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [tweetLengthPreset, setTweetLengthPreset] = useState<TweetLength>('short');
 
   useEffect(() => {
     loadInitialData();
@@ -192,6 +195,14 @@ const Panel: React.FC = () => {
     const startTime = performance.now();
 
     try {
+      // Determine character limits based on preset
+      const charLimits = {
+        short: { min: 100, max: 150, description: 'punchy and concise' },
+        medium: { min: 150, max: 220, description: 'balanced length' },
+        long: { min: 220, max: 280, description: 'detailed but within Twitter\'s limit' },
+      };
+      const limit = charLimits[tweetLengthPreset];
+
       // Build the prompt with context if replying
       let enhancedPrompt = prompt;
       if (context.type === 'reply' && context.tweetContext) {
@@ -204,7 +215,13 @@ User's instructions: ${prompt}
 Write a reply that:
 1. Responds directly to the original tweet
 2. Maintains the brand voice
-3. Is conversational and engaging`;
+3. Is conversational and engaging
+4. Is ${limit.description} (${limit.min}-${limit.max} characters)`;
+      } else {
+        // Add character limit guidance for compose tweets
+        enhancedPrompt = `${prompt}
+
+Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
       }
 
       const request: GenerateRequest = {
@@ -250,15 +267,16 @@ Write a reply that:
     }
   };
 
-  const handleInsert = () => {
+  const handleInsert = (content?: string) => {
     if (!generatedContent) {
       return;
     }
 
-    const text =
+    const text = content || (
       typeof generatedContent === 'string'
         ? generatedContent
-        : generatedContent.join('\n\n');
+        : generatedContent.join('\n\n')
+    );
 
     window.parent.postMessage(
       {
@@ -512,6 +530,66 @@ Write a reply that:
                 />
               </div>
 
+              <div className="stack-sm">
+                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Tweet length</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTweetLengthPreset('short')}
+                    className={`flex-1 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                      tweetLengthPreset === 'short' ? 'border-2' : ''
+                    }`}
+                    style={{
+                      borderColor: tweetLengthPreset === 'short' ? 'var(--koto-sakura-pink)' : 'var(--koto-border)',
+                      backgroundColor: tweetLengthPreset === 'short' ? 'rgba(232, 92, 143, 0.1)' : 'var(--koto-bg-dark)',
+                      color: tweetLengthPreset === 'short' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-primary)'
+                    }}
+                  >
+                    <div>Short</div>
+                    <div className="text-[10px] font-normal mt-0.5" style={{
+                      color: tweetLengthPreset === 'short' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-secondary)',
+                      opacity: 0.8
+                    }}>100-150</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTweetLengthPreset('medium')}
+                    className={`flex-1 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                      tweetLengthPreset === 'medium' ? 'border-2' : ''
+                    }`}
+                    style={{
+                      borderColor: tweetLengthPreset === 'medium' ? 'var(--koto-sakura-pink)' : 'var(--koto-border)',
+                      backgroundColor: tweetLengthPreset === 'medium' ? 'rgba(232, 92, 143, 0.1)' : 'var(--koto-bg-dark)',
+                      color: tweetLengthPreset === 'medium' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-primary)'
+                    }}
+                  >
+                    <div>Medium</div>
+                    <div className="text-[10px] font-normal mt-0.5" style={{
+                      color: tweetLengthPreset === 'medium' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-secondary)',
+                      opacity: 0.8
+                    }}>150-220</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTweetLengthPreset('long')}
+                    className={`flex-1 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                      tweetLengthPreset === 'long' ? 'border-2' : ''
+                    }`}
+                    style={{
+                      borderColor: tweetLengthPreset === 'long' ? 'var(--koto-sakura-pink)' : 'var(--koto-border)',
+                      backgroundColor: tweetLengthPreset === 'long' ? 'rgba(232, 92, 143, 0.1)' : 'var(--koto-bg-dark)',
+                      color: tweetLengthPreset === 'long' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-primary)'
+                    }}
+                  >
+                    <div>Long</div>
+                    <div className="text-[10px] font-normal mt-0.5" style={{
+                      color: tweetLengthPreset === 'long' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-secondary)',
+                      opacity: 0.8
+                    }}>220-280</div>
+                  </button>
+                </div>
+              </div>
+
               {context.type === 'compose' && (
                 <div className="stack-sm rounded-2xl p-4" style={{ backgroundColor: 'rgba(26, 29, 46, 0.5)' }}>
                   <label className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
@@ -648,10 +726,23 @@ Write a reply that:
                           }}
                         >
                           <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>
-                            <span>Suggestion {index + 1}</span>
-                            <span>{tweet.length} characters</span>
+                            <span>Tweet {index + 1}/{generatedContent.length}</span>
+                            <span className={tweet.length > 280 ? 'text-red-500' : ''}>{tweet.length} chars</span>
                           </div>
                           <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--koto-text-primary)' }}>{tweet}</p>
+                          <button
+                            onClick={() => handleInsert(tweet)}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-white shadow-md transition koto-button-hover focus:outline-none"
+                            style={{
+                              backgroundColor: 'var(--koto-success)',
+                              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.25)'
+                            }}
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Insert this tweet
+                          </button>
                         </div>
                       ))}
                     </div>
