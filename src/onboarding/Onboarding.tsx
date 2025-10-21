@@ -85,7 +85,6 @@ const Onboarding: React.FC = () => {
   const [importFeedback, setImportFeedback] = useState<
     { type: 'success' | 'error'; message: string } | null
   >(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const exampleTweetRequestTokens = useRef<number[]>(
     Array.from({ length: MAX_EXAMPLE_TWEETS }, () => 0),
   );
@@ -107,11 +106,6 @@ const Onboarding: React.FC = () => {
         if (response.success) {
           const existingSettings = response.data as UserSettings;
           const existingKey = existingSettings.apiKeys.openai;
-
-          // Load theme preference
-          if (existingSettings.ui?.theme) {
-            setTheme(existingSettings.ui.theme === 'auto' ? 'light' : existingSettings.ui.theme);
-          }
 
           if (typeof existingKey === 'string' && existingKey.trim()) {
             const settingsUrl = chrome.runtime.getURL('src/settings/index.html');
@@ -291,7 +285,7 @@ const Onboarding: React.FC = () => {
         ui: {
           buttonPosition: 'top-right',
           panelWidth: 400,
-          theme: theme,
+          theme: 'light',
         },
         features: {
           autoAnalyze: true,
@@ -340,63 +334,47 @@ const Onboarding: React.FC = () => {
     }
   };
 
-  const handleToggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
-
   const totalSteps = steps.length;
   const activeStep = steps.find((item) => item.id === step);
 
   return (
-    <div className={`relative min-h-screen overflow-hidden ${theme === 'light' ? 'light-mode' : ''}`} style={{ backgroundColor: theme === 'light' ? 'white' : 'var(--koto-bg-dark)', color: 'var(--koto-text-primary)' }}>
-      {theme === 'dark' && (
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute -top-48 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-indigo-500/20 blur-3xl" />
-          <div className="absolute bottom-0 right-[-20%] h-[420px] w-[420px] rounded-full bg-purple-500/10 blur-3xl" />
-        </div>
-      )}
-
+    <div className="relative min-h-screen overflow-hidden light-mode" style={{ backgroundColor: 'var(--koto-bg-light)', color: 'var(--koto-text-primary)' }}>
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-5 py-14 sm:px-8 lg:flex-row lg:items-start lg:py-20">
         <aside className="relative w-full overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur xl:w-[340px]" style={{
-          borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-          backgroundColor: theme === 'light' ? 'var(--koto-surface)' : 'rgba(15, 23, 42, 0.8)',
-          boxShadow: theme === 'light' ? 'var(--koto-shadow-lg)' : '0 35px 70px -15px rgba(15,23,42,0.65)'
+          borderColor: 'var(--koto-border)',
+          backgroundColor: 'var(--koto-surface)',
+          boxShadow: 'var(--koto-shadow-lg)'
         }}>
-          <div className={`pointer-events-none absolute inset-0 ${theme === 'dark' ? 'opacity-70' : 'opacity-0'}`}>
-            <div className="absolute -left-12 top-10 h-44 w-44 rounded-full bg-indigo-500/40 blur-3xl" />
-            <div className="absolute bottom-4 right-6 h-40 w-40 rounded-full bg-blue-400/30 blur-3xl" />
-          </div>
-
           <div className="relative space-y-10">
             <div className="space-y-4">
               <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.35em]" style={{
-                borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-                backgroundColor: theme === 'light' ? 'rgba(232, 92, 143, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgb(199, 210, 254)'
+                borderColor: 'var(--koto-border)',
+                backgroundColor: 'rgba(232, 92, 143, 0.1)',
+                color: 'var(--koto-sakura-pink)'
               }}>
                 Kotodama setup
               </span>
-              <h1 className="text-3xl font-semibold leading-tight sm:text-4xl" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'white' }}>
+              <h1 className="text-3xl font-semibold leading-tight sm:text-4xl" style={{ color: 'var(--koto-text-primary)' }}>
                 Make the assistant sound like you
               </h1>
-              <p className="text-sm" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgba(226, 232, 240, 0.85)' }}>
+              <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                 Spend two quick steps to lock in access and tone. Everything is stored locally and fully encrypted before it hits disk.
               </p>
             </div>
 
             <div className="space-y-6 rounded-2xl border p-6" style={{
-              borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-              backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.5)' : 'rgba(255, 255, 255, 0.05)'
+              borderColor: 'var(--koto-border)',
+              backgroundColor: 'rgba(240, 242, 248, 0.5)'
             }}>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgba(199, 210, 254, 0.8)' }}>You&apos;ll cover</p>
-              <ul className="space-y-5 text-sm" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgba(226, 232, 240, 0.9)' }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: 'var(--koto-sakura-pink)' }}>You&apos;ll cover</p>
+              <ul className="space-y-5 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                 <li className="flex gap-3">
                   <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/80 text-[0.75rem] font-semibold text-white">
                     1
                   </span>
                   <div>
-                    <p className="font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)' }}>Connect your key</p>
-                    <p style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgba(226, 232, 240, 0.8)' }}>We never transmit or log it—everything stays on this browser profile.</p>
+                    <p className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>Connect your key</p>
+                    <p style={{ color: 'var(--koto-text-secondary)' }}>We never transmit or log it—everything stays on this browser profile.</p>
                   </div>
                 </li>
                 <li className="flex gap-3">
@@ -404,14 +382,14 @@ const Onboarding: React.FC = () => {
                     2
                   </span>
                   <div>
-                    <p className="font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)' }}>Tune your voice</p>
-                    <p style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgba(226, 232, 240, 0.8)' }}>Add signature phrases or references so generated drafts hit your vibe immediately.</p>
+                    <p className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>Tune your voice</p>
+                    <p style={{ color: 'var(--koto-text-secondary)' }}>Add signature phrases or references so generated drafts hit your vibe immediately.</p>
                   </div>
                 </li>
               </ul>
             </div>
 
-            <div className="space-y-3 text-xs uppercase tracking-[0.35em]" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgba(199, 210, 254, 0.7)' }}>
+            <div className="space-y-3 text-xs uppercase tracking-[0.35em]" style={{ color: 'var(--koto-text-secondary)' }}>
               <p>Zero accounts. Zero analytics.</p>
               <p>Revoke, export, and delete any time.</p>
             </div>
@@ -420,45 +398,23 @@ const Onboarding: React.FC = () => {
 
         <section className="flex-1">
           <div className="h-full rounded-3xl border backdrop-blur" style={{
-            borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-            backgroundColor: theme === 'light' ? 'var(--koto-surface)' : 'rgba(15, 23, 42, 0.75)',
-            boxShadow: theme === 'light' ? 'var(--koto-shadow-lg)' : '0 35px 70px -20px rgba(15,23,42,0.55)'
+            borderColor: 'var(--koto-border)',
+            backgroundColor: 'var(--koto-surface)',
+            boxShadow: 'var(--koto-shadow-lg)'
           }}>
-            <header className="space-y-6 border-b px-6 py-8 sm:px-8" style={{ borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)' }}>
-              <div className="flex items-center justify-between gap-4">
-                <button
-                  onClick={handleToggleTheme}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full transition koto-button-hover"
-                  style={{
-                    backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.1)',
-                    color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
-                  }}
-                  aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                  title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                >
-                  {theme === 'light' ? (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+            <header className="space-y-6 border-b px-6 py-8 sm:px-8" style={{ borderColor: 'var(--koto-border)' }}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgba(165, 180, 252, 0.9)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: 'var(--koto-sakura-pink)' }}>
                     Step {step} of {totalSteps}
                   </p>
-                  <h2 className="text-2xl font-semibold sm:text-3xl" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'white' }}>{activeStep?.title}</h2>
-                  <p className="max-w-xl text-sm sm:text-base" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(203, 213, 225)' }}>{activeStep?.description}</p>
+                  <h2 className="text-2xl font-semibold sm:text-3xl" style={{ color: 'var(--koto-text-primary)' }}>{activeStep?.title}</h2>
+                  <p className="max-w-xl text-sm sm:text-base" style={{ color: 'var(--koto-text-secondary)' }}>{activeStep?.description}</p>
                 </div>
 
                 <ol className="flex items-center gap-2 rounded-full border p-2" style={{
-                  borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-                  backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.5)' : 'rgba(255, 255, 255, 0.05)'
+                  borderColor: 'var(--koto-border)',
+                  backgroundColor: 'rgba(240, 242, 248, 0.5)'
                 }}>
                   {steps.map((item, index) => {
                     const isActive = step === item.id;
@@ -476,9 +432,9 @@ const Onboarding: React.FC = () => {
                           }`}
                           style={
                             isActive && !isCompleted
-                              ? { backgroundColor: theme === 'light' ? 'white' : 'white', color: 'rgb(79, 70, 229)' }
+                              ? { backgroundColor: 'white', color: 'rgb(79, 70, 229)' }
                               : !isActive && !isCompleted
-                                ? { color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(100, 116, 139)' }
+                                ? { color: 'var(--koto-text-secondary)' }
                                 : {}
                           }
                         >
@@ -486,13 +442,11 @@ const Onboarding: React.FC = () => {
                         </span>
                         {index < totalSteps - 1 && (
                           <span
-                            className={`h-px w-10 rounded-full transition`}
+                            className="h-px w-10 rounded-full transition"
                             style={{
                               backgroundColor: isCompleted
                                 ? 'rgba(129, 140, 248, 0.8)'
-                                : theme === 'light'
-                                  ? 'var(--koto-border)'
-                                  : 'rgba(255, 255, 255, 0.1)'
+                                : 'var(--koto-border)'
                             }}
                           />
                         )}
@@ -507,7 +461,7 @@ const Onboarding: React.FC = () => {
               {step === 1 && (
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(226, 232, 240)' }}>OpenAI API key</label>
+                    <label className="block text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>OpenAI API key</label>
                     <input
                       type="password"
                       value={openaiKey}
@@ -515,19 +469,19 @@ const Onboarding: React.FC = () => {
                       placeholder="sk-..."
                       className="w-full rounded-2xl border px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none focus:ring-2"
                       style={{
-                        borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.15)',
-                        backgroundColor: theme === 'light' ? 'var(--koto-bg-dark)' : 'rgba(255, 255, 255, 0.1)',
-                        color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)'
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'var(--koto-bg-dark)',
+                        color: 'var(--koto-text-primary)'
                       }}
                     />
-                    <p className="text-sm" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(148, 163, 184)' }}>
+                    <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                       Don&apos;t have a key?{' '}
                       <a
                         href="https://platform.openai.com/api-keys"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-medium"
-                        style={{ color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgb(165, 180, 252)' }}
+                        style={{ color: 'var(--koto-sakura-pink)' }}
                       >
                         Generate one here
                       </a>
@@ -536,11 +490,11 @@ const Onboarding: React.FC = () => {
                   </div>
 
                   <div className="rounded-2xl border p-5 text-sm" style={{
-                    borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-                    backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                    color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(203, 213, 225)'
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'rgba(240, 242, 248, 0.5)',
+                    color: 'var(--koto-text-secondary)'
                   }}>
-                    <p className="font-semibold" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'white' }}>Why we ask</p>
+                    <p className="font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Why we ask</p>
                     <p className="mt-1">
                       Keys are encrypted locally using the Web Crypto API before they&apos;re stored. You can revoke or replace them
                       any time from settings.
@@ -553,9 +507,9 @@ const Onboarding: React.FC = () => {
                       onClick={() => setOpenaiKey('')}
                       className="flex-1 rounded-2xl border px-4 py-3 text-base font-medium transition sm:flex-none sm:px-6"
                       style={{
-                        borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.15)',
-                        backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                        color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)'
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'rgba(240, 242, 248, 0.5)',
+                        color: 'var(--koto-text-primary)'
                       }}
                     >
                       Clear field
@@ -567,14 +521,10 @@ const Onboarding: React.FC = () => {
                       className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white shadow-[0_18px_35px_-12px_rgba(79,70,229,0.65)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:shadow-none sm:flex-none sm:px-6"
                       style={{
                         backgroundColor: !openaiKey.trim()
-                          ? theme === 'light'
-                            ? 'var(--koto-border)'
-                            : 'rgba(71, 85, 105, 0.6)'
+                          ? 'var(--koto-border)'
                           : 'rgb(99, 102, 241)',
                         color: !openaiKey.trim()
-                          ? theme === 'light'
-                            ? 'var(--koto-text-secondary)'
-                            : 'rgb(203, 213, 225)'
+                          ? 'var(--koto-text-secondary)'
                           : 'white'
                       }}
                     >
@@ -587,7 +537,7 @@ const Onboarding: React.FC = () => {
               {step === 2 && (
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(226, 232, 240)' }}>
+                    <label className="block text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
                       Brand voice name <span style={{ color: 'var(--koto-error)' }}>*</span>
                     </label>
                     <input
@@ -601,15 +551,15 @@ const Onboarding: React.FC = () => {
                       required
                       className="w-full rounded-2xl border px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none focus:ring-2"
                       style={{
-                        borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.15)',
-                        backgroundColor: theme === 'light' ? 'var(--koto-bg-dark)' : 'rgba(255, 255, 255, 0.1)',
-                        color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)'
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'var(--koto-bg-dark)',
+                        color: 'var(--koto-text-primary)'
                       }}
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(226, 232, 240)' }}>
+                    <label className="block text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
                       Description <span style={{ color: 'var(--koto-error)' }}>*</span>
                     </label>
                     <textarea
@@ -623,29 +573,29 @@ const Onboarding: React.FC = () => {
                       required
                       className="w-full rounded-2xl border px-4 py-3 text-base placeholder:text-slate-400 focus:outline-none focus:ring-2"
                       style={{
-                        borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.15)',
-                        backgroundColor: theme === 'light' ? 'var(--koto-bg-dark)' : 'rgba(255, 255, 255, 0.1)',
-                        color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)'
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'var(--koto-bg-dark)',
+                        color: 'var(--koto-text-primary)'
                       }}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(226, 232, 240)' }}>Import from markdown</label>
+                    <label className="block text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>Import from markdown</label>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold transition"
                         style={{
-                          borderColor: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgb(165, 180, 252)',
-                          backgroundColor: theme === 'light' ? 'rgba(232, 92, 143, 0.1)' : 'rgba(224, 231, 255, 0.1)',
-                          color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgb(165, 180, 252)'
+                          borderColor: 'var(--koto-sakura-pink)',
+                          backgroundColor: 'rgba(232, 92, 143, 0.1)',
+                          color: 'var(--koto-sakura-pink)'
                         }}
                       >
                         Upload .md file
                       </button>
-                      <p className="text-xs" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(148, 163, 184)' }}>
+                      <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
                         Use headings like "Name", "Description", and "Example Tweets" to prefill the form automatically.
                       </p>
                     </div>
@@ -669,10 +619,10 @@ const Onboarding: React.FC = () => {
 
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <label className="text-sm font-medium" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(226, 232, 240)' }}>
-                        Example tweets <span style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(148, 163, 184)' }}>(up to {MAX_EXAMPLE_TWEETS})</span>
+                      <label className="text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
+                        Example tweets <span style={{ color: 'var(--koto-text-secondary)' }}>(up to {MAX_EXAMPLE_TWEETS})</span>
                       </label>
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgb(165, 180, 252)' }}>
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-sakura-pink)' }}>
                         Optional but powerful
                       </span>
                     </div>
@@ -686,13 +636,13 @@ const Onboarding: React.FC = () => {
                             placeholder={`Example ${index + 1}...`}
                             className="w-full rounded-xl border px-3 py-2 text-sm transition focus:outline-none focus:ring-2"
                             style={{
-                              borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-                              backgroundColor: theme === 'light' ? 'var(--koto-bg-dark)' : 'rgba(255, 255, 255, 0.05)',
-                              color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)'
+                              borderColor: 'var(--koto-border)',
+                              backgroundColor: 'var(--koto-bg-dark)',
+                              color: 'var(--koto-text-primary)'
                             }}
                           />
                           {exampleTweetStatuses[index] === 'loading' && (
-                            <p className="px-1 text-xs" style={{ color: theme === 'light' ? 'var(--koto-sakura-pink)' : 'rgb(165, 180, 252)' }}>Fetching tweet text…</p>
+                            <p className="px-1 text-xs" style={{ color: 'var(--koto-sakura-pink)' }}>Fetching tweet text…</p>
                           )}
                           {exampleTweetStatuses[index] === 'error' && (
                             <p className="px-1 text-xs text-rose-400">{exampleTweetErrors[index]}</p>
@@ -700,15 +650,15 @@ const Onboarding: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs" style={{ color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(148, 163, 184)' }}>Paste a tweet link to pull in its text automatically.</p>
+                    <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>Paste a tweet link to pull in its text automatically.</p>
                   </div>
 
                   <div className="rounded-2xl border p-5 text-sm" style={{
-                    borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.1)',
-                    backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                    color: theme === 'light' ? 'var(--koto-text-secondary)' : 'rgb(203, 213, 225)'
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'rgba(240, 242, 248, 0.5)',
+                    color: 'var(--koto-text-secondary)'
                   }}>
-                    <p className="font-semibold" style={{ color: theme === 'light' ? 'var(--koto-text-primary)' : 'white' }}>Pro tip</p>
+                    <p className="font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Pro tip</p>
                     <p className="mt-1">
                       Mix short and long examples. Mention catchphrases or hashtags so Kotodama highlights them when drafting replies.
                     </p>
@@ -720,9 +670,9 @@ const Onboarding: React.FC = () => {
                       onClick={() => setStep(1)}
                       className="flex-1 rounded-2xl border px-4 py-3 text-base font-semibold transition sm:flex-none sm:px-6"
                       style={{
-                        borderColor: theme === 'light' ? 'var(--koto-border)' : 'rgba(255, 255, 255, 0.15)',
-                        backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.5)' : 'rgba(255, 255, 255, 0.05)',
-                        color: theme === 'light' ? 'var(--koto-text-primary)' : 'rgb(241, 245, 249)'
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'rgba(240, 242, 248, 0.5)',
+                        color: 'var(--koto-text-primary)'
                       }}
                     >
                       Back
@@ -734,14 +684,10 @@ const Onboarding: React.FC = () => {
                       className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white shadow-[0_18px_35px_-12px_rgba(79,70,229,0.65)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:shadow-none sm:flex-none sm:px-6"
                       style={{
                         backgroundColor: isSubmitting
-                          ? theme === 'light'
-                            ? 'var(--koto-border)'
-                            : 'rgba(71, 85, 105, 0.6)'
+                          ? 'var(--koto-border)'
                           : 'rgb(99, 102, 241)',
                         color: isSubmitting
-                          ? theme === 'light'
-                            ? 'var(--koto-text-secondary)'
-                            : 'rgb(203, 213, 225)'
+                          ? 'var(--koto-text-secondary)'
                           : 'white'
                       }}
                     >

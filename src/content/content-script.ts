@@ -159,49 +159,55 @@ function createFloatingButton() {
 
     console.log('[Kotodama] Floating button clicked, detecting context...');
 
-    // Strategy 1: Check for "Replying to" text (multiple selectors)
+    // Strategy 1: Check for "Replying to" text - most reliable indicator
     const replyingToSelectors = [
       '[data-testid="inlineReplyingTo"]',
       '[aria-label*="Replying to"]',
-      'div[dir="ltr"] > span:first-child', // "Replying to" text
     ];
     let replyingToElement = null;
     for (const selector of replyingToSelectors) {
-      replyingToElement = document.querySelector(selector);
-      if (replyingToElement?.textContent?.includes('Replying to')) break;
+      const element = document.querySelector(selector);
+      if (element?.textContent?.includes('Replying to')) {
+        replyingToElement = element;
+        break;
+      }
     }
 
-    // Strategy 2: Look for tweet articles on the page (original tweet)
-    const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
-
-    // Strategy 3: Check URL for /status/ (we're viewing a tweet detail page)
-    const isStatusPage = window.location.pathname.includes('/status/');
-
-    // Strategy 4: Check for compose box placeholder text
+    // Strategy 2: Check for compose box placeholder text containing "reply"
     const composeBox = document.querySelector('[data-testid="tweetTextarea_0"]');
     const placeholder = composeBox?.getAttribute('data-text') || composeBox?.getAttribute('placeholder') || '';
     const isReplyPlaceholder = placeholder.toLowerCase().includes('reply');
 
+    // Strategy 3: Check if the compose box is within a reply container
+    const isInReplyContainer = !!composeBox?.closest('[data-testid="reply"]');
+
     console.log('[Kotodama] Detection results:', {
       replyingToElement: !!replyingToElement,
-      tweetArticles: tweetArticles.length,
-      isStatusPage,
       isReplyPlaceholder,
-      placeholder: placeholder.substring(0, 30),
+      isInReplyContainer,
+      placeholder: placeholder.substring(0, 50),
     });
 
-    // Determine if this is a reply context
+    // Determine if this is a reply context - use stricter criteria
+    // Only treat as reply if we have EXPLICIT reply indicators
     const isReplyContext = (
-      replyingToElement ||
-      (isStatusPage && tweetArticles.length > 0) ||
-      isReplyPlaceholder
+      replyingToElement !== null ||
+      isInReplyContainer ||
+      (isReplyPlaceholder && placeholder.toLowerCase().startsWith('post your reply'))
     );
 
-    if (isReplyContext && tweetArticles.length > 0) {
+    if (isReplyContext) {
       console.log('[Kotodama] Reply context detected');
       currentContext = 'reply';
-      currentTweetContext = await extractTweetContextFromPage(tweetArticles[0] as HTMLElement);
-      console.log('[Kotodama] Extracted context:', currentTweetContext);
+
+      // Try to find the tweet we're replying to
+      const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
+      if (tweetArticles.length > 0) {
+        currentTweetContext = await extractTweetContextFromPage(tweetArticles[0] as HTMLElement);
+        console.log('[Kotodama] Extracted context:', currentTweetContext);
+      } else {
+        currentTweetContext = null;
+      }
     } else {
       console.log('[Kotodama] Compose context (not a reply)');
       currentContext = 'compose';
@@ -499,44 +505,62 @@ function insertTweetContent(content: string) {
     return;
   }
 
+  console.log('[Kotodama] Inserting content:', content);
+
+  // Clear existing content first
+  composeEditable.textContent = '';
   composeEditable.focus();
 
-  const selection = window.getSelection();
-
-  if (selection) {
-    const range = document.createRange();
-    range.selectNodeContents(composeEditable);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
-
+  // Try using execCommand first (more reliable for maintaining Twitter's state)
   let inserted = false;
-
   try {
+    // Position cursor at the start
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.selectNodeContents(composeEditable);
+      range.collapse(true); // Collapse to start
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    // Try to insert using execCommand
     inserted = document.execCommand('insertText', false, content);
+    console.log('[Kotodama] execCommand insertText result:', inserted);
   } catch (error) {
-    console.warn('Failed to use execCommand for insertion', error);
+    console.warn('[Kotodama] Failed to use execCommand for insertion', error);
   }
 
-  if (!inserted) {
+  // Fallback to direct textContent setting
+  if (!inserted || composeEditable.textContent !== content) {
+    console.log('[Kotodama] Using textContent fallback');
     composeEditable.textContent = content;
   }
 
-  const inputEvent = new InputEvent('input', {
+  // Dispatch input events to notify Twitter's React components
+  composeEditable.dispatchEvent(new InputEvent('input', {
     bubbles: true,
+    cancelable: true,
+    inputType: 'insertText',
     data: content,
-    inputType: 'insertFromPaste',
-  });
+  }));
 
-  composeEditable.dispatchEvent(inputEvent);
+  // Also dispatch a change event for good measure
+  composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
 
+  // Position cursor at the end
+  const selection = window.getSelection();
   if (selection) {
     const range = document.createRange();
     range.selectNodeContents(composeEditable);
-    range.collapse(false);
+    range.collapse(false); // Collapse to end
     selection.removeAllRanges();
     selection.addRange(range);
   }
+
+  // Verify insertion
+  console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
+  console.log('[Kotodama] Expected length:', content.length);
 
   if (panelIframe) {
     setTimeout(() => {

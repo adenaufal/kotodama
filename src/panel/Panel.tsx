@@ -227,7 +227,18 @@ Write a reply that:
         console.log(`[Kotodama Performance] Provider: ${response.data.provider}`);
         console.log(`[Kotodama Performance] Token usage: ${response.data.tokenUsage || 'N/A'}`);
 
-        setGeneratedContent(response.data.content);
+        // Clean up the generated content - remove surrounding quotes if present
+        let cleanedContent = response.data.content;
+        if (typeof cleanedContent === 'string') {
+          // Remove surrounding quotes (single or double) that may be added by AI
+          cleanedContent = cleanedContent.replace(/^["'](.*)["']$/s, '$1').trim();
+        } else if (Array.isArray(cleanedContent)) {
+          cleanedContent = cleanedContent.map(tweet =>
+            tweet.replace(/^["'](.*)["']$/s, '$1').trim()
+          );
+        }
+
+        setGeneratedContent(cleanedContent);
       } else {
         setError(response.error || 'Generation failed');
       }
