@@ -599,70 +599,122 @@ function insertTweetContent(content: string) {
     selection.addRange(range);
   }
 
-  try {
-    document.execCommand('delete', false);
-  } catch (error) {
-    console.warn('[Kotodama] execCommand delete failed:', error);
+  let pasteHandled = false;
+  if (typeof ClipboardEvent === 'function' && typeof DataTransfer === 'function') {
+    try {
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', content);
+      const pasteEvent = new ClipboardEvent('paste', {
+        bubbles: true,
+        cancelable: true,
+      });
+
+      Object.defineProperty(pasteEvent, 'clipboardData', {
+        value: clipboardData,
+        configurable: true,
+      });
+
+      const dispatchResult = composeEditable.dispatchEvent(pasteEvent);
+      pasteHandled = pasteEvent.defaultPrevented || !dispatchResult;
+      console.log('[Kotodama] Paste event dispatched. Handled by X:', pasteHandled);
+    } catch (error) {
+      console.warn('[Kotodama] Clipboard paste simulation failed:', error);
+    }
   }
 
-  // Split content into lines and insert via execCommand to mimic real typing
-  const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  const normalize = (value: string) => value.replace(/\s+$/g, '').replace(/\r\n/g, '\n');
 
-    if (line.length > 0) {
-      const inserted = document.execCommand('insertText', false, line);
+  const applyFallbackInsertion = () => {
+    console.log('[Kotodama] Using execCommand fallback insertion');
+    if (selection) {
+      const range = document.createRange();
+      range.selectNodeContents(composeEditable);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    try {
+      composeEditable.dispatchEvent(new InputEvent('beforeinput', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertReplacementText',
+        data: content,
+      }));
+    } catch (error) {
+      console.warn('[Kotodama] beforeinput insertReplacementText failed:', error);
+    }
+
+    try {
+      const inserted = document.execCommand('insertText', false, content);
       if (!inserted) {
-        composeEditable.append(document.createTextNode(line));
+        throw new Error('execCommand insertText returned false');
       }
+    } catch (error) {
+      console.warn('[Kotodama] execCommand insertText fallback failed:', error);
+      composeEditable.textContent = content;
+    }
+  };
+
+  const finalizeInsertion = () => {
+    const currentText = normalize(composeEditable.textContent || '');
+    const expectedText = normalize(content);
+
+    if (currentText !== expectedText) {
+      applyFallbackInsertion();
     }
 
-    if (i < lines.length - 1) {
-      try {
-        document.execCommand('insertParagraph', false);
-      } catch {
-        composeEditable.append(document.createElement('br'));
+    // Ensure placeholder state and aria label stay accurate
+    composeEditable.setAttribute('data-text', 'true');
+    if (composeEditable.hasAttribute('aria-label')) {
+      composeEditable.setAttribute('aria-label', 'Tweet text');
+    }
+
+    try {
+      composeEditable.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        data: content,
+        inputType: pasteHandled ? 'insertFromPaste' : 'insertReplacementText',
+      }));
+    } catch (error) {
+      console.warn('[Kotodama] input event failed:', error);
+      composeEditable.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Place cursor at the end
+    const finalSelection = window.getSelection();
+    if (finalSelection) {
+      const finalRange = document.createRange();
+      finalRange.selectNodeContents(composeEditable);
+      finalRange.collapse(false);
+      finalSelection.removeAllRanges();
+      finalSelection.addRange(finalRange);
+    }
+
+    console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
+    console.log('[Kotodama] Expected length:', content.length);
+    console.log('[Kotodama] Match:', composeEditable.textContent === content);
+
+    composeEditable.blur();
+    setTimeout(() => {
+      composeEditable.focus();
+
+      if (panelIframe) {
+        setTimeout(() => {
+          hidePanel();
+        }, 600);
       }
-    }
+    }, 50);
+  };
+
+  if (pasteHandled) {
+    requestAnimationFrame(finalizeInsertion);
+  } else {
+    finalizeInsertion();
   }
 
-  // Ensure placeholder state and aria label stay accurate
-  composeEditable.setAttribute('data-text', 'true');
-  if (composeEditable.hasAttribute('aria-label')) {
-    composeEditable.setAttribute('aria-label', 'Tweet text');
-  }
-
-  // Fire the events Twitter listens for to enable the Post button
-  composeEditable.dispatchEvent(new Event('input', { bubbles: true }));
-  composeEditable.dispatchEvent(new Event('change', { bubbles: true }));
-  composeEditable.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End', code: 'End' }));
-  composeEditable.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'End', code: 'End' }));
-
-  // Place cursor at the end
-  const finalSelection = window.getSelection();
-  if (finalSelection) {
-    const finalRange = document.createRange();
-    finalRange.selectNodeContents(composeEditable);
-    finalRange.collapse(false);
-    finalSelection.removeAllRanges();
-    finalSelection.addRange(finalRange);
-  }
-
-  console.log('[Kotodama] Final content length:', composeEditable.textContent?.length);
-  console.log('[Kotodama] Expected length:', content.length);
-  console.log('[Kotodama] Match:', composeEditable.textContent === content);
-
-  // Give React a nudge by blurring then refocusing
-  composeEditable.blur();
-  setTimeout(() => {
-    composeEditable.focus();
-
-    if (panelIframe) {
-      setTimeout(() => {
-        hidePanel();
-      }, 600);
-    }
-  }, 50);
 }
 
 async function fetchUserTweets(_username: string): Promise<string[]> {
