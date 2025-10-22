@@ -1,14 +1,22 @@
+export interface ToneAttributes {
+  formality: number;      // 0-100: Casual to Professional
+  humor: number;          // 0-100: Serious to Humorous
+  technicality: number;   // 0-100: Simple to Technical
+  empathy: number;        // 0-100: Direct to Empathetic
+  energy: number;         // 0-100: Calm to Energetic
+  authenticity: number;   // 0-100: Reserved to Authentic/Vulnerable
+}
+
 export interface BrandVoice {
   id: string;
   name: string;
   description?: string;
   exampleTweets: string[];
   guidelines?: string;
-  toneAttributes: {
-    formality: number; // 0-100
-    humor: number;     // 0-100
-    technicality: number; // 0-100
-  };
+  toneAttributes: ToneAttributes;
+  category?: 'professional' | 'casual' | 'technical' | 'creative' | 'educational' | 'personal' | 'custom';
+  tags?: string[];
+  isTemplate?: boolean; // Built-in templates that can't be deleted
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,12 +35,6 @@ export interface UserProfile {
     toneProfile: ToneAttributes;
   };
   lastAnalyzed: Date;
-}
-
-export interface ToneAttributes {
-  formality: number;
-  humor: number;
-  technicality: number;
 }
 
 export interface GeneratedTweet {
