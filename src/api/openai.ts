@@ -102,10 +102,13 @@ function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile):
     prompt += '\n';
   }
 
-  prompt += `Tone Attributes:\n`;
-  prompt += `- Formality: ${brandVoice.toneAttributes.formality}/100\n`;
-  prompt += `- Humor: ${brandVoice.toneAttributes.humor}/100\n`;
-  prompt += `- Technicality: ${brandVoice.toneAttributes.technicality}/100\n\n`;
+  prompt += `Tone Attributes (adjust your writing style to match these values):\n`;
+  prompt += `- Formality: ${brandVoice.toneAttributes.formality}/100 (0=very casual, 100=very professional)\n`;
+  prompt += `- Humor: ${brandVoice.toneAttributes.humor}/100 (0=serious, 100=humorous)\n`;
+  prompt += `- Technicality: ${brandVoice.toneAttributes.technicality}/100 (0=simple language, 100=technical jargon)\n`;
+  prompt += `- Empathy: ${brandVoice.toneAttributes.empathy}/100 (0=direct, 100=empathetic)\n`;
+  prompt += `- Energy: ${brandVoice.toneAttributes.energy}/100 (0=calm, 100=energetic)\n`;
+  prompt += `- Authenticity: ${brandVoice.toneAttributes.authenticity}/100 (0=reserved, 100=vulnerable/personal)\n\n`;
 
   if (targetProfile) {
     prompt += `Additionally, adapt your response to match the communication style of the person you're replying to:\n`;

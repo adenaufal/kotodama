@@ -308,7 +308,13 @@ const Onboarding: React.FC = () => {
           formality: 50,
           humor: 50,
           technicality: 50,
+          empathy: 50,
+          energy: 50,
+          authenticity: 50,
         },
+        category: 'custom',
+        tags: [],
+        isTemplate: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
