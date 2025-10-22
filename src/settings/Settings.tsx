@@ -148,35 +148,31 @@ const Settings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="page-shell light-mode min-h-screen" style={{ backgroundColor: 'var(--koto-bg-light)' }}>
-        <div className="rounded-2xl px-8 py-6 text-center shadow-xl" style={{
-          backgroundColor: 'var(--koto-surface)',
-          boxShadow: 'var(--koto-shadow-lg)'
-        }}>
-          <p className="text-sm font-medium" style={{ color: 'var(--koto-text-secondary)' }}>Loading your settings…</p>
-        </div>
+      <div className="rounded-2xl px-8 py-6 text-center shadow-xl" style={{
+        backgroundColor: 'var(--koto-surface)',
+        boxShadow: 'var(--koto-shadow-lg)'
+      }}>
+        <p className="text-sm font-medium" style={{ color: 'var(--koto-text-secondary)' }}>Loading your settings…</p>
       </div>
     );
   }
 
   if (!settings) {
     return (
-      <div className="page-shell light-mode min-h-screen" style={{ backgroundColor: 'var(--koto-bg-light)' }}>
-        <div className="stack max-w-md rounded-2xl px-8 py-6 text-center shadow-xl" style={{
-          backgroundColor: 'var(--koto-surface)',
-          boxShadow: 'var(--koto-shadow-lg)'
-        }}>
-          <p className="text-base font-semibold" style={{ color: 'var(--koto-text-primary)' }}>We couldn&apos;t load your settings.</p>
-          <p className="mt-3 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-            Please close this window and reopen the extension. If the problem continues, try running the onboarding flow again.
-          </p>
-        </div>
+      <div className="stack max-w-md rounded-2xl px-8 py-6 text-center shadow-xl" style={{
+        backgroundColor: 'var(--koto-surface)',
+        boxShadow: 'var(--koto-shadow-lg)'
+      }}>
+        <p className="text-base font-semibold" style={{ color: 'var(--koto-text-primary)' }}>We couldn&apos;t load your settings.</p>
+        <p className="mt-3 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
+          Please close this window and reopen the extension. If the problem continues, try running the onboarding flow again.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="page-shell light-mode min-h-screen" style={{ backgroundColor: 'var(--koto-bg-light)' }}>
+    <>
       <div className="stack w-full max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="stack rounded-3xl p-8 shadow-2xl ring-1 sm:p-10" style={{
           backgroundColor: 'var(--koto-surface)',
@@ -367,7 +363,7 @@ const Settings: React.FC = () => {
           onRefresh={handleRefreshVoices}
         />
       )}
-    </div>
+    </>
   );
 };
 
