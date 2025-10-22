@@ -12,6 +12,7 @@ export const Input: React.FC<InputProps> = ({
   helperText,
   className = '',
   id,
+  style,
   ...props
 }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
@@ -30,6 +31,7 @@ export const Input: React.FC<InputProps> = ({
             ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
             : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
         } ${className}`}
+        style={{ color: 'var(--koto-text-primary)', ...style }}
         {...props}
       />
       {error && <p className="text-sm text-red-600">{error}</p>}

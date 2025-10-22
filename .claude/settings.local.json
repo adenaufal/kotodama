@@ -31,7 +31,8 @@
       "Bash(git mv REPLY-CONTEXT-FIX.md docs/project/)",
       "Bash(git mv README_RELEASES.md docs/project/)",
       "Bash(git add docs/README.md CLAUDE.md README.md)",
-      "Bash(git mv \"i:\\Github\\myself\\kotodama\\src\\panel\\BrandVoiceManager.tsx\" \"i:\\Github\\myself\\kotodama\\src\\settings\\BrandVoiceManager.tsx\")"
+      "Bash(git mv \"i:\\Github\\myself\\kotodama\\src\\panel\\BrandVoiceManager.tsx\" \"i:\\Github\\myself\\kotodama\\src\\settings\\BrandVoiceManager.tsx\")",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

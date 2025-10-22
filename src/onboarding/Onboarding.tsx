@@ -431,17 +431,19 @@ const Onboarding: React.FC = () => {
                         <span
                           className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${
                             isCompleted
-                              ? 'bg-indigo-500 text-white shadow-[0_8px_16px_rgba(79,70,229,0.45)]'
+                              ? 'bg-indigo-500 text-white'
                               : isActive
-                                ? 'text-indigo-600 shadow-[0_0_0_3px_rgba(129,140,248,0.35)]'
+                                ? 'text-indigo-600'
                                 : ''
                           }`}
                           style={
                             isActive && !isCompleted
-                              ? { backgroundColor: 'white', color: 'rgb(79, 70, 229)' }
-                              : !isActive && !isCompleted
-                                ? { color: 'var(--koto-text-secondary)' }
-                                : {}
+                              ? { backgroundColor: 'white', color: 'rgb(79, 70, 229)', boxShadow: '0 0 0 3px rgba(129, 140, 248, 0.25)' }
+                              : isCompleted
+                                ? { boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)' }
+                                : !isActive && !isCompleted
+                                  ? { color: 'var(--koto-text-secondary)' }
+                                  : {}
                           }
                         >
                           {item.id}
@@ -524,14 +526,17 @@ const Onboarding: React.FC = () => {
                       type="button"
                       onClick={() => setStep(2)}
                       disabled={!openaiKey.trim()}
-                      className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white shadow-[0_18px_35px_-12px_rgba(79,70,229,0.65)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:shadow-none sm:flex-none sm:px-6"
+                      className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:shadow-none sm:flex-none sm:px-6"
                       style={{
                         backgroundColor: !openaiKey.trim()
                           ? 'var(--koto-border)'
                           : 'rgb(99, 102, 241)',
                         color: !openaiKey.trim()
                           ? 'var(--koto-text-secondary)'
-                          : 'white'
+                          : 'white',
+                        boxShadow: !openaiKey.trim()
+                          ? 'none'
+                          : '0 4px 12px rgba(79, 70, 229, 0.3)'
                       }}
                     >
                       Continue
@@ -687,14 +692,17 @@ const Onboarding: React.FC = () => {
                       type="button"
                       onClick={handleComplete}
                       disabled={isSubmitting}
-                      className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white shadow-[0_18px_35px_-12px_rgba(79,70,229,0.65)] transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:shadow-none sm:flex-none sm:px-6"
+                      className="flex-1 rounded-2xl bg-indigo-500 px-4 py-3 text-base font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:shadow-none sm:flex-none sm:px-6"
                       style={{
                         backgroundColor: isSubmitting
                           ? 'var(--koto-border)'
                           : 'rgb(99, 102, 241)',
                         color: isSubmitting
                           ? 'var(--koto-text-secondary)'
-                          : 'white'
+                          : 'white',
+                        boxShadow: isSubmitting
+                          ? 'none'
+                          : '0 4px 12px rgba(79, 70, 229, 0.3)'
                       }}
                     >
                       {isSubmitting ? 'Setting up…' : 'Complete setup'}

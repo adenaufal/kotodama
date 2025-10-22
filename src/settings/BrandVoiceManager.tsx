@@ -263,12 +263,27 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
     const value = formData.toneAttributes?.[key] || 50;
 
     return (
-      <div key={key} className="stack-sm">
-        <div className="flex items-center justify-between text-xs font-medium" style={{ color: 'var(--koto-text-secondary)' }}>
-          <span>{label.label}</span>
-          <span>{value}</span>
+      <div
+        key={key}
+        className="stack-sm rounded-2xl border px-4 py-4"
+        style={{
+          borderColor: 'rgba(148, 163, 184, 0.28)',
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.15)'
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+            {label.label}
+          </span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--koto-text-secondary)' }}>
+            {value}
+          </span>
         </div>
-        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
+        <div
+          className="flex items-center gap-3 text-[0.65rem] font-semibold uppercase tracking-wide"
+          style={{ color: 'rgba(226, 232, 240, 0.85)' }}
+        >
           <span className="w-20 text-left">{label.low}</span>
           <input
             type="range"
@@ -276,8 +291,11 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
             max="100"
             value={value}
             onChange={(e) => updateToneAttribute(key, parseInt(e.target.value, 10))}
-            className="flex-1"
-            style={{ accentColor: 'var(--koto-sakura-pink)' }}
+            className="flex-1 cursor-pointer"
+            style={{
+              accentColor: 'var(--koto-sakura-pink)',
+              height: '6px'
+            }}
           />
           <span className="w-20 text-right">{label.high}</span>
         </div>
@@ -288,88 +306,99 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
   // Render Templates View
   if (viewMode === 'templates') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
-        <div className="relative mx-4 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn" style={{
-          borderColor: 'var(--koto-border)',
-          backgroundColor: 'var(--koto-surface)',
-          boxShadow: 'var(--koto-shadow-lg)'
-        }}>
-          <div className="relative overflow-hidden px-6 py-6" style={{
-            backgroundColor: 'var(--koto-deep-indigo)',
-            color: 'var(--koto-text-primary)'
-          }}>
-            <div className="relative z-10 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                  Brand Voice Templates
-                </h2>
-                <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-                  Choose a template to get started quickly
-                </p>
-              </div>
-              <button
-                onClick={() => setViewMode('list')}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
-                style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                  color: 'var(--koto-text-primary)'
-                }}
-                aria-label="Back"
-              >
-                ←
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {BRAND_VOICE_TEMPLATES.map((template) => (
-                <div
-                  key={template.id}
-                  className="rounded-2xl border p-5 shadow-sm transition hover:shadow-md"
-                  style={{
-                    borderColor: 'var(--koto-border)',
-                    backgroundColor: 'var(--koto-bg-dark)'
-                  }}
-                >
-                  <h3 className="text-lg font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                    {template.name}
-                  </h3>
-                  <p className="mt-2 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-                    {template.description}
+      <div
+        className="fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+      >
+        <div className="flex min-h-full items-start justify-center p-4 md:p-8">
+          <div
+            className="relative flex w-full max-w-4xl max-h-[92vh] flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn"
+            style={{
+              borderColor: 'var(--koto-border)',
+              backgroundColor: 'var(--koto-surface)',
+              boxShadow: 'var(--koto-shadow-lg)'
+            }}
+          >
+            <div
+              className="relative overflow-hidden px-6 py-6"
+              style={{
+                backgroundColor: 'var(--koto-deep-indigo)',
+                color: 'var(--koto-text-primary)'
+              }}
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                    Brand Voice Templates
+                  </h2>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
+                    Choose a template to get started quickly
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {template.tags?.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full px-3 py-1 text-xs font-medium"
-                        style={{
-                          backgroundColor: 'rgba(232, 92, 143, 0.1)',
-                          color: 'var(--koto-sakura-pink)'
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                    <div>Formality: {template.toneAttributes.formality}</div>
-                    <div>Humor: {template.toneAttributes.humor}</div>
-                    <div>Technical: {template.toneAttributes.technicality}</div>
-                    <div>Energy: {template.toneAttributes.energy}</div>
-                  </div>
-                  <button
-                    onClick={() => handleCreateFromTemplate(template)}
-                    className="mt-4 w-full rounded-full px-4 py-2 text-sm font-semibold transition koto-button-hover"
+                </div>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
+                  style={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    color: 'var(--koto-text-primary)'
+                  }}
+                  aria-label="Back"
+                >
+                  ←
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {BRAND_VOICE_TEMPLATES.map((template) => (
+                  <div
+                    key={template.id}
+                    className="rounded-2xl border p-5 shadow-sm transition hover:shadow-md"
                     style={{
-                      backgroundColor: 'var(--koto-sakura-pink)',
-                      color: 'white'
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)'
                     }}
                   >
-                    Use This Template
-                  </button>
-                </div>
-              ))}
+                    <h3 className="text-lg font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                      {template.name}
+                    </h3>
+                    <p className="mt-2 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
+                      {template.description}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {template.tags?.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full px-3 py-1 text-xs font-medium"
+                          style={{
+                            backgroundColor: 'rgba(232, 92, 143, 0.1)',
+                            color: 'var(--koto-sakura-pink)'
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
+                      <div>Formality: {template.toneAttributes.formality}</div>
+                      <div>Humor: {template.toneAttributes.humor}</div>
+                      <div>Technical: {template.toneAttributes.technicality}</div>
+                      <div>Energy: {template.toneAttributes.energy}</div>
+                    </div>
+                    <button
+                      onClick={() => handleCreateFromTemplate(template)}
+                      className="mt-4 w-full rounded-full px-4 py-2 text-sm font-semibold transition koto-button-hover"
+                      style={{
+                        backgroundColor: 'var(--koto-sakura-pink)',
+                        color: 'white'
+                      }}
+                    >
+                      Use This Template
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -380,247 +409,290 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
   // Render Edit View
   if (viewMode === 'edit') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
-        <div className="relative mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn" style={{
-          borderColor: 'var(--koto-border)',
-          backgroundColor: 'var(--koto-surface)',
-          boxShadow: 'var(--koto-shadow-lg)'
-        }}>
-          <div className="relative overflow-hidden px-6 py-6" style={{
-            backgroundColor: 'var(--koto-deep-indigo)',
-            color: 'var(--koto-text-primary)'
-          }}>
-            <div className="relative z-10 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                  {isCreating ? 'Create Brand Voice' : 'Edit Brand Voice'}
-                </h2>
-                <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-                  Configure your unique writing style
-                </p>
+      <div
+        className="fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+      >
+        <div className="flex min-h-full items-start justify-center p-4 md:p-8">
+          <div
+            className="relative flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn"
+            style={{
+              borderColor: 'var(--koto-border)',
+              backgroundColor: 'var(--koto-surface)',
+              boxShadow: 'var(--koto-shadow-lg)'
+            }}
+          >
+            <div
+              className="relative overflow-hidden px-6 py-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(232, 92, 143, 0.18), rgba(45, 50, 80, 0.18))',
+                color: 'var(--koto-text-primary)',
+                borderBottom: '1px solid var(--koto-border)'
+              }}
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--koto-text-primary)' }}>
+                    {isCreating ? 'Create Brand Voice' : 'Edit Brand Voice'}
+                  </h2>
+                  <p className="mt-2 text-base leading-snug" style={{ color: 'var(--koto-text-secondary)' }}>
+                    Configure your unique writing style
+                  </p>
+                </div>
+                <button
+                  onClick={handleCancel}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-xl transition koto-button-hover"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                    color: 'var(--koto-text-primary)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)'
+                  }}
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
               </div>
-              <button
-                onClick={handleCancel}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
-                style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                  color: 'var(--koto-text-primary)'
-                }}
-                aria-label="Close"
-              >
-                &times;
-              </button>
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
-            {error && (
-              <div className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn" style={{
-                borderColor: 'var(--koto-error)',
-                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                color: 'var(--koto-error)'
-              }}>
-                {error}
-              </div>
-            )}
-
-            {validationResult && (
-              <>
-                {validationResult.warnings.length > 0 && (
-                  <div className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm" style={{
-                    borderColor: '#ff9800',
-                    backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                    color: '#ff9800'
-                  }}>
-                    <strong>Warnings:</strong>
-                    <ul className="mt-1 ml-4 list-disc">
-                      {validationResult.warnings.map((warning, i) => (
-                        <li key={i}>{warning}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {validationResult.suggestions.length > 0 && (
-                  <div className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm" style={{
-                    borderColor: 'var(--koto-sakura-pink)',
-                    backgroundColor: 'rgba(232, 92, 143, 0.1)',
-                    color: 'var(--koto-sakura-pink)'
-                  }}>
-                    <strong>Suggestions:</strong>
-                    <ul className="mt-1 ml-4 list-disc">
-                      {validationResult.suggestions.map((suggestion, i) => (
-                        <li key={i}>{suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="stack">
-              <div className="stack-sm">
-                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                  Name <span style={{ color: 'var(--koto-error)' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Professional Tech Expert"
-                  required
-                  className="w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+            <div className="flex-1 overflow-y-auto p-6">
+              {error && (
+                <div
+                  className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn"
                   style={{
-                    borderColor: 'var(--koto-border)',
-                    backgroundColor: 'var(--koto-bg-dark)',
-                    color: 'var(--koto-text-primary)'
+                    borderColor: 'var(--koto-error)',
+                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                    color: 'var(--koto-error)'
                   }}
-                />
-              </div>
-
-              <div className="stack-sm">
-                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                  Description <span style={{ color: 'var(--koto-error)' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of this voice"
-                  required
-                  className="w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
-                  style={{
-                    borderColor: 'var(--koto-border)',
-                    backgroundColor: 'var(--koto-bg-dark)',
-                    color: 'var(--koto-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div className="stack-sm">
-                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Guidelines (optional)</label>
-                <textarea
-                  value={formData.guidelines || ''}
-                  onChange={(e) => setFormData({ ...formData, guidelines: e.target.value })}
-                  placeholder="e.g., Always use emojis, Keep it casual, Focus on tech topics"
-                  rows={3}
-                  className="w-full resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
-                  style={{
-                    borderColor: 'var(--koto-border)',
-                    backgroundColor: 'var(--koto-bg-dark)',
-                    color: 'var(--koto-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div className="stack-sm">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Example Tweets</label>
-                  <button
-                    onClick={addExampleTweet}
-                    className="text-xs font-semibold transition"
-                    style={{ color: 'var(--koto-sakura-pink)' }}
-                  >
-                    + Add Example
-                  </button>
+                >
+                  {error}
                 </div>
-                <div className="stack-sm">
-                  {(formData.exampleTweets || []).map((tweet, index) => (
-                    <div key={index} className="flex gap-2">
-                      <textarea
-                        value={tweet}
-                        onChange={(e) => updateExampleTweet(index, e.target.value)}
-                        placeholder={`Example ${index + 1}`}
-                        rows={2}
-                        className="flex-1 resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
-                        style={{
-                          borderColor: 'var(--koto-border)',
-                          backgroundColor: 'var(--koto-bg-dark)',
-                          color: 'var(--koto-text-primary)'
-                        }}
-                      />
-                      {(formData.exampleTweets?.length || 0) > 1 && (
-                        <button
-                          onClick={() => removeExampleTweet(index)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-full transition"
-                          style={{ color: 'var(--koto-text-secondary)' }}
-                          aria-label="Remove example"
-                        >
-                          &times;
-                        </button>
-                      )}
+              )}
+
+              {validationResult && (
+                <>
+                  {validationResult.warnings.length > 0 && (
+                    <div
+                      className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm"
+                      style={{
+                        borderColor: '#ff9800',
+                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                        color: '#ff9800'
+                      }}
+                    >
+                      <strong>Warnings:</strong>
+                      <ul className="mt-1 ml-4 list-disc">
+                        {validationResult.warnings.map((warning, i) => (
+                          <li key={i}>{warning}</li>
+                        ))}
+                      </ul>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  )}
+                  {validationResult.suggestions.length > 0 && (
+                    <div
+                      className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm"
+                      style={{
+                        borderColor: 'var(--koto-sakura-pink)',
+                        backgroundColor: 'rgba(232, 92, 143, 0.1)',
+                        color: 'var(--koto-sakura-pink)'
+                      }}
+                    >
+                      <strong>Suggestions:</strong>
+                      <ul className="mt-1 ml-4 list-disc">
+                        {validationResult.suggestions.map((suggestion, i) => (
+                          <li key={i}>{suggestion}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
 
-              <div className="stack-sm">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Tone Attributes</label>
-                  <button
-                    onClick={handleValidate}
-                    className="text-xs font-semibold transition"
-                    style={{ color: 'var(--koto-sakura-pink)' }}
-                  >
-                    Validate
-                  </button>
+              <div className="stack">
+                <div className="stack-sm">
+                  <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                    Name <span style={{ color: 'var(--koto-error)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name || ''}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Professional Tech Expert"
+                    required
+                    className="w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                    style={{
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)',
+                      color: 'var(--koto-text-primary)'
+                    }}
+                  />
                 </div>
 
-                {/* Tone Presets */}
-                <div className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(26, 29, 46, 0.3)' }}>
-                  <div className="text-xs font-semibold mb-2" style={{ color: 'var(--koto-text-secondary)' }}>
-                    Quick Presets:
+                <div className="stack-sm">
+                  <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                    Description <span style={{ color: 'var(--koto-error)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description of this voice"
+                    required
+                    className="w-full rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                    style={{
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)',
+                      color: 'var(--koto-text-primary)'
+                    }}
+                  />
+                </div>
+
+                <div className="stack-sm">
+                  <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                    Guidelines (optional)
+                  </label>
+                  <textarea
+                    value={formData.guidelines || ''}
+                    onChange={(e) => setFormData({ ...formData, guidelines: e.target.value })}
+                    placeholder="e.g., Always use emojis, Keep it casual, Focus on tech topics"
+                    rows={3}
+                    className="w-full resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                    style={{
+                      borderColor: 'var(--koto-border)',
+                      backgroundColor: 'var(--koto-bg-dark)',
+                      color: 'var(--koto-text-primary)'
+                    }}
+                  />
+                </div>
+
+                <div className="stack-sm">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                      Example Tweets
+                    </label>
+                    <button
+                      onClick={addExampleTweet}
+                      className="text-xs font-semibold transition"
+                      style={{ color: 'var(--koto-sakura-pink)' }}
+                    >
+                      + Add Example
+                    </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(TONE_PRESETS).map(([key, preset]) => (
-                      <button
-                        key={key}
-                        onClick={() => applyTonePreset(key)}
-                        className="rounded-full px-3 py-1 text-xs font-medium transition koto-button-hover"
-                        style={{
-                          backgroundColor: 'rgba(232, 92, 143, 0.1)',
-                          color: 'var(--koto-sakura-pink)'
-                        }}
-                        title={preset.description}
-                      >
-                        {preset.name}
-                      </button>
+                  <div className="stack-sm">
+                    {(formData.exampleTweets || []).map((tweet, index) => (
+                      <div key={index} className="flex gap-2">
+                        <textarea
+                          value={tweet}
+                          onChange={(e) => updateExampleTweet(index, e.target.value)}
+                          placeholder={`Example ${index + 1}`}
+                          rows={2}
+                          className="flex-1 resize-none rounded-2xl border px-4 py-3 text-sm shadow-sm outline-none transition"
+                          style={{
+                            borderColor: 'var(--koto-border)',
+                            backgroundColor: 'var(--koto-bg-dark)',
+                            color: 'var(--koto-text-primary)'
+                          }}
+                        />
+                        {(formData.exampleTweets?.length || 0) > 1 && (
+                          <button
+                            onClick={() => removeExampleTweet(index)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                            style={{ color: 'var(--koto-text-secondary)' }}
+                            aria-label="Remove example"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Tone Sliders */}
-                <div className="stack-sm rounded-2xl p-4" style={{ backgroundColor: 'rgba(26, 29, 46, 0.5)' }}>
-                  {renderToneSlider('formality')}
-                  {renderToneSlider('humor')}
-                  {renderToneSlider('technicality')}
-                  {renderToneSlider('empathy')}
-                  {renderToneSlider('energy')}
-                  {renderToneSlider('authenticity')}
-                </div>
-              </div>
+                <div className="stack-sm">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                      Tone Attributes
+                    </label>
+                    <button
+                      onClick={handleValidate}
+                      className="text-xs font-semibold transition"
+                      style={{ color: 'var(--koto-sakura-pink)' }}
+                    >
+                      Validate
+                    </button>
+                  </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex-1 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    backgroundColor: 'var(--koto-sakura-pink)',
-                    boxShadow: '0 4px 12px rgba(232, 92, 143, 0.3)'
-                  }}
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="rounded-full border px-6 py-3 text-sm font-semibold transition koto-button-hover"
-                  style={{
-                    borderColor: 'var(--koto-border)',
-                    color: 'var(--koto-text-secondary)'
-                  }}
-                >
-                  Cancel
-                </button>
+                  {/* Tone Presets */}
+                  <div
+                    className="rounded-3xl p-5 shadow-sm"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(232, 92, 143, 0.14), rgba(45, 50, 80, 0.12))',
+                      border: '1px solid rgba(232, 92, 143, 0.25)',
+                      boxShadow: '0 4px 12px rgba(232, 92, 143, 0.15)'
+                    }}
+                  >
+                    <div className="mb-3 text-sm font-semibold tracking-wide" style={{ color: 'var(--koto-text-primary)' }}>
+                      Quick Presets:
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(TONE_PRESETS).map(([key, preset]) => (
+                        <button
+                          key={key}
+                          onClick={() => applyTonePreset(key)}
+                          className="rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition koto-button-hover"
+                          style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.35)',
+                            color: 'var(--koto-text-primary)'
+                          }}
+                          title={preset.description}
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tone Sliders */}
+                  <div
+                    className="stack-sm rounded-3xl p-5"
+                    style={{
+                      background: 'linear-gradient(140deg, rgba(15, 23, 42, 0.55), rgba(24, 33, 63, 0.45))',
+                      border: '1px solid rgba(148, 163, 184, 0.28)',
+                      boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)'
+                    }}
+                  >
+                    {renderToneSlider('formality')}
+                    {renderToneSlider('humor')}
+                    {renderToneSlider('technicality')}
+                    {renderToneSlider('empathy')}
+                    {renderToneSlider('energy')}
+                    {renderToneSlider('authenticity')}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      backgroundColor: 'var(--koto-sakura-pink)',
+                      boxShadow: '0 4px 12px rgba(232, 92, 143, 0.25)'
+                    }}
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="rounded-full border px-6 py-3 text-sm font-semibold transition koto-button-hover"
+                    style={{
+                      borderColor: 'var(--koto-border)',
+                      color: 'var(--koto-text-secondary)'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -631,205 +703,233 @@ const BrandVoiceManager: React.FC<BrandVoiceManagerProps> = ({ voices, onClose, 
 
   // Render List View
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
-      <div className="relative mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn" style={{
-        borderColor: 'var(--koto-border)',
-        backgroundColor: 'var(--koto-surface)',
-        boxShadow: 'var(--koto-shadow-lg)'
-      }}>
-        <div className="relative overflow-hidden px-6 py-6" style={{
-          backgroundColor: 'var(--koto-deep-indigo)',
-          color: 'var(--koto-text-primary)'
-        }}>
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                Manage Brand Voices
-              </h2>
-              <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-                Create, edit, and organize your brand voices
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                color: 'var(--koto-text-primary)'
-              }}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {error && (
-            <div className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn" style={{
-              borderColor: 'var(--koto-error)',
-              backgroundColor: 'rgba(244, 67, 54, 0.1)',
-              color: 'var(--koto-error)'
-            }}>
-              {error}
-            </div>
-          )}
-
-          <div className="stack">
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleCreate}
-                className="flex-1 rounded-2xl border-2 border-dashed px-6 py-4 text-sm font-semibold transition koto-button-hover"
-                style={{
-                  borderColor: 'var(--koto-border)',
-                  backgroundColor: 'rgba(26, 29, 46, 0.3)',
-                  color: 'var(--koto-text-secondary)'
-                }}
-              >
-                + Create New Brand Voice
-              </button>
-              <button
-                onClick={() => setViewMode('templates')}
-                className="flex-1 rounded-2xl px-6 py-4 text-sm font-semibold transition koto-button-hover"
-                style={{
-                  backgroundColor: 'rgba(232, 92, 143, 0.1)',
-                  color: 'var(--koto-sakura-pink)'
-                }}
-              >
-                Browse Templates
-              </button>
-            </div>
-
-            {/* Import Button */}
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleImport}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-2xl border px-4 py-2 text-xs font-semibold transition koto-button-hover"
-                style={{
-                  borderColor: 'var(--koto-border)',
-                  color: 'var(--koto-text-secondary)'
-                }}
-              >
-                Import from JSON
-              </button>
-            </div>
-
-            {voices.length === 0 ? (
-              <div className="rounded-2xl border px-6 py-8 text-center" style={{
-                borderColor: 'var(--koto-border)',
-                backgroundColor: 'rgba(26, 29, 46, 0.3)'
-              }}>
-                <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-                  No brand voices yet. Create one or start with a template!
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto backdrop-blur-sm"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+    >
+      <div className="flex min-h-full items-start justify-center p-4 md:p-8">
+        <div
+          className="relative flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-3xl border shadow-2xl koto-animate-fadeIn"
+          style={{
+            borderColor: 'var(--koto-border)',
+            backgroundColor: 'var(--koto-surface)',
+            boxShadow: 'var(--koto-shadow-lg)'
+          }}
+        >
+          <div
+            className="relative overflow-hidden px-6 py-6"
+            style={{
+              background: 'linear-gradient(135deg, rgba(232, 92, 143, 0.16), rgba(45, 50, 80, 0.12))',
+              color: 'var(--koto-text-primary)',
+              borderBottom: '1px solid var(--koto-border)'
+            }}
+          >
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-semibold tracking-tight" style={{ color: 'var(--koto-text-primary)' }}>
+                  Manage Brand Voices
+                </h2>
+                <p className="mt-2 text-base leading-snug" style={{ color: 'var(--koto-text-secondary)' }}>
+                  Create, edit, and organize your brand voices
                 </p>
               </div>
-            ) : (
-              <div className="stack-sm">
-                {voices.map((voice) => (
-                  <div
-                    key={voice.id}
-                    className="rounded-2xl border p-4 shadow-sm transition"
-                    style={{
-                      borderColor: 'var(--koto-border)',
-                      backgroundColor: 'var(--koto-bg-dark)'
-                    }}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                            {voice.name}
-                          </h3>
-                          {voice.isTemplate && (
-                            <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{
-                              backgroundColor: 'rgba(232, 92, 143, 0.1)',
-                              color: 'var(--koto-sakura-pink)'
-                            }}>
-                              Template
-                            </span>
+              <button
+                onClick={onClose}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-xl transition koto-button-hover"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                  color: 'var(--koto-text-primary)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)'
+                }}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {error && (
+              <div
+                className="mb-4 rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn"
+                style={{
+                  borderColor: 'var(--koto-error)',
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                  color: 'var(--koto-error)'
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <div className="stack">
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={handleCreate}
+                  className="flex-1 rounded-2xl px-6 py-5 text-base font-semibold shadow-lg transition koto-button-hover"
+                  style={{
+                    border: 'none',
+                    background: 'linear-gradient(135deg, rgba(232, 92, 143, 0.98), rgba(232, 92, 143, 0.78))',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(232, 92, 143, 0.3)'
+                  }}
+                >
+                  + Create New Brand Voice
+                </button>
+                <button
+                  onClick={() => setViewMode('templates')}
+                  className="flex-1 rounded-2xl border px-6 py-5 text-base font-semibold transition koto-button-hover"
+                  style={{
+                    borderColor: 'rgba(232, 92, 143, 0.45)',
+                    backgroundColor: 'rgba(232, 92, 143, 0.08)',
+                    color: 'var(--koto-sakura-pink)'
+                  }}
+                >
+                  Browse Templates
+                </button>
+              </div>
+
+              {/* Import Button */}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-2xl border px-4 py-2 text-xs font-semibold transition koto-button-hover"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    color: 'var(--koto-text-secondary)'
+                  }}
+                >
+                  Import from JSON
+                </button>
+              </div>
+
+              {voices.length === 0 ? (
+                <div
+                  className="rounded-2xl border px-6 py-8 text-center"
+                  style={{
+                    borderColor: 'var(--koto-border)',
+                    backgroundColor: 'rgba(26, 29, 46, 0.3)'
+                  }}
+                >
+                  <p className="text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
+                    No brand voices yet. Create one or start with a template!
+                  </p>
+                </div>
+              ) : (
+                <div className="stack-sm">
+                  {voices.map((voice) => (
+                    <div
+                      key={voice.id}
+                      className="rounded-2xl border p-4 shadow-sm transition"
+                      style={{
+                        borderColor: 'var(--koto-border)',
+                        backgroundColor: 'var(--koto-bg-dark)'
+                      }}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
+                              {voice.name}
+                            </h3>
+                            {voice.isTemplate && (
+                              <span
+                                className="rounded-full px-2 py-0.5 text-xs font-medium"
+                                style={{
+                                  backgroundColor: 'rgba(232, 92, 143, 0.1)',
+                                  color: 'var(--koto-sakura-pink)'
+                                }}
+                              >
+                                Template
+                              </span>
+                            )}
+                          </div>
+                          {voice.description && (
+                            <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
+                              {voice.description}
+                            </p>
                           )}
-                        </div>
-                        {voice.description && (
-                          <p className="mt-1 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
-                            {voice.description}
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
+                            <span>Formality: {voice.toneAttributes.formality}</span>
+                            <span>???</span>
+                            <span>Humor: {voice.toneAttributes.humor}</span>
+                            <span>???</span>
+                            <span>Technical: {voice.toneAttributes.technicality}</span>
+                            <span>???</span>
+                            <span>Energy: {voice.toneAttributes.energy}</span>
+                          </div>
+                          <p className="mt-1 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
+                            {voice.exampleTweets.length} example{voice.exampleTweets.length !== 1 ? 's' : ''}
                           </p>
-                        )}
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                          <span>Formality: {voice.toneAttributes.formality}</span>
-                          <span>•</span>
-                          <span>Humor: {voice.toneAttributes.humor}</span>
-                          <span>•</span>
-                          <span>Technical: {voice.toneAttributes.technicality}</span>
-                          <span>•</span>
-                          <span>Energy: {voice.toneAttributes.energy}</span>
                         </div>
-                        <p className="mt-1 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                          {voice.exampleTweets.length} example{voice.exampleTweets.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEdit(voice)}
-                            className="rounded-full px-4 py-2 text-xs font-semibold transition koto-button-hover"
-                            style={{
-                              backgroundColor: 'rgba(26, 29, 46, 0.5)',
-                              color: 'var(--koto-text-primary)'
-                            }}
-                          >
-                            Edit
-                          </button>
-                          {!voice.isTemplate && (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => handleDelete(voice.id, voice.name)}
-                              className="rounded-full px-4 py-2 text-xs font-semibold transition koto-button-hover"
+                              onClick={() => handleEdit(voice)}
+                              className="rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition koto-button-hover"
                               style={{
-                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                color: 'var(--koto-error)'
+                                background: 'linear-gradient(135deg, rgba(232, 92, 143, 1), rgba(232, 92, 143, 0.82))',
+                                color: '#ffffff',
+                                boxShadow: '0 12px 26px rgba(232, 92, 143, 0.28)'
                               }}
                             >
-                              Delete
+                              Edit
                             </button>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleExportJSON(voice)}
-                            className="rounded-full px-3 py-1 text-xs font-medium transition koto-button-hover"
-                            style={{
-                              backgroundColor: 'rgba(26, 29, 46, 0.3)',
-                              color: 'var(--koto-text-secondary)'
-                            }}
-                            title="Export as JSON"
-                          >
-                            JSON
-                          </button>
-                          <button
-                            onClick={() => handleExportMarkdown(voice)}
-                            className="rounded-full px-3 py-1 text-xs font-medium transition koto-button-hover"
-                            style={{
-                              backgroundColor: 'rgba(26, 29, 46, 0.3)',
-                              color: 'var(--koto-text-secondary)'
-                            }}
-                            title="Export as Markdown"
-                          >
-                            MD
-                          </button>
+                            {!voice.isTemplate && (
+                              <button
+                                onClick={() => handleDelete(voice.id, voice.name)}
+                                className="rounded-full px-5 py-2 text-sm font-semibold transition koto-button-hover"
+                                style={{
+                                  backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                                  color: 'var(--koto-error)',
+                                  border: '1px solid rgba(244, 67, 54, 0.25)'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleExportJSON(voice)}
+                              className="rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition koto-button-hover"
+                              style={{
+                                backgroundColor: 'rgba(148, 163, 184, 0.12)',
+                                border: '1px solid rgba(148, 163, 184, 0.35)',
+                                color: 'var(--koto-text-secondary)'
+                              }}
+                              title="Export as JSON"
+                            >
+                              JSON
+                            </button>
+                            <button
+                              onClick={() => handleExportMarkdown(voice)}
+                              className="rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition koto-button-hover"
+                              style={{
+                                backgroundColor: 'rgba(148, 163, 184, 0.12)',
+                                border: '1px solid rgba(148, 163, 184, 0.35)',
+                                color: 'var(--koto-text-secondary)'
+                              }}
+                              title="Export as Markdown"
+                            >
+                              MD
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

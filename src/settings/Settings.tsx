@@ -347,7 +347,7 @@ const Settings: React.FC = () => {
               className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold text-white transition koto-button-hover focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 backgroundColor: !hasChanges || saveState === 'saving' ? 'var(--koto-border)' : 'var(--koto-sakura-pink)',
-                boxShadow: !hasChanges || saveState === 'saving' ? 'none' : '0 4px 12px rgba(232, 92, 143, 0.3)'
+                boxShadow: !hasChanges || saveState === 'saving' ? 'none' : '0 3px 10px rgba(232, 92, 143, 0.25)'
               }}
             >
               {saveState === 'saving' ? 'Saving…' : 'Save changes'}

@@ -8,7 +8,7 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ currentPage, onNavigate }) => {
-  const navItems: Array<{ id: PageType; label: string; icon: JSX.Element }> = [
+  const navItems: Array<{ id: PageType; label: string; icon: React.ReactElement }> = [
     {
       id: 'settings',
       label: 'Settings',
