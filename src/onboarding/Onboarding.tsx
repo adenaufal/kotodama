@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BrandVoice, UserSettings } from '../types';
 import { parseBrandVoiceMarkdown } from './brandVoiceImport';
+import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
+import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
 
 const MAX_EXAMPLE_TWEETS = 5;
 
@@ -68,6 +70,7 @@ const steps = [
 ];
 
 const Onboarding: React.FC = () => {
+  const { sendMessage, isInvalidated } = useRuntimeMessaging();
   const [step, setStep] = useState(1);
   const [openaiKey, setOpenaiKey] = useState('');
   const [brandVoiceName, setBrandVoiceName] = useState('');
@@ -99,18 +102,15 @@ const Onboarding: React.FC = () => {
 
     const checkExistingConfiguration = async () => {
       try {
-        const response = await chrome.runtime.sendMessage({
+        const existingSettings = await sendMessage<UserSettings>({
           type: 'get-settings',
         });
 
-        if (response.success) {
-          const existingSettings = response.data as UserSettings;
-          const existingKey = existingSettings.apiKeys.openai;
+        const existingKey = existingSettings.apiKeys.openai;
 
-          if (typeof existingKey === 'string' && existingKey.trim()) {
-            const settingsUrl = chrome.runtime.getURL('src/settings/index.html');
-            window.location.replace(settingsUrl);
-          }
+        if (typeof existingKey === 'string' && existingKey.trim()) {
+          const settingsUrl = chrome.runtime.getURL('src/settings/index.html');
+          window.location.replace(settingsUrl);
         }
       } catch (error) {
         console.error('Failed to verify existing configuration', error);
@@ -294,7 +294,7 @@ const Onboarding: React.FC = () => {
         },
       };
 
-      await chrome.runtime.sendMessage({
+      await sendMessage({
         type: 'save-settings',
         payload: settings,
       });
@@ -319,13 +319,13 @@ const Onboarding: React.FC = () => {
         updatedAt: new Date(),
       };
 
-      await chrome.runtime.sendMessage({
+      await sendMessage({
         type: 'save-brand-voice',
         payload: brandVoice,
       });
 
       settings.defaultBrandVoiceId = brandVoice.id;
-      await chrome.runtime.sendMessage({
+      await sendMessage({
         type: 'save-settings',
         payload: settings,
       });
@@ -714,6 +714,8 @@ const Onboarding: React.FC = () => {
           </div>
         </section>
       </div>
+
+      <RuntimeInvalidatedModal isOpen={isInvalidated} />
     </div>
   );
 };
