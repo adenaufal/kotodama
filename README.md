@@ -4,13 +4,13 @@
 
 An intelligent Chrome/Edge browser extension that helps you compose tweets and replies that maintain your unique brand voice while adapting to your audience's communication style.
 
-## Highlights (v1.4.0)
+## Highlights (v1.5.0)
 
 - **🎨 Brand Voice Studio**: Create, import (Markdown or tweet links), edit, and delete brand voices with tone controls
 - **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-4o family with automatic fallback handling
 - **💬 Reply Intelligence**: Auto-captures tweet context, surfaces reply templates, and blends in with the original conversation
 - **🌓 Premium Settings**: Redesigned dashboard with floating navigation, full-page gradients, and API key visibility toggle
-- **📚 Session Memory**: Optionally remember generation history and surface recent drafts for quick reuse
+- **🧵 Sequential Threads**: Intelligent thread posting that clicks the "Add" button and inserts tweets one-by-one with configurable delays
 - **🔒 Local-First Security**: API keys encrypted via Web Crypto; no data leaves the browser beyond OpenAI requests
 
 ## Prerequisites
@@ -74,7 +74,8 @@ An intelligent Chrome/Edge browser extension that helps you compose tweets and r
 3. Specify the number of tweets (2-10)
 4. Enter your thread outline or topic
 5. Generate and review the complete thread
-6. Insert all tweets to Twitter at once
+6. Set a **Thread Delay** (1–10 seconds) to ensure Twitter's UI can keep up
+7. Click **Insert All Tweets** — the extension will sequentially fill each box and click the (+) button for you
 
 ### Replying to Tweets
 
@@ -261,4 +262,4 @@ For issues, questions, or feature requests, please open an issue on the GitHub r
 
 ---
 
-**Note**: This is v1.4.0. The extension is under active development. Features and UI may change.
+**Note**: This is v1.5.0. The extension is under active development. Features and UI may change.

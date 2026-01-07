@@ -1,6 +1,6 @@
 # Kotodama Quick Reference Card
 
-One-page cheatsheet for working on Kotodama v1.3.0. Updated: 2025-10-18.
+One-page cheatsheet for working on Kotodama v1.5.0. Updated: 2026-01-07.
 
 ---
 
@@ -15,6 +15,8 @@ One-page cheatsheet for working on Kotodama v1.3.0. Updated: 2025-10-18.
 - **Reply templates** populate the prompt with pre-written intents (supportive, analytical, humorous, etc.).
 - **Thread toggle** switches between single tweets and numbered threads (2–10 items).
 - **Insert to X** posts the generated text back into Twitter/X.
+- **Thread Posting Flow**: For threads, insertion happens sequentially with a configurable **Thread Delay** (1–10s) and automatic clicking of the (+) button.
+- **New Button**: Resets the current generation, prompt, and error state to start a new composition.
 
 ---
 
@@ -75,7 +77,8 @@ Automatic fallback removes the `temperature` parameter if the API complains abou
 2. Panel shows **Replying to @handle** + original tweet text.
 3. Prompt is blank by default — choose a template to kick-start tone or type your own instructions.
 4. Service worker augments the prompt with context and sends to OpenAI.
-5. Button inserts the response at the cursor; panel remains open so you can tweak and re-insert.
+5. Button inserts the response at the cursor; the panel remains open after insertion as requested by users.
+6. For multi-tweet threads, real-time "Toast" progress notifications appear at the bottom of the page during the sequential posting process.
 
 ---
 

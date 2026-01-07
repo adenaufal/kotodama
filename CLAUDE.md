@@ -38,6 +38,8 @@ This is a Manifest V3 Chrome extension with three main execution contexts:
    - Creates and manages the side panel iframe
    - Handles message passing between page ↔ panel ↔ background
    - Inserts generated tweets into Twitter's contenteditable divs
+   - **Sequential Thread Posting**: Automates clicking the "+" button and inserting multiple tweets with configurable delays to avoid Twitter UI errors.
+   - **Toast Notifications**: Displays progress updates on the page during thread posting.
 
 3. **React UIs** (three separate apps)
    - **Panel UI** ([src/panel/](src/panel/)): Side panel for tweet composition
@@ -107,7 +109,8 @@ All cross-context communication uses `chrome.runtime.onMessage` with typed messa
 
 Between content script and panel, `window.postMessage` is used:
 - `context` - Send reply context to panel
-- `insert-tweet` - Request tweet insertion
+- `insert-tweet` - Request single tweet insertion
+- `insert-thread` - Request sequential thread insertion with delay
 - `close-panel` - Close the side panel
 
 ### AI Integration
