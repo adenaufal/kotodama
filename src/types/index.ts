@@ -63,6 +63,8 @@ export interface UserSettings {
   claudeAuthType?: 'api' | 'cookie'; // API key or cookie authentication
   defaultBrandVoiceId?: string;
   defaultModel?: string; // Model ID to use for generation (e.g., 'gpt-4o', 'gpt-4o-mini')
+  modelPriority?: 'maximize-free' | 'always-quality' | 'always-mini'; // Smart model selection strategy
+  userTier?: 1 | 2 | 3 | 4 | 5; // OpenAI usage tier for quota calculation
   analysisDepth: 10 | 20 | 30 | 50;
   ui: {
     buttonPosition: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
@@ -100,15 +102,15 @@ export interface GenerateResponse {
 
 export interface Message {
   type:
-    | 'generate'
-    | 'analyze-profile'
-    | 'save-settings'
-    | 'get-settings'
-    | 'get-brand-voice'
-    | 'save-brand-voice'
-    | 'list-brand-voices'
-    | 'delete-brand-voice'
-    | 'open-settings';
+  | 'generate'
+  | 'analyze-profile'
+  | 'save-settings'
+  | 'get-settings'
+  | 'get-brand-voice'
+  | 'save-brand-voice'
+  | 'list-brand-voices'
+  | 'delete-brand-voice'
+  | 'open-settings';
   payload?: any;
 }
 

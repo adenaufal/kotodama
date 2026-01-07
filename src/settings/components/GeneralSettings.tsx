@@ -1,19 +1,41 @@
 import React, { useState } from 'react';
-import { OPENAI_MODELS, getModelById } from '../../constants/models';
+import { OPENAI_MODELS, getModelById, ModelPriority } from '../../constants/models';
 
 interface GeneralSettingsProps {
     openaiKey: string;
     setOpenaiKey: (key: string) => void;
     defaultModel: string;
     setDefaultModel: (model: string) => void;
+    modelPriority: ModelPriority;
+    setModelPriority: (priority: ModelPriority) => void;
     saveState: 'idle' | 'saving' | 'saved' | 'error';
 }
+
+const MODEL_PRIORITY_OPTIONS: { value: ModelPriority; label: string; description: string }[] = [
+    {
+        value: 'maximize-free',
+        label: 'Maximize Free Tokens',
+        description: 'Use mini models (10M free tokens/day) by default, premium only for reasoning'
+    },
+    {
+        value: 'always-quality',
+        label: 'Always Quality',
+        description: 'Always use premium models like GPT-4o (1M free tokens/day)'
+    },
+    {
+        value: 'always-mini',
+        label: 'Always Mini',
+        description: 'Always use fast/cheap models like GPT-4o Mini'
+    }
+];
 
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
     openaiKey,
     setOpenaiKey,
     defaultModel,
     setDefaultModel,
+    modelPriority,
+    setModelPriority,
     saveState
 }) => {
     const [showApiKey, setShowApiKey] = useState(false);
@@ -68,10 +90,38 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                 </p>
             </div>
 
-            {/* AI Model */}
+            {/* Model Priority Strategy */}
             <div className="space-y-4">
                 <label className="text-sm font-bold uppercase tracking-wider text-slate-500 block">
-                    Default AI Model
+                    Model Selection Strategy
+                </label>
+                <div className="relative">
+                    <select
+                        value={modelPriority}
+                        onChange={(e) => setModelPriority(e.target.value as ModelPriority)}
+                        className="w-full appearance-none rounded-xl px-5 py-4 text-base outline-none transition-all duration-200 border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-[var(--koto-sakura-pink)] text-slate-900 shadow-sm cursor-pointer"
+                    >
+                        {MODEL_PRIORITY_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+                <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 text-xs text-emerald-700">
+                    <span className="font-bold">💡 Tip:</span> {MODEL_PRIORITY_OPTIONS.find(o => o.value === modelPriority)?.description}
+                </div>
+            </div>
+
+            {/* AI Model Override */}
+            <div className="space-y-4">
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-500 block">
+                    Default AI Model <span className="text-slate-300 font-normal">(Override)</span>
                 </label>
                 <div className="relative">
                     <select
@@ -79,10 +129,10 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                         onChange={(e) => setDefaultModel(e.target.value)}
                         className="w-full appearance-none rounded-xl px-5 py-4 text-base outline-none transition-all duration-200 border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-[var(--koto-sakura-pink)] text-slate-900 shadow-sm cursor-pointer"
                     >
-                        <option value="">Auto (Best Available)</option>
+                        <option value="">Auto (Uses Strategy Above)</option>
                         {OPENAI_MODELS.map((model) => (
                             <option key={model.id} value={model.id}>
-                                {model.name}
+                                {model.name} {model.tokenTier === 'mini' ? '🆓' : ''}
                             </option>
                         ))}
                     </select>
