@@ -7,10 +7,13 @@ import {
   GeneralSettings,
   BrandVoiceList
 } from './components';
+import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
+import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const Settings: React.FC = () => {
+  const { sendMessage, isInvalidated } = useRuntimeMessaging();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,25 +29,21 @@ const Settings: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [settingsResponse, voicesResponse] = await Promise.all([
-        chrome.runtime.sendMessage({ type: 'get-settings' }),
-        chrome.runtime.sendMessage({ type: 'list-brand-voices' }),
+      const [settingsData, voicesData] = await Promise.all([
+        sendMessage<UserSettings>({ type: 'get-settings' }),
+        sendMessage<BrandVoice[]>({ type: 'list-brand-voices' }),
       ]);
 
-      if (settingsResponse && settingsResponse.success) {
-        const data = settingsResponse.data as UserSettings;
-        setSettings(data);
-        setOpenaiKey(data.apiKeys?.openai || '');
-        setDefaultVoiceId(data.defaultBrandVoiceId || '');
-        setDefaultModel(data.defaultModel || '');
-        setModelPriority(data.modelPriority || 'maximize-free');
-      }
+      setSettings(settingsData);
+      setOpenaiKey(settingsData.apiKeys?.openai || '');
+      setDefaultVoiceId(settingsData.defaultBrandVoiceId || '');
+      setDefaultModel(settingsData.defaultModel || '');
+      setModelPriority(settingsData.modelPriority || 'maximize-free');
 
-      if (voicesResponse && voicesResponse.success) {
-        setBrandVoices(voicesResponse.data as BrandVoice[]);
-      }
+      setBrandVoices(voicesData);
     } catch (err) {
       console.error('Failed to load settings:', err);
+      // Error already handled by the hook
     } finally {
       setLoading(false);
     }
@@ -83,7 +82,7 @@ const Settings: React.FC = () => {
         modelPriority: modelPriority,
       };
 
-      await chrome.runtime.sendMessage({ type: 'save-settings', payload: updatedSettings });
+      await sendMessage({ type: 'save-settings', payload: updatedSettings });
 
       setSettings(updatedSettings);
       setSaveState('saved');
@@ -166,6 +165,8 @@ const Settings: React.FC = () => {
           onRefresh={loadData}
         />
       )}
+
+      <RuntimeInvalidatedModal isOpen={isInvalidated} />
     </>
   );
 };

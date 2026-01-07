@@ -5,6 +5,7 @@ let panelIframe: HTMLIFrameElement | null = null;
 let currentContext: 'compose' | 'reply' | null = null;
 let currentTweetContext: any = null;
 let isPanelOpen = false;
+let runtimeInvalidated = false;
 
 const PANEL_TRANSITION_DURATION = 300;
 
@@ -25,6 +26,141 @@ function resolveExtensionRuntime(): ExtensionRuntime {
   }
 
   return null;
+}
+
+/**
+ * Checks if the extension runtime is still valid
+ */
+function isRuntimeValid(): boolean {
+  try {
+    const runtime = resolveExtensionRuntime();
+    return !!(runtime && runtime.id);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Monitors runtime validity and shows reload notification when invalidated
+ */
+function watchRuntimeValidity(): void {
+  const checkInterval = 3000; // Check every 3 seconds
+
+  const intervalId = setInterval(() => {
+    if (!isRuntimeValid() && !runtimeInvalidated) {
+      runtimeInvalidated = true;
+      clearInterval(intervalId);
+      showRuntimeInvalidatedNotification();
+    }
+  }, checkInterval);
+
+  // Also listen for errors
+  window.addEventListener('error', (event) => {
+    if (event.message?.includes('Extension context invalidated') && !runtimeInvalidated) {
+      runtimeInvalidated = true;
+      clearInterval(intervalId);
+      showRuntimeInvalidatedNotification();
+    }
+  });
+}
+
+/**
+ * Shows a notification when the runtime is invalidated
+ */
+function showRuntimeInvalidatedNotification(): void {
+  // Remove any existing notification
+  const existingNotification = document.querySelector('.kotodama-reload-notification');
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = 'kotodama-reload-notification';
+  notification.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999999;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+      padding: 16px 20px;
+      max-width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      animation: slideIn 0.3s ease;
+    ">
+      <div style="display: flex; align-items: start; gap: 12px;">
+        <svg style="width: 24px; height: 24px; flex-shrink: 0; color: #f59e0b;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">
+            Kotodama Extension Updated
+          </div>
+          <div style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+            Please reload this page to continue using Kotodama.
+          </div>
+          <button onclick="window.location.reload()" style="
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+          " onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+            Reload Page
+          </button>
+        </div>
+        <button onclick="this.closest('.kotodama-reload-notification').remove()" style="
+          background: transparent;
+          border: none;
+          color: #9ca3af;
+          cursor: pointer;
+          padding: 0;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg style="width: 20px; height: 20px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Add animation keyframes
+  if (!document.querySelector('#kotodama-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'kotodama-notification-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(notification);
+
+  // Auto-dismiss after 30 seconds
+  setTimeout(() => {
+    notification.remove();
+  }, 30000);
 }
 
 const extensionRuntime = resolveExtensionRuntime();
@@ -94,6 +230,16 @@ function styleToolbarButton(button: HTMLButtonElement) {
 // Initialize the content script
 function init() {
   console.log('Kotodama content script loaded');
+
+  // Check if runtime is valid
+  if (!isRuntimeValid()) {
+    console.error('[Kotodama] Extension runtime is not valid on initialization');
+    showRuntimeInvalidatedNotification();
+    return;
+  }
+
+  // Start watching for runtime invalidation
+  watchRuntimeValidity();
 
   // Create a floating button at top-right
   createFloatingButton();
@@ -397,6 +543,13 @@ async function extractTweetContextFromPage(tweetArticle: HTMLElement): Promise<a
 }
 
 function openPanel() {
+  // Check if runtime is still valid
+  if (!isRuntimeValid()) {
+    console.error('[Kotodama] Extension runtime is invalidated');
+    showRuntimeInvalidatedNotification();
+    return;
+  }
+
   if (panelIframe) {
     console.time('[Kotodama Performance] Panel show');
     showPanel();
@@ -409,6 +562,7 @@ function openPanel() {
 
   if (!extensionRuntime) {
     console.error('Kotodama: extension runtime is unavailable in this context.');
+    showRuntimeInvalidatedNotification();
     return;
   }
 
