@@ -25,27 +25,49 @@ beforeEach(() => {
     delete storedValues[key];
   }
 
+  // Support both promise-based and callback-based API for chrome.storage
   const localStorageArea = {
-    get: vi.fn(async (key: string) => {
-      if (typeof key === 'string') {
-        return { [key]: storedValues[key] };
+    get: vi.fn((keyOrKeys: string | string[], callback?: (result: Record<string, unknown>) => void) => {
+      const keys = typeof keyOrKeys === 'string' ? [keyOrKeys] : keyOrKeys;
+      const result: Record<string, unknown> = {};
+      for (const key of keys) {
+        if (key in storedValues) {
+          result[key] = storedValues[key];
+        }
       }
-
-      return {};
+      if (callback) {
+        callback(result);
+        return;
+      }
+      return Promise.resolve(result);
     }),
-    set: vi.fn(async (items: Record<string, unknown>) => {
+    set: vi.fn((items: Record<string, unknown>, callback?: () => void) => {
       Object.assign(storedValues, items);
+      if (callback) {
+        callback();
+        return;
+      }
+      return Promise.resolve();
     }),
-    clear: vi.fn(async () => {
+    clear: vi.fn((callback?: () => void) => {
       for (const key of Object.keys(storedValues)) {
         delete storedValues[key];
       }
+      if (callback) {
+        callback();
+        return;
+      }
+      return Promise.resolve();
     }),
   } satisfies StorageAreaMock;
 
   globalWithChrome.chrome = {
     storage: {
       local: localStorageArea,
+    },
+    runtime: {
+      id: 'test-extension-id',
+      getManifest: () => ({}),
     },
   };
 });

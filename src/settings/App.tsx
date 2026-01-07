@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import Settings from './Settings';
 import About from './About';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import '../panel/index.css';
 
 export type PageType = 'settings' | 'about';
@@ -86,6 +87,8 @@ const App: React.FC = () => {
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

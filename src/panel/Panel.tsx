@@ -5,6 +5,7 @@ import { ContextArea } from './components/ContextArea';
 import { InputArea } from './components/InputArea';
 import { ResultsArea } from './components/ResultsArea';
 import { ReplyTemplate } from '../constants/templates';
+import { sanitizePrompt, sanitizeTweetContext, escapeForPrompt } from '../utils/sanitize';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -37,6 +38,43 @@ const Panel: React.FC = () => {
       window.removeEventListener('message', handleMessage);
     };
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl+Enter to generate
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!isLoading && !generatedContent) {
+          handleGenerate();
+        } else if (generatedContent) {
+          handleInsert();
+        }
+      }
+      // Escape to close panel
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (generatedContent) {
+          // If showing results, go back to input
+          setGeneratedContent('');
+        } else {
+          // Otherwise close the panel
+          handleClose();
+        }
+      }
+      // Cmd/Ctrl+Shift+R to regenerate
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'r') {
+        e.preventDefault();
+        if (generatedContent && !isLoading) {
+          setGeneratedContent('');
+          handleGenerate();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoading, generatedContent, prompt, selectedVoiceId]);
 
   const handleMessage = (event: MessageEvent) => {
     if (event.data.type === 'context') {
@@ -90,7 +128,9 @@ const Panel: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) {
+    // Sanitize and validate prompt
+    const sanitizedPrompt = sanitizePrompt(prompt);
+    if (!sanitizedPrompt.trim()) {
       setError('Please enter a prompt');
       return;
     }
@@ -104,7 +144,6 @@ const Panel: React.FC = () => {
     setError(null);
     setGeneratedContent(''); // Clear previous results
 
-    console.time('[Kotodama Performance] AI generation');
     const startTime = performance.now();
 
     try {
@@ -115,13 +154,18 @@ const Panel: React.FC = () => {
       };
       const limit = charLimits[tweetLengthPreset];
 
-      let enhancedPrompt = prompt;
+      let enhancedPrompt = sanitizedPrompt;
       if (context.type === 'reply' && context.tweetContext) {
-        enhancedPrompt = `You are replying to @${context.tweetContext.username}'s tweet.
+        // Sanitize tweet context to prevent prompt injection
+        const safeContext = sanitizeTweetContext(context.tweetContext);
+        const escapedText = escapeForPrompt(safeContext.text);
+        const escapedUsername = escapeForPrompt(safeContext.username);
 
-Original tweet: "${context.tweetContext.text}"
+        enhancedPrompt = `You are replying to @${escapedUsername}'s tweet.
 
-User's instructions: ${prompt}
+Original tweet: "${escapedText}"
+
+User's instructions: ${sanitizedPrompt}
 
 Write a reply that:
 1. Responds directly to the original tweet
@@ -129,7 +173,7 @@ Write a reply that:
 3. Is conversational and engaging
 4. Is ${limit.description} (${limit.min}-${limit.max} characters)`;
       } else {
-        enhancedPrompt = `${prompt}
+        enhancedPrompt = `${sanitizedPrompt}
 
 Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
       }
@@ -185,17 +229,20 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
       return;
     }
 
+    // Use specific origin instead of wildcard for security
+    const targetOrigin = window.location.ancestorOrigins?.[0] || 'https://twitter.com';
     window.parent.postMessage(
       {
         type: 'insert-tweet',
         content: text,
       },
-      '*'
+      targetOrigin
     );
   };
 
   const handleClose = () => {
-    window.parent.postMessage({ type: 'close-panel' }, '*');
+    const targetOrigin = window.location.ancestorOrigins?.[0] || 'https://twitter.com';
+    window.parent.postMessage({ type: 'close-panel' }, targetOrigin);
   };
 
   const handleOpenSettings = () => {

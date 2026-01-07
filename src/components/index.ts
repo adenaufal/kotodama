@@ -7,3 +7,4 @@ export { Switch } from './Switch';
 export { Modal } from './Modal';
 export { Tabs } from './Tabs';
 export { Toast } from './Toast';
+export { ErrorBoundary } from './ErrorBoundary';

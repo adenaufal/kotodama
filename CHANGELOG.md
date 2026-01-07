@@ -1,35 +1,27 @@
 # Changelog
 
-## [1.4.0](https://github.com/adenaufal/kotodama/compare/v1.3.0...v1.4.0) (2026-01-07)
-
-
-### Features
-
-* add navigation menu and about page to settings ([#36](https://github.com/adenaufal/kotodama/issues/36)) ([81483bb](https://github.com/adenaufal/kotodama/commit/81483bbfdf5835ca52bea30881ab8f89a0209402))
-* add tweet length presets and improve thread parsing ([c547667](https://github.com/adenaufal/kotodama/commit/c5476679e862d8d82a95053a787c1e8cf131edb0))
-* enhance brand voice implementation with advanced features ([#35](https://github.com/adenaufal/kotodama/issues/35)) ([545ab04](https://github.com/adenaufal/kotodama/commit/545ab04b69ac31ffaf653337592a690c76fa03e8))
-
-
-### Bug Fixes
-
-* adjust panel iframe positioning and sizing ([ff01c66](https://github.com/adenaufal/kotodama/commit/ff01c66a9fcc15117a422f5de3fb46c7d23c48fe))
-* improve panel responsiveness and tweet insertion logic ([c0b2680](https://github.com/adenaufal/kotodama/commit/c0b268061285f0735f2d4ff50b5fe7daa80ceb58))
-* improve reply detection and tweet insertion logic ([d823a48](https://github.com/adenaufal/kotodama/commit/d823a4885d595099eedbbfc17affb768126f3bc1))
-* improve tweet content insertion robustness ([61a91ff](https://github.com/adenaufal/kotodama/commit/61a91ff672826104e5aac348abeeccabdd4bc128))
-* improve UI styling and controls for settings components ([a167b10](https://github.com/adenaufal/kotodama/commit/a167b10974c4b0f99bc9a39b699f72e603bd7a4d))
-* remove dark mode support and clean up theme logic ([35c0c43](https://github.com/adenaufal/kotodama/commit/35c0c433447cf67875e33c18ae9331a4867cce46))
-
 ## [Unreleased](https://github.com/adenaufal/kotodama/compare/v1.4.0...HEAD)
+
+## [1.4.0](https://github.com/adenaufal/kotodama/compare/v1.3.0...v1.4.0) (2026-01-07)
 
 ### Features
 
 * add API key visibility toggle in General Configuration ([67d9c0a](https://github.com/adenaufal/kotodama/commit/67d9c0a))
+* add navigation menu and about page to settings ([#36](https://github.com/adenaufal/kotodama/issues/36)) ([81483bb](https://github.com/adenaufal/kotodama/commit/81483bbfdf5835ca52bea30881ab8f89a0209402))
+* add tweet length presets and improve thread parsing ([c547667](https://github.com/adenaufal/kotodama/commit/c5476679e862d8d82a95053a787c1e8cf131edb0))
+* enhance brand voice implementation with advanced features ([#35](https://github.com/adenaufal/kotodama/issues/35)) ([545ab04](https://github.com/adenaufal/kotodama/commit/545ab04b69ac31ffaf653337592a690c76fa03e8))
 
 ### Bug Fixes
 
 * fix Manage Voices modal clipping by moving it outside restrictive layout container ([e8f2b31](https://github.com/adenaufal/kotodama/commit/e8f2b31))
 * fix broken GitHub and Report Issue repository links ([a2b4c1d](https://github.com/adenaufal/kotodama/commit/a2b4c1d))
 * remove redundant About section from main Settings tab ([f3e4d5c](https://github.com/adenaufal/kotodama/commit/f3e4d5c))
+* adjust panel iframe positioning and sizing ([ff01c66](https://github.com/adenaufal/kotodama/commit/ff01c66a9fcc15117a422f5de3fb46c7d23c48fe))
+* improve panel responsiveness and tweet insertion logic ([c0b2680](https://github.com/adenaufal/kotodama/commit/c0b268061285f0735f2d4ff50b5fe7daa80ceb58))
+* improve reply detection and tweet insertion logic ([d823a48](https://github.com/adenaufal/kotodama/commit/d823a4885d595099eedbbfc17affb768126f3bc1))
+* improve tweet content insertion robustness ([61a91ff](https://github.com/adenaufal/kotodama/commit/61a91ff672826104e5aac348abeeccabdd4bc128))
+* improve UI styling and controls for settings components ([a167b10](https://github.com/adenaufal/kotodama/commit/a167b10974c4b0f99bc9a39b699f72e603bd7a4d))
+* remove dark mode support and clean up theme logic ([35c0c43](https://github.com/adenaufal/kotodama/commit/35c0c433447cf67875e33c18ae9331a4867cce46))
 
 ### Refactor
 

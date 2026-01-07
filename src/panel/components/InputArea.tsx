@@ -80,26 +80,43 @@ export const InputArea: React.FC<InputAreaProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                     {/* Brand Voice Selector */}
                     <div className="relative col-span-2 sm:col-span-1">
-                        <select
-                            value={selectedVoiceId}
-                            onChange={(e) => setSelectedVoiceId(e.target.value)}
-                            className="w-full appearance-none rounded-xl border px-4 py-3 text-xs font-semibold shadow-sm outline-none transition-all focus:border-[var(--koto-sakura-pink)]"
-                            style={{
-                                borderColor: 'var(--koto-border)',
-                                backgroundColor: 'var(--koto-bg-card)',
-                                color: 'var(--koto-text-primary)'
-                            }}
-                        >
-                            <option value="">Select Voice...</option>
-                            {voices.map((voice) => (
-                                <option key={voice.id} value={voice.id}>
-                                    {voice.name}
-                                </option>
-                            ))}
-                        </select>
-                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px]" style={{ color: 'var(--koto-text-tertiary)' }}>
-                            ▼
-                        </span>
+                        {voices.length === 0 ? (
+                            <div className="w-full rounded-xl border px-4 py-3 text-xs flex items-center gap-2"
+                                style={{
+                                    borderColor: 'var(--koto-sakura-pink)',
+                                    backgroundColor: 'rgba(232, 92, 143, 0.08)',
+                                    color: 'var(--koto-text-secondary)'
+                                }}
+                            >
+                                <svg className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--koto-sakura-pink)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span>No brand voices yet. <button onClick={() => chrome.runtime.sendMessage({ type: 'open-settings' })} className="font-semibold underline hover:no-underline" style={{ color: 'var(--koto-sakura-pink)' }}>Create one</button></span>
+                            </div>
+                        ) : (
+                            <>
+                                <select
+                                    value={selectedVoiceId}
+                                    onChange={(e) => setSelectedVoiceId(e.target.value)}
+                                    className="w-full appearance-none rounded-xl border px-4 py-3 text-xs font-semibold shadow-sm outline-none transition-all focus:border-[var(--koto-sakura-pink)]"
+                                    style={{
+                                        borderColor: 'var(--koto-border)',
+                                        backgroundColor: 'var(--koto-bg-card)',
+                                        color: 'var(--koto-text-primary)'
+                                    }}
+                                >
+                                    <option value="">Select Voice...</option>
+                                    {voices.map((voice) => (
+                                        <option key={voice.id} value={voice.id}>
+                                            {voice.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px]" style={{ color: 'var(--koto-text-tertiary)' }}>
+                                    ▼
+                                </span>
+                            </>
+                        )}
                     </div>
 
                     {/* Length Selector */}
@@ -158,38 +175,54 @@ export const InputArea: React.FC<InputAreaProps> = ({
                 )}
             </div>
 
-            <button
-                onClick={onGenerate}
-                disabled={isLoading || !prompt.trim() || !selectedVoiceId}
-                className="relative overflow-hidden w-full group rounded-xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.99]"
-                style={{
-                    background: isLoading || !prompt.trim() || !selectedVoiceId
-                        ? 'var(--koto-border)'
-                        : 'linear-gradient(135deg, var(--koto-sakura-pink), #ec4899)',
-                    boxShadow: isLoading || !prompt.trim() || !selectedVoiceId
-                        ? 'none'
-                        : '0 8px 20px -4px rgba(236, 72, 153, 0.5)'
-                }}
-            >
-                <span className="relative z-10 flex items-center justify-center gap-2 text-sm font-bold tracking-wide text-white">
-                    {isLoading ? (
-                        <>
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Thinking...
-                        </>
-                    ) : (
-                        <>
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            Generate Magic
-                        </>
-                    )}
-                </span>
-            </button>
+            <div className="space-y-2">
+                <button
+                    onClick={onGenerate}
+                    disabled={isLoading || !prompt.trim() || !selectedVoiceId}
+                    className="relative overflow-hidden w-full group rounded-xl py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.99]"
+                    style={{
+                        background: isLoading || !prompt.trim() || !selectedVoiceId
+                            ? 'var(--koto-border)'
+                            : 'linear-gradient(135deg, var(--koto-sakura-pink), #ec4899)',
+                        boxShadow: isLoading || !prompt.trim() || !selectedVoiceId
+                            ? 'none'
+                            : '0 8px 20px -4px rgba(236, 72, 153, 0.5)'
+                    }}
+                >
+                    <span className="relative z-10 flex items-center justify-center gap-2 text-sm font-bold tracking-wide text-white">
+                        {isLoading ? (
+                            <>
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Thinking...
+                            </>
+                        ) : (
+                            <>
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Generate Magic
+                            </>
+                        )}
+                    </span>
+                </button>
+
+                {/* Keyboard shortcuts hint */}
+                <div className="flex justify-center gap-4 text-[10px] font-medium" style={{ color: 'var(--koto-text-tertiary)' }}>
+                    <span className="flex items-center gap-1">
+                        <kbd className="px-1.5 py-0.5 rounded bg-[var(--koto-bg-card)] border border-[var(--koto-border)] font-mono text-[9px]">⌘</kbd>
+                        <span>+</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[var(--koto-bg-card)] border border-[var(--koto-border)] font-mono text-[9px]">↵</kbd>
+                        <span className="ml-1">Generate</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <kbd className="px-1.5 py-0.5 rounded bg-[var(--koto-bg-card)] border border-[var(--koto-border)] font-mono text-[9px]">Esc</kbd>
+                        <span className="ml-1">Close</span>
+                    </span>
+                </div>
+            </div>
         </div>
     );
 };

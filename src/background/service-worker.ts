@@ -2,6 +2,8 @@ import { Message, MessageResponse, GenerateRequest, BrandVoice, UserProfile } fr
 import { db } from '../storage/db';
 import { getSettings, saveSettings } from '../storage/settings';
 import { generateWithOpenAI, analyzeTwitterProfile } from '../api/openai';
+import { tryRequest } from '../utils/rateLimiter';
+import { logger } from '../utils/logger';
 
 const ONBOARDING_URL = chrome.runtime.getURL('src/onboarding/index.html');
 const SETTINGS_URL = chrome.runtime.getURL('src/settings/index.html');
@@ -25,7 +27,7 @@ chrome.action.onClicked.addListener(async () => {
       await chrome.tabs.create({ url });
     }
   } catch (error) {
-    console.error('Failed to open extension page', error);
+    logger.error('Failed to open extension page', error);
     await chrome.tabs.create({ url: ONBOARDING_URL });
   }
 });
@@ -35,7 +37,7 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   handleMessage(message)
     .then((response) => sendResponse(response))
     .catch((error) => {
-      console.error('Message handling error:', error);
+      logger.error('Message handling error:', error);
       sendResponse({
         success: false,
         error: error.message || 'Unknown error occurred',
@@ -81,6 +83,15 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
 
 async function handleGenerate(request: GenerateRequest): Promise<MessageResponse> {
   try {
+    // Check rate limits first
+    const rateLimitCheck = await tryRequest('generate');
+    if (!rateLimitCheck.allowed) {
+      return {
+        success: false,
+        error: rateLimitCheck.error || 'Rate limit exceeded. Please try again later.',
+      };
+    }
+
     const settings = await getSettings();
 
     if (!settings.apiKeys.openai) {
@@ -320,4 +331,4 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-console.log('Kotodama service worker loaded');
+logger.info('Service worker loaded');

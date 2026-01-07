@@ -205,6 +205,13 @@ Content Script (inserts to Twitter)
 
 ## Roadmap
 
+### Shipped in v1.4.0 (January 2026)
+- Redesigned Settings dashboard with floating navigation and full-page gradients
+- API key visibility toggle and improved security messaging
+- Enhanced brand voice management with better modal responsiveness
+- Fixed GitHub repository links and About page content
+- Improved tweet insertion robustness and panel positioning
+
 ### Shipped in v1.3.0 (October 2025)
 - Brand voice manager with edit/delete and Markdown import
 - Reply context fixes with templates and performance logging

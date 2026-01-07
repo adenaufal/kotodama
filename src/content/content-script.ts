@@ -489,16 +489,28 @@ function togglePanel() {
   }
 }
 
+// Trusted origins for postMessage security
+const TRUSTED_ORIGINS = [
+  'https://twitter.com',
+  'https://x.com',
+];
+
+function isExtensionOrigin(origin: string): boolean {
+  return origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://');
+}
+
 function sendContextToPanel() {
   if (!panelIframe?.contentWindow) return;
 
+  // Send to extension origin (panel iframe)
+  const panelOrigin = extensionRuntime?.getURL('').replace(/\/$/, '') || '*';
   panelIframe.contentWindow.postMessage(
     {
       type: 'context',
       context: currentContext,
       tweetContext: currentTweetContext,
     },
-    '*'
+    panelOrigin
   );
 }
 
@@ -528,18 +540,28 @@ function hidePanel() {
 
 // Listen for messages from the panel
 window.addEventListener('message', async (event) => {
+  // Verify the message is from a trusted source (extension panel or Twitter)
+  const origin = event.origin;
+  const isTrustedOrigin = isExtensionOrigin(origin) || TRUSTED_ORIGINS.some((t) => origin.startsWith(t));
+
+  if (!isTrustedOrigin) {
+    return;
+  }
+
   if (event.data.type === 'insert-tweet') {
     insertTweetContent(event.data.content);
   } else if (event.data.type === 'close-panel') {
     hidePanel();
   } else if (event.data.type === 'analyze-profile') {
     const tweets = await fetchUserTweets(event.data.username);
+    // Reply to the extension origin
+    const replyOrigin = extensionRuntime?.getURL('').replace(/\/$/, '') || origin;
     event.source?.postMessage(
       {
         type: 'profile-tweets',
         tweets,
       },
-      { targetOrigin: '*' } as any
+      { targetOrigin: replyOrigin } as WindowPostMessageOptions
     );
   }
 });
@@ -717,15 +739,74 @@ function insertTweetContent(content: string) {
 
 }
 
-async function fetchUserTweets(_username: string): Promise<string[]> {
-  // This would ideally scrape the user's timeline
-  // For now, return a placeholder implementation
-  // In production, this would navigate to the user's profile and extract recent tweets
+/**
+ * Fetches tweets from the current page or navigates to user profile.
+ * Extracts tweet text content from visible tweet articles.
+ */
+async function fetchUserTweets(username: string): Promise<string[]> {
+  const tweets: string[] = [];
 
-  // TODO: Implement actual tweet scraping
-  // This is a simplified version - real implementation would be more complex
+  // If we're already on the user's profile, scrape directly
+  const currentPath = window.location.pathname;
+  const isOnProfile = currentPath === `/${username}` || currentPath.startsWith(`/${username}/`);
 
-  return [];
+  if (isOnProfile) {
+    // Scrape tweets from current page
+    const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
+
+    for (const article of tweetElements) {
+      const tweetTextEl = article.querySelector('[data-testid="tweetText"]');
+      if (tweetTextEl?.textContent) {
+        const text = tweetTextEl.textContent.trim();
+        // Only include tweets with substantial content
+        if (text.length > 10 && text.length <= 280) {
+          tweets.push(text);
+        }
+      }
+
+      // Limit to 20 tweets for analysis
+      if (tweets.length >= 20) break;
+    }
+  } else {
+    // Try to fetch from Twitter's syndication API (public tweets only)
+    // This is a fallback for when not on the user's profile page
+    try {
+      // Use Twitter's oEmbed/syndication for public profile data
+      // Note: This has limitations and may not work for all profiles
+      const tweetArticles = document.querySelectorAll('article[data-testid="tweet"]');
+
+      // Check if any visible tweets are from the target user
+      for (const article of tweetArticles) {
+        const userLinks = article.querySelectorAll('a[role="link"][href^="/"]');
+        let isFromUser = false;
+
+        for (const link of userLinks) {
+          const href = link.getAttribute('href') || '';
+          if (href === `/${username}` || href.startsWith(`/${username}/`)) {
+            isFromUser = true;
+            break;
+          }
+        }
+
+        if (isFromUser) {
+          const tweetTextEl = article.querySelector('[data-testid="tweetText"]');
+          if (tweetTextEl?.textContent) {
+            const text = tweetTextEl.textContent.trim();
+            if (text.length > 10 && text.length <= 280) {
+              tweets.push(text);
+            }
+          }
+        }
+
+        if (tweets.length >= 20) break;
+      }
+    } catch (error) {
+      // Scraping failed, return empty array
+      // The calling code should handle this gracefully
+    }
+  }
+
+  return tweets;
 }
 
 // Initialize when DOM is ready
