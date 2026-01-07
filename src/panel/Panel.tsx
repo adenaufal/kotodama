@@ -338,8 +338,12 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
   };
 
   return (
-    <div className={`w-full h-screen overflow-hidden flex flex-col font-sans transition-colors duration-300 ${theme === 'light' ? 'light-mode' : ''}`}
-      style={{ backgroundColor: 'var(--koto-bg-dark)' }}>
+    <div className={`w-full h-full overflow-hidden flex flex-col font-sans transition-colors duration-300 ${theme === 'light' ? 'light-mode' : ''}`}
+      style={{
+        backgroundColor: 'var(--koto-bg-dark)',
+        // Add a subtle gradient overlay to the whole panel
+        backgroundImage: 'linear-gradient(to bottom right, rgba(255,255,255,0.03), rgba(255,255,255,0))',
+      }}>
 
       {runtimeInvalidated && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-[100000] flex items-center justify-center p-8">
@@ -380,19 +384,19 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         />
 
         {error && (
-          <div className="mx-8 mt-4 rounded-xl border px-4 py-3 text-sm flex items-center gap-2 koto-animate-fadeIn relative z-10" style={{
-            borderColor: 'var(--koto-error)',
-            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+          <div className="mx-6 mt-4 rounded-xl border px-4 py-3 text-sm flex items-center gap-3 koto-animate-fadeIn relative z-10 shadow-sm" style={{
+            borderColor: 'rgba(244, 67, 54, 0.2)',
+            backgroundColor: 'rgba(244, 67, 54, 0.05)',
             color: 'var(--koto-error)'
           }}>
             <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            {error}
+            <span className="font-medium">{error}</span>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
           {!generatedContent ? (
             <InputArea
               prompt={prompt}

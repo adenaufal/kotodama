@@ -279,24 +279,31 @@ function createFloatingButton() {
     width: '48px',
     height: '48px',
     padding: '0',
-    borderRadius: '9999px',
-    border: 'none',
-    background: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: '16px', // Soft square look
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    background: 'linear-gradient(135deg, #1d9bf0, #ec4899)', // Twitter Blue to Sakura Pink
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    transition: 'all 0.2s ease',
+    boxShadow: '0 8px 20px -4px rgba(29, 155, 240, 0.5), 0 4px 12px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)', // Bouncy transition
     outline: 'none',
-    zIndex: '1000',
+    zIndex: '9999', // Higher z-index to be safe
+    backdropFilter: 'blur(8px)',
   } as CSSStyleDeclaration);
 
+  // White icon for contrast against gradient
+  const iconSvg = button.querySelector('img, svg');
+  if (iconSvg) {
+    (iconSvg as HTMLElement).style.filter = 'brightness(0) invert(1)';
+  }
+
   button.addEventListener('mouseenter', () => {
-    button.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-    button.style.transform = 'translateY(-1px)';
+    button.style.transform = 'scale(1.1) rotate(5deg)';
+    button.style.boxShadow = '0 12px 28px -6px rgba(236, 72, 153, 0.6), 0 8px 16px rgba(0, 0, 0, 0.15)';
   });
 
   button.addEventListener('mouseleave', () => {
-    button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-    button.style.transform = 'translateY(0)';
+    button.style.transform = 'scale(1) rotate(0deg)';
+    button.style.boxShadow = '0 8px 20px -4px rgba(29, 155, 240, 0.5), 0 4px 12px rgba(0, 0, 0, 0.1)';
   });
 
   button.addEventListener('click', async (e) => {
@@ -396,151 +403,7 @@ function createFloatingButton() {
   console.log('[Kotodama Performance] Floating button ready');
 }
 
-async function handleAIButtonClick(composeBox: HTMLElement) {
-  // Determine if this is a reply or original tweet
-  const isReply = !!composeBox.closest('[data-testid="reply"]');
-  currentContext = isReply ? 'reply' : 'compose';
-
-  if (isReply) {
-    // Extract tweet context for replies
-    currentTweetContext = await extractTweetContext(composeBox);
-  } else {
-    currentTweetContext = null;
-  }
-
-  // Open or toggle the panel
-  if (panelIframe && document.body.contains(panelIframe)) {
-    togglePanel();
-  } else {
-    openPanel();
-  }
-}
-
-async function extractTweetContext(replyBox: HTMLElement): Promise<any> {
-  console.log('[Kotodama] Extracting tweet context from reply box');
-
-  // Strategy 1: Look for tweet article in the same container
-  let tweetArticle = replyBox.closest('article');
-
-  // Strategy 2: If not found, look for the tweet above the reply
-  if (!tweetArticle) {
-    const allArticles = document.querySelectorAll('article');
-    // The original tweet should be one of the articles before the reply box
-    tweetArticle = Array.from(allArticles).find(article => {
-      return article.querySelector('[data-testid="tweetText"]') !== null;
-    }) || null;
-  }
-
-  if (!tweetArticle) {
-    console.warn('[Kotodama] Could not find original tweet article');
-    return null;
-  }
-
-  // Extract tweet text
-  const tweetTextElement = tweetArticle.querySelector('[data-testid="tweetText"]');
-  const tweetText = tweetTextElement?.textContent || '';
-
-  // Extract username - try multiple selectors
-  let username = '';
-  const usernameSelectors = [
-    '[data-testid="User-Name"] a[role="link"]',
-    '[data-testid="User-Name"] span',
-    'a[role="link"][href^="/"]',
-  ];
-
-  for (const selector of usernameSelectors) {
-    const element = tweetArticle.querySelector(selector);
-    if (element?.textContent) {
-      username = element.textContent.replace('@', '').trim();
-      if (username && username !== '') break;
-    }
-  }
-
-  const context = {
-    text: tweetText,
-    username,
-    timestamp: new Date().toISOString(),
-  };
-
-  console.log('[Kotodama] Extracted context:', context);
-
-  return context;
-}
-
-async function extractTweetContextFromPage(tweetArticle: HTMLElement): Promise<any> {
-  console.log('[Kotodama] Extracting tweet context from page');
-
-  if (!tweetArticle) {
-    console.warn('[Kotodama] No tweet article provided');
-    return null;
-  }
-
-  // Extract tweet text
-  const tweetTextElement = tweetArticle.querySelector('[data-testid="tweetText"]');
-  const tweetText = tweetTextElement?.textContent?.trim() || '';
-
-  if (!tweetText) {
-    console.warn('[Kotodama] No tweet text found in article');
-    return null;
-  }
-
-  // Extract username - try multiple selectors with improved logic
-  let username = '';
-  const usernameSelectors = [
-    '[data-testid="User-Name"] a[role="link"][href^="/"]',
-    '[data-testid="User-Name"] a[href^="/"]',
-    'a[role="link"][href^="/"][href*="status"]',
-    'a[role="link"][href^="/"]',
-  ];
-
-  for (const selector of usernameSelectors) {
-    const element = tweetArticle.querySelector(selector);
-    if (element) {
-      const href = element.getAttribute('href');
-      if (href && href.startsWith('/') && !href.startsWith('/i/')) {
-        // Extract username from href, handle both /username and /username/status/123 formats
-        const pathParts = href.substring(1).split('/');
-        const potentialUsername = pathParts[0];
-        // Validate it looks like a username (not a special path)
-        if (potentialUsername && !['compose', 'home', 'explore', 'notifications', 'messages', 'settings', 'search'].includes(potentialUsername)) {
-          username = potentialUsername.replace('@', '').trim();
-          console.log('[Kotodama] Found username from href:', username);
-          break;
-        }
-      }
-    }
-  }
-
-  // Fallback: try to get username from text content
-  if (!username) {
-    const userNameElement = tweetArticle.querySelector('[data-testid="User-Name"]');
-    if (userNameElement) {
-      const spans = userNameElement.querySelectorAll('span');
-      for (const span of spans) {
-        const text = span.textContent?.trim() || '';
-        if (text.startsWith('@')) {
-          username = text.substring(1);
-          console.log('[Kotodama] Found username from @mention:', username);
-          break;
-        }
-      }
-    }
-  }
-
-  if (!username) {
-    console.warn('[Kotodama] Could not extract username from tweet');
-  }
-
-  const context = {
-    text: tweetText,
-    username: username || 'unknown',
-    timestamp: new Date().toISOString(),
-  };
-
-  console.log('[Kotodama] Extracted context from page:', context);
-
-  return context;
-}
+// ... existing code ...
 
 function openPanel() {
   // Check if runtime is still valid
@@ -575,7 +438,7 @@ function openPanel() {
   // Responsive sizing based on viewport
   const viewportWidth = window.innerWidth;
 
-  // Adjust dimensions for smaller screens
+  // Adjust dimensions for smaller screens - Slightly larger and more spacious
   let panelWidth: string;
   let panelHeight: string;
   let panelTop: string;
@@ -583,21 +446,21 @@ function openPanel() {
 
   if (viewportWidth <= 1366) {
     // Small screens (13-14 inch laptops, 720p-1080p)
-    panelWidth = 'min(400px, calc(100vw - 40px))';
-    panelHeight = 'min(650px, calc(100vh - 80px))';
-    panelTop = '60px';
+    panelWidth = 'min(420px, calc(100vw - 40px))';
+    panelHeight = 'min(680px, calc(100vh - 80px))';
+    panelTop = '80px';
     panelRight = '20px';
   } else if (viewportWidth <= 1920) {
     // Medium screens (15-17 inch laptops, 1080p-1440p)
-    panelWidth = 'min(460px, calc(100vw - 60px))';
-    panelHeight = 'min(720px, calc(100vh - 100px))';
-    panelTop = '70px';
+    panelWidth = 'min(480px, calc(100vw - 60px))';
+    panelHeight = 'min(750px, calc(100vh - 100px))';
+    panelTop = '80px';
     panelRight = '30px';
   } else {
     // Large screens (1440p+)
-    panelWidth = 'min(520px, calc(100vw - 80px))';
-    panelHeight = 'min(800px, calc(100vh - 120px))';
-    panelTop = '80px';
+    panelWidth = 'min(540px, calc(100vw - 80px))';
+    panelHeight = 'min(850px, calc(100vh - 120px))';
+    panelTop = '90px';
     panelRight = '40px';
   }
 
@@ -607,17 +470,17 @@ function openPanel() {
     right: panelRight,
     width: panelWidth,
     height: panelHeight,
-    minHeight: '500px',
+    minHeight: '550px',
     border: 'none',
-    borderRadius: '20px',
+    borderRadius: '24px', // More rounded corners
     zIndex: '999999',
-    boxShadow: '0 30px 80px rgba(15, 23, 42, 0.35)',
+    boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(29, 155, 240, 0.2)', // Deeper shadow
     background: 'transparent',
     overflow: 'hidden',
-    transform: 'translateY(24px)',
+    transform: 'translateY(30px) scale(0.98)',
     opacity: '0',
     pointerEvents: 'none',
-    transition: 'transform 0.3s ease, opacity 0.3s ease',
+    transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease', // Apple-like spring
   } as CSSStyleDeclaration);
 
   document.body.appendChild(panelIframe);
