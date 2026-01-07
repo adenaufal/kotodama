@@ -113,15 +113,22 @@ const Panel: React.FC = () => {
   };
 
   const loadInitialData = async () => {
+    console.log('[Kotodama Panel] Loading initial data...');
     try {
       const settingsResponse = await sendRuntimeMessage(
         { type: 'get-settings' },
         {
           onRetry: (attempt) => {
-            console.log(`[Kotodama] Retrying get-settings (attempt ${attempt})...`);
+            console.log(`[Kotodama Panel] Retrying get-settings (attempt ${attempt})...`);
           }
         }
       );
+
+      console.log('[Kotodama Panel] Settings response:', {
+        success: settingsResponse.success,
+        hasOpenAiKey: settingsResponse.success && !!settingsResponse.data?.apiKeys?.openai,
+        defaultBrandVoiceId: settingsResponse.data?.defaultBrandVoiceId
+      });
 
       if (settingsResponse.success) {
         setSettings(settingsResponse.data);
@@ -129,32 +136,52 @@ const Panel: React.FC = () => {
         if (settingsResponse.data.ui?.theme) {
           setTheme(settingsResponse.data.ui.theme === 'auto' ? 'dark' : settingsResponse.data.ui.theme);
         }
+      } else {
+        console.error('[Kotodama Panel] Failed to load settings:', settingsResponse.error);
       }
 
       const voicesResponse = await sendRuntimeMessage(
         { type: 'list-brand-voices' },
         {
           onRetry: (attempt) => {
-            console.log(`[Kotodama] Retrying list-brand-voices (attempt ${attempt})...`);
+            console.log(`[Kotodama Panel] Retrying list-brand-voices (attempt ${attempt})...`);
           }
         }
       );
 
+      console.log('[Kotodama Panel] Brand voices response:', {
+        success: voicesResponse.success,
+        voiceCount: voicesResponse.success && Array.isArray(voicesResponse.data) ? voicesResponse.data.length : 0
+      });
+
       if (voicesResponse.success) {
         const voices: BrandVoice[] = Array.isArray(voicesResponse.data) ? voicesResponse.data : [];
         setBrandVoices(voices);
+
+        if (voices.length === 0) {
+          console.warn('[Kotodama Panel] No brand voices found! User needs to create one in settings.');
+        } else {
+          console.log('[Kotodama Panel] Loaded brand voices:', voices.map(v => ({ id: v.id, name: v.name })));
+        }
 
         if (voices.length > 0) {
           const defaultId = settingsResponse.success ? settingsResponse.data.defaultBrandVoiceId : undefined;
           const hasDefault = defaultId ? voices.some((voice) => voice.id === defaultId) : false;
 
           if (!hasDefault) {
+            console.log('[Kotodama Panel] No default voice or default not found, selecting first voice');
             setSelectedVoiceId(voices[0].id);
+          } else {
+            console.log('[Kotodama Panel] Using default brand voice:', defaultId);
           }
         }
+      } else {
+        console.error('[Kotodama Panel] Failed to load brand voices:', voicesResponse.error);
       }
+
+      console.log('[Kotodama Panel] Initial data loaded successfully');
     } catch (loadError: any) {
-      console.error('Failed to load initial data:', loadError);
+      console.error('[Kotodama Panel] Failed to load initial data:', loadError);
       const userMessage = createUserErrorMessage(loadError);
       setError(userMessage);
 
@@ -166,17 +193,29 @@ const Panel: React.FC = () => {
   };
 
   const handleGenerate = async () => {
+    console.log('[Kotodama Panel] Starting generation...');
+
     // Sanitize and validate prompt
     const sanitizedPrompt = sanitizePrompt(prompt);
     if (!sanitizedPrompt.trim()) {
+      console.warn('[Kotodama Panel] Empty prompt');
       setError('Please enter a prompt');
       return;
     }
 
     if (!selectedVoiceId) {
+      console.warn('[Kotodama Panel] No brand voice selected');
       setError('Please select a brand voice');
       return;
     }
+
+    console.log('[Kotodama Panel] Generation request:', {
+      promptLength: sanitizedPrompt.length,
+      brandVoiceId: selectedVoiceId,
+      isThread,
+      threadLength: isThread ? threadLength : undefined,
+      contextType: context.type
+    });
 
     setIsLoading(true);
     setError(null);
@@ -223,6 +262,9 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         threadLength: isThread ? threadLength : undefined,
       };
 
+      console.log('[Kotodama Panel] Sending generate message to background...');
+      console.time('[Kotodama Panel] Generation');
+
       const response = await sendRuntimeMessage(
         {
           type: 'generate',
@@ -231,10 +273,17 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         {
           maxRetries: 1, // Limit retries for generation as it's expensive
           onRetry: (attempt, error) => {
-            console.log(`[Kotodama] Retrying generation (attempt ${attempt})...`, error);
+            console.log(`[Kotodama Panel] Retrying generation (attempt ${attempt})...`, error);
           }
         }
       );
+
+      console.timeEnd('[Kotodama Panel] Generation');
+      console.log('[Kotodama Panel] Received response:', {
+        success: response.success,
+        hasData: !!response.data,
+        error: response.error
+      });
 
       if (response.success) {
         const endTime = performance.now();
@@ -252,10 +301,13 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         }
 
         setGeneratedContent(cleanedContent);
+        console.log('[Kotodama Panel] Content set successfully');
       } else {
+        console.error('[Kotodama Panel] Generation failed:', response.error);
         setError(response.error || 'Generation failed');
       }
     } catch (generateError: any) {
+      console.error('[Kotodama Panel] Exception during generation:', generateError);
       const userMessage = createUserErrorMessage(generateError);
       setError(userMessage);
 
