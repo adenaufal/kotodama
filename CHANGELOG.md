@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.5.0](https://github.com/adenaufal/kotodama/compare/v1.4.0...v1.5.0) (2026-01-07)
+
+
+### Features
+
+* Add initial browser extension source and compiled output, and track `dist/` directory. ([b517dd1](https://github.com/adenaufal/kotodama/commit/b517dd15337c6e2ba9a52998dabaf19740e9eb13))
+
+
+### Bug Fixes
+
+* add comprehensive logging and error handling for AI tweet generation ([#41](https://github.com/adenaufal/kotodama/issues/41)) ([efb6c79](https://github.com/adenaufal/kotodama/commit/efb6c7918ae1cacb41249339877a1ba1b3673f21))
+* add onReset prop to ResultsArea component ([01deab0](https://github.com/adenaufal/kotodama/commit/01deab0f35a85cc283fc85b5d47da8c1fc35cb4b))
+* add thread insertion and onboarding template selection ([96c4b29](https://github.com/adenaufal/kotodama/commit/96c4b29f6acd2e435c6189a70515ff27a95f4692))
+* apply fix to bypass the auto-redirection logic on onboarding page in settings page ([aed30dc](https://github.com/adenaufal/kotodama/commit/aed30dc81a23d2ddb1d37903af6ffbea5ecf1df3))
+
 ## [Unreleased](https://github.com/adenaufal/kotodama/compare/v1.4.0...HEAD)
 
 ## [1.4.0](https://github.com/adenaufal/kotodama/compare/v1.3.0...v1.4.0) (2026-01-07)
