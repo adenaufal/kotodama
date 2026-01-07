@@ -4,12 +4,12 @@
 
 An intelligent Chrome/Edge browser extension that helps you compose tweets and replies that maintain your unique brand voice while adapting to your audience's communication style.
 
-## Highlights (v1.3.0)
+## Highlights (v1.4.0)
 
 - **🎨 Brand Voice Studio**: Create, import (Markdown or tweet links), edit, and delete brand voices with tone controls
 - **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-4o family with automatic fallback handling
 - **💬 Reply Intelligence**: Auto-captures tweet context, surfaces reply templates, and blends in with the original conversation
-- **🌓 Adaptive UI**: Refined design system with light/dark themes, design tokens, and smooth panel animations
+- **🌓 Premium Settings**: Redesigned dashboard with floating navigation, full-page gradients, and API key visibility toggle
 - **📚 Session Memory**: Optionally remember generation history and surface recent drafts for quick reuse
 - **🔒 Local-First Security**: API keys encrypted via Web Crypto; no data leaves the browser beyond OpenAI requests
 
@@ -95,7 +95,8 @@ An intelligent Chrome/Edge browser extension that helps you compose tweets and r
 
 ```
 kotodama/
-├── src/
+├── .agent/               # Agent workflows and automation
+├── src/                  # Source code
 │   ├── api/              # AI provider clients (OpenAI wired today; Gemini/Claude prototypes)
 │   ├── background/       # Manifest V3 service worker
 │   ├── components/       # Shared React building blocks
@@ -173,7 +174,8 @@ Comprehensive documentation is available in the [docs/](docs/) directory:
 2. **Background Service Worker**: Handles API calls, data processing, and message routing
 3. **Panel UI**: React-based side panel for tweet composition and editing
 4. **Onboarding UI**: First-time setup wizard
-5. **Storage Layer**: IndexedDB for large data, Chrome Storage for settings
+5. **Settings UI**: Advanced configuration and brand voice management dashboard
+6. **Storage Layer**: IndexedDB for large data, Chrome Storage for settings
 
 ### Data Flow
 
@@ -252,4 +254,4 @@ For issues, questions, or feature requests, please open an issue on the GitHub r
 
 ---
 
-**Note**: This is v1.0 MVP. The extension is under active development. Features and UI may change.
+**Note**: This is v1.4.0. The extension is under active development. Features and UI may change.

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { GenerateRequest, BrandVoice, UserSettings } from '../types';
-import { getModelById } from '../constants/models';
+import { PanelHeader } from './components/PanelHeader';
+import { ContextArea } from './components/ContextArea';
+import { InputArea } from './components/InputArea';
+import { ResultsArea } from './components/ResultsArea';
+import { ReplyTemplate } from '../constants/templates';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -9,101 +13,6 @@ interface ContextData {
     username: string;
   };
 }
-
-interface ReplyTemplate {
-  id: string;
-  label: string;
-  icon: string;
-  prompt: string;
-  category: 'supportive' | 'thoughtful' | 'engaging' | 'professional' | 'casual' | 'appreciative';
-}
-
-const REPLY_TEMPLATES: ReplyTemplate[] = [
-  {
-    id: 'supportive-encourage',
-    label: 'Encouraging',
-    icon: '💪',
-    prompt: 'Write an encouraging and supportive reply that shows empathy and offers positive reinforcement.',
-    category: 'supportive',
-  },
-  {
-    id: 'supportive-empathy',
-    label: 'Empathetic',
-    icon: '🤝',
-    prompt: 'Write an empathetic reply that acknowledges their feelings and shows understanding.',
-    category: 'supportive',
-  },
-  {
-    id: 'thoughtful-insight',
-    label: 'Add Insight',
-    icon: '💡',
-    prompt: 'Share a thoughtful insight or perspective that adds value to their point.',
-    category: 'thoughtful',
-  },
-  {
-    id: 'thoughtful-analysis',
-    label: 'Analytical',
-    icon: '🔍',
-    prompt: 'Provide a deeper analysis or breakdown of the topic they mentioned.',
-    category: 'thoughtful',
-  },
-  {
-    id: 'engaging-question',
-    label: 'Ask Question',
-    icon: '❓',
-    prompt: 'Ask an engaging follow-up question that deepens the conversation.',
-    category: 'engaging',
-  },
-  {
-    id: 'engaging-share',
-    label: 'Share Experience',
-    icon: '📖',
-    prompt: 'Share a relevant personal experience or story that relates to their tweet.',
-    category: 'engaging',
-  },
-  {
-    id: 'professional-network',
-    label: 'Network',
-    icon: '🤝',
-    prompt: 'Write a professional networking-focused reply that opens doors for collaboration.',
-    category: 'professional',
-  },
-  {
-    id: 'professional-expertise',
-    label: 'Share Expertise',
-    icon: '🎯',
-    prompt: 'Offer professional expertise or industry insights related to their topic.',
-    category: 'professional',
-  },
-  {
-    id: 'casual-friendly',
-    label: 'Friendly Chat',
-    icon: '😊',
-    prompt: 'Write a casual, friendly reply like chatting with a friend.',
-    category: 'casual',
-  },
-  {
-    id: 'casual-humor',
-    label: 'Light Humor',
-    icon: '😄',
-    prompt: 'Add light humor or a playful take on their tweet.',
-    category: 'casual',
-  },
-  {
-    id: 'appreciative-thanks',
-    label: 'Say Thanks',
-    icon: '🙏',
-    prompt: 'Express genuine gratitude and appreciation for their post.',
-    category: 'appreciative',
-  },
-  {
-    id: 'appreciative-agree',
-    label: 'Show Agreement',
-    icon: '✅',
-    prompt: 'Show agreement and amplify their message with added context.',
-    category: 'appreciative',
-  },
-];
 
 type TweetLength = 'short' | 'medium' | 'long';
 
@@ -143,11 +52,7 @@ const Panel: React.FC = () => {
       });
 
       if (event.data.context === 'reply' && event.data.tweetContext) {
-        // Don't set the prompt automatically - let user see context and write their own
-        // The context card will show the full tweet
         setPrompt('');
-      } else if (event.data.context === 'reply' && !event.data.tweetContext) {
-        console.warn('[Kotodama Panel] Reply context but no tweet data received');
       }
     }
   };
@@ -159,7 +64,6 @@ const Panel: React.FC = () => {
       if (settingsResponse.success) {
         setSettings(settingsResponse.data);
         setSelectedVoiceId(settingsResponse.data.defaultBrandVoiceId || '');
-        // Load theme preference from settings
         if (settingsResponse.data.ui?.theme) {
           setTheme(settingsResponse.data.ui.theme === 'auto' ? 'dark' : settingsResponse.data.ui.theme);
         }
@@ -198,12 +102,12 @@ const Panel: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
+    setGeneratedContent(''); // Clear previous results
 
     console.time('[Kotodama Performance] AI generation');
     const startTime = performance.now();
 
     try {
-      // Determine character limits based on preset
       const charLimits = {
         short: { min: 100, max: 150, description: 'punchy and concise' },
         medium: { min: 150, max: 220, description: 'balanced length' },
@@ -211,7 +115,6 @@ const Panel: React.FC = () => {
       };
       const limit = charLimits[tweetLengthPreset];
 
-      // Build the prompt with context if replying
       let enhancedPrompt = prompt;
       if (context.type === 'reply' && context.tweetContext) {
         enhancedPrompt = `You are replying to @${context.tweetContext.username}'s tweet.
@@ -226,7 +129,6 @@ Write a reply that:
 3. Is conversational and engaging
 4. Is ${limit.description} (${limit.min}-${limit.max} characters)`;
       } else {
-        // Add character limit guidance for compose tweets
         enhancedPrompt = `${prompt}
 
 Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
@@ -248,14 +150,10 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         const endTime = performance.now();
         const duration = endTime - startTime;
         console.timeEnd('[Kotodama Performance] AI generation');
-        console.log(`[Kotodama Performance] Generation took ${duration.toFixed(0)}ms`);
-        console.log(`[Kotodama Performance] Provider: ${response.data.provider}`);
-        console.log(`[Kotodama Performance] Token usage: ${response.data.tokenUsage || 'N/A'}`);
+        console.log(`[Kotodama] Gen took ${duration.toFixed(0)}ms`);
 
-        // Clean up the generated content - remove surrounding quotes if present
         let cleanedContent = response.data.content;
         if (typeof cleanedContent === 'string') {
-          // Remove surrounding quotes (single or double) that may be added by AI
           cleanedContent = cleanedContent.replace(/^["'](.*)["']$/s, '$1').trim();
         } else if (Array.isArray(cleanedContent)) {
           cleanedContent = cleanedContent.map(tweet =>
@@ -268,7 +166,6 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         setError(response.error || 'Generation failed');
       }
     } catch (generateError: any) {
-      console.timeEnd('[Kotodama Performance] AI generation');
       setError(generateError.message || 'An error occurred');
     } finally {
       setIsLoading(false);
@@ -276,25 +173,17 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
   };
 
   const handleInsert = (content?: string) => {
-    // Determine what content to insert
     let text: string;
 
     if (typeof content === 'string') {
-      // Specific content provided (from individual tweet button)
       text = content;
     } else if (typeof generatedContent === 'string') {
-      // Single generated tweet
       text = generatedContent;
     } else if (Array.isArray(generatedContent) && generatedContent.length > 0) {
-      // Multiple tweets - join them
       text = generatedContent.join('\n\n');
     } else {
-      // No valid content
-      console.warn('[Kotodama] No content to insert');
       return;
     }
-
-    console.log('[Kotodama] Inserting content via postMessage:', text.substring(0, 50) + '...');
 
     window.parent.postMessage(
       {
@@ -310,7 +199,6 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
   };
 
   const handleOpenSettings = () => {
-    // Open the extension settings page in a new tab
     chrome.runtime.sendMessage({ type: 'open-settings' });
   };
 
@@ -318,7 +206,6 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
 
-    // Save theme preference to settings
     if (settings) {
       const updatedSettings: UserSettings = {
         ...settings,
@@ -344,461 +231,70 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
     setPrompt(template.prompt);
   };
 
-  const hasGeneratedContent =
-    (Array.isArray(generatedContent) && generatedContent.length > 0) ||
-    (!!generatedContent && !Array.isArray(generatedContent));
-
   return (
-    <>
-      <div className={`w-full min-h-screen text-slate-900 ${theme === 'light' ? 'light-mode' : ''}`} style={{ backgroundColor: 'var(--koto-bg-dark)' }}>
-        <div className="flex w-full flex-col h-full">
-        <div className="relative overflow-hidden rounded-b-3xl px-8 pb-14 pt-6 shadow-lg" style={{
-          backgroundColor: 'var(--koto-deep-indigo)',
-          boxShadow: 'var(--koto-shadow-md)',
-          color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
-        }}>
-          <div className={`absolute inset-0 ${theme === 'dark' ? 'bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.08),_transparent_55%)]' : ''}`} />
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div className="stack-sm">
-              <p className="text-xs font-medium uppercase tracking-[0.3em]" style={{ color: 'var(--koto-text-secondary)' }}>Kotodama</p>
-              <h1 className="text-2xl font-semibold leading-tight" style={{ color: 'var(--koto-text-primary)' }}>AI Tweet Composer</h1>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                {settings?.defaultProvider && (
-                  <span>
-                    Provider:{' '}
-                    <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>{settings.defaultProvider}</span>
-                  </span>
-                )}
-                {settings?.defaultModel && getModelById(settings.defaultModel) && (
-                  <span>
-                    Model:{' '}
-                    <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>{getModelById(settings.defaultModel)?.name}</span>
-                  </span>
-                )}
-                {!settings?.defaultModel && (
-                  <span>
-                    Model:{' '}
-                    <span className="font-medium" style={{ color: 'var(--koto-text-primary)' }}>Auto</span>
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleToggleTheme}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition koto-button-hover"
-                style={{
-                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                  color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
-                }}
-                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              >
-                {theme === 'light' ? (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                )}
-              </button>
-              <button
-                onClick={handleOpenSettings}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full transition koto-button-hover"
-                style={{
-                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                  color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
-                }}
-                aria-label="Open settings"
-                title="Open settings"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleClose}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition koto-button-hover"
-                style={{
-                  backgroundColor: theme === 'light' ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.15)',
-                  color: theme === 'light' ? 'var(--koto-text-primary)' : 'white'
-                }}
-                aria-label="Close panel"
-              >
-                &times;
-              </button>
-            </div>
-          </div>
+    <div className={`w-full h-screen overflow-hidden flex flex-col font-sans transition-colors duration-300 ${theme === 'light' ? 'light-mode' : ''}`}
+      style={{ backgroundColor: 'var(--koto-bg-dark)' }}>
 
-          {context.type === 'reply' && context.tweetContext && (
-            <>
-              <div className="relative z-10 mt-6 rounded-2xl border p-4 backdrop-blur koto-animate-fadeIn" style={{
-                borderColor: 'var(--koto-border)',
-                backgroundColor: theme === 'light' ? 'rgba(240, 242, 248, 0.8)' : 'rgba(54, 59, 82, 0.5)'
-              }}>
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>Replying to</p>
-                <p className="mt-1 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>@{context.tweetContext.username}</p>
-                <p className="mt-2 max-h-32 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--koto-text-secondary)' }}>{context.tweetContext.text}</p>
-              </div>
+      <PanelHeader
+        theme={theme}
+        settings={settings}
+        onToggleTheme={handleToggleTheme}
+        onOpenSettings={handleOpenSettings}
+        onClose={handleClose}
+      />
 
-              <div className="relative z-10 mt-4 koto-animate-fadeIn">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap" style={{ color: 'var(--koto-text-secondary)' }}>
-                    Quick reply:
-                  </label>
-                  <div className="relative flex-1">
-                    <select
-                      onChange={(e) => {
-                        const template = REPLY_TEMPLATES.find(t => t.id === e.target.value);
-                        if (template) {
-                          handleTemplateClick(template);
-                          e.target.value = ''; // Reset dropdown after selection
-                        }
-                      }}
-                      className="w-full appearance-none rounded-xl border px-3 py-2 pr-8 text-xs font-medium shadow-sm outline-none transition"
-                      style={{
-                        borderColor: 'var(--koto-border)',
-                        backgroundColor: 'var(--koto-bg-dark)',
-                        color: 'var(--koto-text-primary)'
-                      }}
-                      defaultValue=""
-                    >
-                      <option value="">Choose a template...</option>
-                      <optgroup label="Supportive">
-                        {REPLY_TEMPLATES.filter(t => t.category === 'supportive').map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.icon} {template.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Thoughtful">
-                        {REPLY_TEMPLATES.filter(t => t.category === 'thoughtful').map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.icon} {template.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Engaging">
-                        {REPLY_TEMPLATES.filter(t => t.category === 'engaging').map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.icon} {template.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Professional">
-                        {REPLY_TEMPLATES.filter(t => t.category === 'professional').map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.icon} {template.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Casual">
-                        {REPLY_TEMPLATES.filter(t => t.category === 'casual').map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.icon} {template.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Appreciative">
-                        {REPLY_TEMPLATES.filter(t => t.category === 'appreciative').map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.icon} {template.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center" style={{ color: 'var(--koto-text-secondary)' }}>
-                      ▾
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+      <div className="flex-1 flex flex-col relative overflow-hidden">
+        <ContextArea
+          context={context}
+          onTemplateSelect={handleTemplateClick}
+        />
 
-        <div className="-mt-10 flex-1 overflow-y-auto px-8 pb-6">
-          <div className="stack rounded-3xl border p-8 shadow-2xl backdrop-blur-sm" style={{
-            borderColor: 'var(--koto-border)',
-            backgroundColor: 'var(--koto-surface)',
-            boxShadow: 'var(--koto-shadow-lg)'
+        {error && (
+          <div className="mx-8 mt-4 rounded-xl border px-4 py-3 text-sm flex items-center gap-2 koto-animate-fadeIn relative z-10" style={{
+            borderColor: 'var(--koto-error)',
+            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+            color: 'var(--koto-error)'
           }}>
-            <div className="stack">
-              <div className="stack-sm">
-                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>
-                  What would you like to share?
-                </label>
-                <textarea
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder={
-                    context.type === 'reply'
-                      ? 'Briefly describe the tone or key points for your reply...'
-                      : 'Share the idea, tone, or key points you want your tweet to convey...'
-                  }
-                  className="min-h-[120px] w-full resize-none rounded-2xl border p-4 text-sm leading-relaxed shadow-inner outline-none transition"
-                  style={{
-                    borderColor: 'var(--koto-border)',
-                    backgroundColor: 'var(--koto-bg-dark)',
-                    color: 'var(--koto-text-primary)'
-                  }}
-                />
-              </div>
-
-              <div className="stack-sm">
-                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Tweet length</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTweetLengthPreset('short')}
-                    className={`flex-1 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
-                      tweetLengthPreset === 'short' ? 'border-2' : ''
-                    }`}
-                    style={{
-                      borderColor: tweetLengthPreset === 'short' ? 'var(--koto-sakura-pink)' : 'var(--koto-border)',
-                      backgroundColor: tweetLengthPreset === 'short' ? 'rgba(232, 92, 143, 0.1)' : 'var(--koto-bg-dark)',
-                      color: tweetLengthPreset === 'short' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-primary)'
-                    }}
-                  >
-                    <div>Short</div>
-                    <div className="text-[10px] font-normal mt-0.5" style={{
-                      color: tweetLengthPreset === 'short' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-secondary)',
-                      opacity: 0.8
-                    }}>100-150</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTweetLengthPreset('medium')}
-                    className={`flex-1 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
-                      tweetLengthPreset === 'medium' ? 'border-2' : ''
-                    }`}
-                    style={{
-                      borderColor: tweetLengthPreset === 'medium' ? 'var(--koto-sakura-pink)' : 'var(--koto-border)',
-                      backgroundColor: tweetLengthPreset === 'medium' ? 'rgba(232, 92, 143, 0.1)' : 'var(--koto-bg-dark)',
-                      color: tweetLengthPreset === 'medium' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-primary)'
-                    }}
-                  >
-                    <div>Medium</div>
-                    <div className="text-[10px] font-normal mt-0.5" style={{
-                      color: tweetLengthPreset === 'medium' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-secondary)',
-                      opacity: 0.8
-                    }}>150-220</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTweetLengthPreset('long')}
-                    className={`flex-1 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
-                      tweetLengthPreset === 'long' ? 'border-2' : ''
-                    }`}
-                    style={{
-                      borderColor: tweetLengthPreset === 'long' ? 'var(--koto-sakura-pink)' : 'var(--koto-border)',
-                      backgroundColor: tweetLengthPreset === 'long' ? 'rgba(232, 92, 143, 0.1)' : 'var(--koto-bg-dark)',
-                      color: tweetLengthPreset === 'long' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-primary)'
-                    }}
-                  >
-                    <div>Long</div>
-                    <div className="text-[10px] font-normal mt-0.5" style={{
-                      color: tweetLengthPreset === 'long' ? 'var(--koto-sakura-pink)' : 'var(--koto-text-secondary)',
-                      opacity: 0.8
-                    }}>220-280</div>
-                  </button>
-                </div>
-              </div>
-
-              {context.type === 'compose' && (
-                <div className="stack-sm rounded-2xl p-4" style={{ backgroundColor: 'rgba(26, 29, 46, 0.5)' }}>
-                  <label className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
-                    <input
-                      type="checkbox"
-                      checked={isThread}
-                      onChange={(event) => setIsThread(event.target.checked)}
-                      className="h-4 w-4 rounded"
-                      style={{ accentColor: 'var(--koto-sakura-pink)' }}
-                    />
-                    Turn this into a thread
-                  </label>
-                  {isThread && (
-                    <div className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-medium" style={{
-                      borderColor: 'var(--koto-border)',
-                      backgroundColor: 'var(--koto-bg-dark)',
-                      color: 'var(--koto-text-primary)'
-                    }}>
-                      <span>Posts:</span>
-                      <input
-                        type="number"
-                        value={threadLength}
-                        onChange={(event) =>
-                          setThreadLength(
-                            Math.max(2, Math.min(10, parseInt(event.target.value, 10) || 5))
-                          )
-                        }
-                        min="2"
-                        max="10"
-                        className="h-8 w-16 rounded-full border px-2 text-center text-sm font-semibold outline-none"
-                        style={{
-                          borderColor: 'var(--koto-border)',
-                          backgroundColor: 'var(--koto-bg-dark)',
-                          color: 'var(--koto-text-primary)'
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="stack-sm">
-                <label className="text-sm font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Brand voice</label>
-                <div className="relative">
-                  <select
-                    value={selectedVoiceId}
-                    onChange={(event) => setSelectedVoiceId(event.target.value)}
-                    className="w-full appearance-none rounded-2xl border px-4 py-3 text-sm font-medium shadow-sm outline-none transition"
-                    style={{
-                      borderColor: 'var(--koto-border)',
-                      backgroundColor: 'var(--koto-bg-dark)',
-                      color: 'var(--koto-text-primary)'
-                    }}
-                  >
-                    <option value="">Select a voice...</option>
-                    {brandVoices.map((voice) => (
-                      <option key={voice.id} value={voice.id}>
-                        {voice.name}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center" style={{ color: 'var(--koto-text-secondary)' }}>
-                    v
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={handleGenerate}
-                  disabled={isLoading || !prompt.trim() || !selectedVoiceId}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                  style={{
-                    backgroundColor: isLoading || !prompt.trim() || !selectedVoiceId ? 'var(--koto-border)' : 'var(--koto-sakura-pink)',
-                    boxShadow: isLoading || !prompt.trim() || !selectedVoiceId ? 'none' : '0 4px 12px rgba(232, 92, 143, 0.3)'
-                  }}
-                >
-                  {isLoading ? 'Crafting magic...' : 'Generate with AI'}
-                </button>
-                <button
-                  onClick={() => {
-                    setPrompt('');
-                    setGeneratedContent('');
-                    setError(null);
-                  }}
-                  className="inline-flex items-center justify-center rounded-full border px-6 py-3 text-sm font-semibold transition koto-button-hover focus:outline-none"
-                  style={{
-                    borderColor: 'var(--koto-border)',
-                    color: 'var(--koto-text-secondary)'
-                  }}
-                  type="button"
-                >
-                  Clear
-                </button>
-              </div>
-
-              {error && (
-                <div className="rounded-2xl border px-4 py-3 text-sm shadow-sm koto-animate-fadeIn" style={{
-                  borderColor: 'var(--koto-error)',
-                  backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                  color: 'var(--koto-error)'
-                }}>
-                  {error}
-                </div>
-              )}
-
-              {hasGeneratedContent && !isLoading && (
-                <div className="stack koto-animate-fadeIn">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-base font-semibold" style={{ color: 'var(--koto-text-primary)' }}>Generated suggestions</h3>
-                      <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                        Click insert to drop your favorite version into X.
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleGenerate}
-                      className="text-sm font-semibold transition"
-                      style={{ color: 'var(--koto-sakura-pink)' }}
-                    >
-                      Regenerate
-                    </button>
-                  </div>
-
-                  {Array.isArray(generatedContent) ? (
-                    <div className="stack-sm">
-                      {generatedContent.map((tweet, index) => (
-                        <div
-                          key={index}
-                          className="stack-sm rounded-2xl border p-4 shadow-sm"
-                          style={{
-                            borderColor: 'var(--koto-border)',
-                            backgroundColor: 'var(--koto-bg-dark)'
-                          }}
-                        >
-                          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>
-                            <span>Tweet {index + 1}/{generatedContent.length}</span>
-                            <span className={tweet.length > 280 ? 'text-red-500' : ''}>{tweet.length} chars</span>
-                          </div>
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--koto-text-primary)' }}>{tweet}</p>
-                          <button
-                            onClick={() => handleInsert(tweet)}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-white shadow-md transition koto-button-hover focus:outline-none"
-                            style={{
-                              backgroundColor: 'var(--koto-success)',
-                              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.25)'
-                            }}
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Insert this tweet
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="stack-sm rounded-2xl border p-4 shadow-sm" style={{
-                      borderColor: 'var(--koto-border)',
-                      backgroundColor: 'var(--koto-bg-dark)'
-                    }}>
-                      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--koto-text-secondary)' }}>
-                        <span>Suggested copy</span>
-                        <span>{generatedContent.length} characters</span>
-                      </div>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--koto-text-primary)' }}>{generatedContent}</p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => handleInsert()}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition koto-button-hover focus:outline-none"
-                    style={{
-                      backgroundColor: 'var(--koto-success)',
-                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-                    }}
-                  >
-                    Insert to X
-                  </button>
-                </div>
-              )}
-            </div>
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            {error}
           </div>
+        )}
 
-          <div className="mt-6 text-center text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-            Powered by Kotodama - Crafted with AI assistance
-          </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {!generatedContent ? (
+            <InputArea
+              prompt={prompt}
+              setPrompt={setPrompt}
+              lengthPreset={tweetLengthPreset}
+              setLengthPreset={setTweetLengthPreset}
+              isThread={isThread}
+              setIsThread={setIsThread}
+              threadLength={threadLength}
+              setThreadLength={setThreadLength}
+              voices={brandVoices}
+              selectedVoiceId={selectedVoiceId}
+              setSelectedVoiceId={setSelectedVoiceId}
+              isLoading={isLoading}
+              onGenerate={handleGenerate}
+              onClear={() => {
+                setPrompt('');
+                setError(null);
+              }}
+              contextType={context.type}
+            />
+          ) : (
+            <ResultsArea
+              generatedContent={generatedContent}
+              onInsert={handleInsert}
+              onRegenerate={handleGenerate}
+              isLoading={isLoading}
+            />
+          )}
         </div>
       </div>
     </div>
-    </>
   );
 };
 

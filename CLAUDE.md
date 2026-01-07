@@ -39,10 +39,11 @@ This is a Manifest V3 Chrome extension with three main execution contexts:
    - Handles message passing between page ↔ panel ↔ background
    - Inserts generated tweets into Twitter's contenteditable divs
 
-3. **React UIs** (two separate apps)
+3. **React UIs** (three separate apps)
    - **Panel UI** ([src/panel/](src/panel/)): Side panel for tweet composition
    - **Onboarding UI** ([src/onboarding/](src/onboarding/)): First-run setup wizard
-   - Both are built with React 19 + TypeScript + Tailwind CSS
+   - **Settings UI** ([src/settings/](src/settings/)): Comprehensive configuration and brand voice management
+   - All are built with React 19 + TypeScript + Tailwind CSS
 
 ### Build System
 
@@ -51,6 +52,7 @@ Vite builds multiple entry points defined in [vite.config.ts](vite.config.ts):
 - `background` → Service worker script
 - `content` → Content script for Twitter injection
 - `onboarding` → HTML page for setup wizard
+- `settings` → HTML page for settings and brand voice management
 
 **Critical Build Detail**: The build uses custom filename sanitization to strip leading underscores from Rollup outputs, which prevents Chrome extension loading errors. See [vite.config.ts:5-26](vite.config.ts#L5-L26).
 
@@ -151,6 +153,7 @@ Tweet insertion ([src/content/content-script.ts:225-261](src/content/content-scr
 - Entry points for each context have corresponding HTML files in their directories
 - API clients are in `src/api/` with one file per provider
 - Storage utilities are in `src/storage/` with separation of concerns (db, encryption, settings)
+- **Settings UI Layout**: Uses a unified full-page gradient background and fixed floating navigation pill at the top for consistent tab switching.
 - Tests are colocated in `__tests__` subdirectories
 
 ### TypeScript Configuration
@@ -174,6 +177,15 @@ Commit messages must follow Conventional Commits format:
 - `feat:` triggers minor version bump
 - `fix:` triggers patch version bump
 - `BREAKING CHANGE:` in footer triggers major version bump
+
+## Agent Workflows
+
+The project includes pre-defined workflows in `.agent/workflows/` to automate common tasks:
+- `/changelog-update`: Update the `CHANGELOG.md` with recent changes.
+- `/claude-update`: Update this file (`CLAUDE.md`) when project structure or conventions change.
+- `/docs-update`: Update documentation in the `docs/` directory.
+- `/readme-update`: Update the main `README.md` to reflect the latest project state.
+- `/safeguard`: Run a full suite of quality checks (types, lint, test, build).
 
 ## Known Issues
 

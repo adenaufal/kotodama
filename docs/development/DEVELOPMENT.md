@@ -115,6 +115,16 @@ npm run type-check
 - Select "Inspect" (or "Inspect frame")
 - Opens DevTools for iframe context
 
+## Agent Workflows
+
+Kotodama uses agent workflows in `.agent/workflows/` to automate repetitive maintenance tasks. Use these slash commands when working with an agent:
+
+- **`/safeguard`**: Runs the complete quality check suite (`type-check`, `lint`, `test`, `build`). Always run this before submitting changes.
+- **`/changelog-update`**: Summarizes recent changes and prepends them to `CHANGELOG.md` under an `[Unreleased]` section.
+- **`/docs-update`**: Helps identify and update relevant documentation in the `docs/` folder.
+- **`/readme-update`**: Keeps `README.md` synced with the latest version, features, and roadmap.
+- **`/claude-update`**: Updates `CLAUDE.md` to ensure the agent maintains an accurate understanding of the project structure and conventions.
+
 ## Common Issues
 
 ### TypeScript Errors

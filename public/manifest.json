@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Kotodama",
   "short_name": "Kotodama",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "Compose tweets and replies that maintain your brand voice while adapting to your audience",
   "permissions": [
     "storage",
@@ -18,8 +18,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://twitter.com/*", "https://x.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end"
     }
   ],
@@ -47,7 +52,10 @@
         "index.css",
         "icons/kotodama-button.svg"
       ],
-      "matches": ["https://twitter.com/*", "https://x.com/*"]
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ]
     }
   ]
 }

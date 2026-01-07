@@ -1,4 +1,4 @@
-# Project Map – Kotodama v1.3.0
+# Project Map – Kotodama v1.4.0
 
 High-level tour of the repository, updated for the current release.
 

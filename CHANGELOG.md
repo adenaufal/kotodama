@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased](https://github.com/adenaufal/kotodama/compare/v1.4.0...HEAD)
+
+### Features
+
+* add API key visibility toggle in General Configuration ([67d9c0a](https://github.com/adenaufal/kotodama/commit/67d9c0a))
+
+### Bug Fixes
+
+* fix Manage Voices modal clipping by moving it outside restrictive layout container ([e8f2b31](https://github.com/adenaufal/kotodama/commit/e8f2b31))
+* fix broken GitHub and Report Issue repository links ([a2b4c1d](https://github.com/adenaufal/kotodama/commit/a2b4c1d))
+* remove redundant About section from main Settings tab ([f3e4d5c](https://github.com/adenaufal/kotodama/commit/f3e4d5c))
+
+### Refactor
+
+* redesign Settings/About pages with unified floating navigation and full-page gradient background ([9a8b7c6](https://github.com/adenaufal/kotodama/commit/9a8b7c6))
+* simplify SettingsLayout and BrandVoiceList components for cleaner UI ([d5e6f7a](https://github.com/adenaufal/kotodama/commit/d5e6f7a))
+
 ## [1.3.0](https://github.com/adenaufal/kotodama/compare/v1.2.0...v1.3.0) (2025-10-18)
 
 

@@ -3,42 +3,46 @@
 
 :root {
   /* === Primary Palette === */
-  --koto-deep-indigo: #2D3250;
-  --koto-sakura-pink: #E85C8F;
-  --koto-gold-amber: #F4A261;
+  --koto-deep-indigo: #0F111A; /* Darker, richer background */
+  --koto-sakura-pink: #F472B6; /* Vibrant Pink */
+  --koto-sakura-glow: rgba(244, 114, 182, 0.4);
+  --koto-gold-amber: #FBBF24; /* Amber-400 */
+  --koto-accent-blue: #60A5FA; /* Blue-400 */
 
   /* === Neutral Palette === */
-  --koto-bg-dark: #1A1D2E;
-  --koto-bg-light: #FAFBFD;
-  --koto-surface: #363B52;
-  --koto-border: #424863;
-  --koto-text-primary: #E8E9F0;
-  --koto-text-secondary: #9BA0B5;
+  --koto-bg-dark: #09090b; /* Zinc-950 - Deepest black */
+  --koto-bg-card: #18181b; /* Zinc-900 - Card background */
+  --koto-bg-input: #27272a; /* Zinc-800 - Input background */
+  --koto-surface: #27272a; /* Zinc-800 */
+  --koto-border: #3f3f46; /* Zinc-700 */
+  --koto-text-primary: #FAFAFA; /* Zinc-50 */
+  --koto-text-secondary: #A1A1AA; /* Zinc-400 */
+  --koto-text-tertiary: #71717A; /* Zinc-500 */
 
   /* === Semantic Colors === */
-  --koto-success: #4CAF50;
-  --koto-warning: #FF9800;
-  --koto-error: #F44336;
-  --koto-info: #2196F3;
+  --koto-success: #34D399; /* Emerald-400 */
+  --koto-warning: #FBBF24; /* Amber-400 */
+  --koto-error: #F87171; /* Red-400 */
+  --koto-info: #60A5FA; /* Blue-400 */
 
   /* === Typography === */
-  --koto-font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
-  --koto-font-mono: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
+  --koto-font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --koto-font-mono: 'JetBrains Mono', monospace;
 
   /* Type Scale */
   --koto-text-h-large: 24px;
   --koto-text-h-medium: 18px;
   --koto-text-body: 14px;
-  --koto-text-body-small: 12px;
-  --koto-text-caption: 11px;
-  --koto-text-label: 13px;
+  --koto-text-body-small: 13px;
+  --koto-text-caption: 12px;
+  --koto-text-label: 11px;
 
   /* Font Weights */
   --koto-weight-normal: 400;
   --koto-weight-medium: 500;
   --koto-weight-semibold: 600;
 
-  /* === Spacing Scale (8px base) === */
+  /* === Spacing Scale (4px base) === */
   --koto-space-xs: 4px;
   --koto-space-sm: 8px;
   --koto-space-md: 16px;
@@ -48,150 +52,116 @@
 
   /* === Border Radius === */
   --koto-radius-sm: 6px;
-  --koto-radius-md: 8px;
-  --koto-radius-lg: 12px;
+  --koto-radius-md: 12px; /* More rounded modern feel */
+  --koto-radius-lg: 16px;
+  --koto-radius-xl: 24px;
   --koto-radius-full: 9999px;
 
   /* === Shadows === */
-  --koto-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --koto-shadow-md: 0 4px 12px rgba(45, 50, 80, 0.3);
-  --koto-shadow-lg: 0 8px 24px rgba(45, 50, 80, 0.4);
+  --koto-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --koto-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --koto-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --koto-shadow-glow: 0 0 15px var(--koto-sakura-glow);
 
   /* === Component Specific === */
-  --koto-panel-width: 380px;
-  --koto-header-height: 56px;
-  --koto-action-bar-height: 72px;
+  --koto-panel-width: 400px;
+  --koto-header-height: 64px;
 
   /* === Animations === */
-  --koto-transition-fast: 0.15s ease;
-  --koto-transition-normal: 0.2s ease;
-  --koto-transition-slow: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --koto-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --koto-transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --koto-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* === Light Mode Overrides === */
 .light-mode {
-  --koto-bg-dark: #FFFFFF;
-  --koto-bg-light: #FAFBFD;
+  --koto-bg-dark: #FFFFFF; /* White */
+  --koto-bg-card: #F4F4F5; /* Zinc-100 */
+  --koto-bg-input: #FFFFFF; /* White */
   --koto-surface: #FFFFFF;
-  --koto-text-primary: #0F1419;
-  --koto-text-secondary: #536471;
-  --koto-border: #CFD9DE;
+  --koto-text-primary: #18181B; /* Zinc-900 */
+  --koto-text-secondary: #52525B; /* Zinc-600 */
+  --koto-text-tertiary: #A1A1AA; /* Zinc-400 */
+  --koto-border: #E4E4E7; /* Zinc-200 */
+  --koto-deep-indigo: #F3F4F6; /* Gray-100 - header bg */
 
-  /* Lighter header background for light mode */
-  --koto-deep-indigo: #EFF3F6;
-
-  /* Adjust shadows for light mode */
-  --koto-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
-  --koto-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --koto-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --koto-shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --koto-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --koto-shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.1);
+  --koto-shadow-glow: 0 0 15px rgba(244, 114, 182, 0.25);
 }
 
 /* === Animations === */
 @keyframes koto-slideIn {
   from {
-    transform: translateX(100%);
+    transform: translateY(10px);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes koto-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes koto-shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
-  100% {
-    background-position: 1000px 0;
-  }
-}
-
-@keyframes koto-ripple {
-  to {
-    transform: scale(1.5);
-    opacity: 0;
   }
 }
 
 @keyframes koto-fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* === Accessibility === */
-*:focus-visible {
-  outline: 2px solid var(--koto-sakura-pink);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+@keyframes koto-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 /* === Utility Classes === */
-.koto-text-primary {
-  color: var(--koto-text-primary);
+.koto-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.koto-text-secondary {
-  color: var(--koto-text-secondary);
-}
-
-.koto-bg-dark {
-  background-color: var(--koto-bg-dark);
-}
-
-.koto-bg-surface {
-  background-color: var(--koto-surface);
-}
-
-.koto-border {
-  border-color: var(--koto-border);
-}
-
-.koto-shadow-md {
-  box-shadow: var(--koto-shadow-md);
+.light-mode .koto-glass {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .koto-animate-slideIn {
-  animation: koto-slideIn var(--koto-transition-slow);
+  animation: koto-slideIn var(--koto-transition-normal) forwards;
 }
 
 .koto-animate-fadeIn {
-  animation: koto-fadeIn var(--koto-transition-normal);
+  animation: koto-fadeIn var(--koto-transition-normal) forwards;
 }
 
 .koto-button-hover {
-  transition: transform var(--koto-transition-normal),
-              box-shadow var(--koto-transition-normal);
+  transition: all var(--koto-transition-fast);
 }
 
 .koto-button-hover:hover:not(:disabled) {
   transform: translateY(-1px);
+  filter: brightness(1.1);
 }
 
 .koto-button-hover:active:not(:disabled) {
   transform: translateY(0);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--koto-border);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--koto-text-secondary);
 }

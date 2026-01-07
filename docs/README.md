@@ -60,3 +60,4 @@ When adding new documentation:
 - Update [TODO](project/TODO.md) when planning new features
 - Add release notes to [Release Notes](project/README_RELEASES.md) for each release
 - Document significant changes in UPDATES files
+- **Pro-tip**: Use the agent workflow `/docs-update` to help keep these documents synchronized with code changes.
