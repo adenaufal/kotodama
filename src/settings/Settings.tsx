@@ -112,7 +112,7 @@ const Settings: React.FC = () => {
   }, [openaiKey, defaultVoiceId, defaultModel, modelPriority, settings, loading]);
 
   const handleRestartOnboarding = () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html') });
+    chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html?skipRedirect=1') });
   };
 
   if (loading) {
