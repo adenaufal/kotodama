@@ -263,7 +263,6 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
       };
 
       console.log('[Kotodama Panel] Sending generate message to background...');
-      console.time('[Kotodama Panel] Generation');
 
       const response = await sendRuntimeMessage(
         {
@@ -278,7 +277,6 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         }
       );
 
-      console.timeEnd('[Kotodama Panel] Generation');
       console.log('[Kotodama Panel] Received response:', {
         success: response.success,
         hasData: !!response.data,
@@ -288,10 +286,16 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
       if (response.success) {
         const endTime = performance.now();
         const duration = endTime - startTime;
-        console.timeEnd('[Kotodama Performance] AI generation');
-        console.log(`[Kotodama] Gen took ${duration.toFixed(0)}ms`);
+        console.log(`[Kotodama] Generation took ${duration.toFixed(0)}ms`);
 
         let cleanedContent = response.data.content;
+
+        console.log('[Kotodama Panel] Raw content from API:', {
+          type: typeof cleanedContent,
+          isArray: Array.isArray(cleanedContent),
+          value: cleanedContent
+        });
+
         if (typeof cleanedContent === 'string') {
           cleanedContent = cleanedContent.replace(/^["'](.*)["']$/s, '$1').trim();
         } else if (Array.isArray(cleanedContent)) {
@@ -300,8 +304,15 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
           );
         }
 
+        console.log('[Kotodama Panel] Cleaned content:', {
+          type: typeof cleanedContent,
+          isArray: Array.isArray(cleanedContent),
+          length: typeof cleanedContent === 'string' ? cleanedContent.length : cleanedContent?.length,
+          preview: typeof cleanedContent === 'string' ? cleanedContent.substring(0, 50) : cleanedContent?.[0]?.substring(0, 50)
+        });
+
         setGeneratedContent(cleanedContent);
-        console.log('[Kotodama Panel] Content set successfully');
+        console.log('[Kotodama Panel] Content state updated, UI should re-render');
       } else {
         console.error('[Kotodama Panel] Generation failed:', response.error);
         setError(response.error || 'Generation failed');
@@ -320,28 +331,39 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
     }
   };
 
-  const handleInsert = (content?: string) => {
-    let text: string;
-
-    if (typeof content === 'string') {
-      text = content;
-    } else if (typeof generatedContent === 'string') {
-      text = generatedContent;
-    } else if (Array.isArray(generatedContent) && generatedContent.length > 0) {
-      text = generatedContent.join('\n\n');
-    } else {
-      return;
-    }
-
+  const handleInsert = (content?: string, delay?: number) => {
     // Use specific origin instead of wildcard for security
     const targetOrigin = window.location.ancestorOrigins?.[0] || 'https://twitter.com';
-    window.parent.postMessage(
-      {
-        type: 'insert-tweet',
-        content: text,
-      },
-      targetOrigin
-    );
+
+    if (typeof content === 'string') {
+      // Single tweet insertion (manual per-tweet insert)
+      window.parent.postMessage(
+        {
+          type: 'insert-tweet',
+          content: content,
+        },
+        targetOrigin
+      );
+    } else if (typeof generatedContent === 'string') {
+      // Single generated content insertion
+      window.parent.postMessage(
+        {
+          type: 'insert-tweet',
+          content: generatedContent,
+        },
+        targetOrigin
+      );
+    } else if (Array.isArray(generatedContent) && generatedContent.length > 0) {
+      // Thread insertion
+      window.parent.postMessage(
+        {
+          type: 'insert-thread',
+          content: generatedContent,
+          delay: delay || 2000, // Default to 2 seconds if not provided (should be milliseconds)
+        },
+        targetOrigin
+      );
+    }
   };
 
   const handleClose = () => {
@@ -475,6 +497,11 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
               generatedContent={generatedContent}
               onInsert={handleInsert}
               onRegenerate={handleGenerate}
+              onReset={() => {
+                setGeneratedContent('');
+                setPrompt('');
+                setError(null);
+              }}
               isLoading={isLoading}
             />
           )}

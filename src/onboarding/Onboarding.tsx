@@ -3,10 +3,13 @@ import { BrandVoice, UserSettings } from '../types';
 import { parseBrandVoiceMarkdown } from './brandVoiceImport';
 import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
 import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
+import { VOICE_TEMPLATES } from './constants/voiceTemplates';
+import { getDefaultToneAttributes } from '../utils/brandVoiceUtils';
 
 const MAX_EXAMPLE_TWEETS = 5;
 
 type ExampleTweetStatus = 'idle' | 'loading' | 'error';
+type Step2Mode = 'selection' | 'form';
 
 const isTwitterStatusUrl = (value: string) =>
   /^(https?:\/\/)?(www\.)?(twitter|x)\.com\/[A-Za-z0-9_]+\/status\/\d+/i.test(value.trim());
@@ -72,6 +75,8 @@ const steps = [
 const Onboarding: React.FC = () => {
   const { sendMessage, isInvalidated } = useRuntimeMessaging();
   const [step, setStep] = useState(1);
+  const [step2Mode, setStep2Mode] = useState<Step2Mode>('selection'); // 'selection' | 'form'
+
   const [openaiKey, setOpenaiKey] = useState('');
   const [brandVoiceName, setBrandVoiceName] = useState('');
   const [brandVoiceDescription, setBrandVoiceDescription] = useState('');
@@ -84,10 +89,16 @@ const Onboarding: React.FC = () => {
   const [exampleTweetErrors, setExampleTweetErrors] = useState<string[]>(() =>
     Array.from({ length: MAX_EXAMPLE_TWEETS }, () => ''),
   );
+
+  // New state for tone attributes
+  const [toneAttributes, setToneAttributes] = useState(getDefaultToneAttributes());
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importFeedback, setImportFeedback] = useState<
     { type: 'success' | 'error'; message: string } | null
   >(null);
+  const [showMarkdownHelp, setShowMarkdownHelp] = useState(false);
+
   const exampleTweetRequestTokens = useRef<number[]>(
     Array.from({ length: MAX_EXAMPLE_TWEETS }, () => 0),
   );
@@ -119,6 +130,38 @@ const Onboarding: React.FC = () => {
 
     checkExistingConfiguration();
   }, []);
+
+  const handleTemplateSelect = (templateId: string) => {
+    const template = VOICE_TEMPLATES.find(t => t.id === templateId);
+
+    if (template) {
+      if (template.id === 'custom') {
+        // Reset to empty custom state
+        setBrandVoiceName('');
+        setBrandVoiceDescription('');
+        setExampleTweets(Array.from({ length: MAX_EXAMPLE_TWEETS }, () => ''));
+        setToneAttributes(getDefaultToneAttributes());
+      } else {
+        // Pre-fill with template data
+        setBrandVoiceName(template.name);
+        setBrandVoiceDescription(template.description);
+
+        // Pad examples to MAX_EXAMPLE_TWEETS
+        const examples = [...template.exampleTweets];
+        while (examples.length < MAX_EXAMPLE_TWEETS) examples.push('');
+        setExampleTweets(examples);
+
+        // Set tone attributes based on template type
+        let attrs = getDefaultToneAttributes();
+        if (template.id === 'professional') attrs = { ...attrs, formality: 80, humor: 10, technicality: 60 };
+        if (template.id === 'casual') attrs = { ...attrs, formality: 20, humor: 70, empathy: 80 };
+        if (template.id === 'witty') attrs = { ...attrs, formality: 40, humor: 90, technicality: 80, energy: 70 };
+        setToneAttributes(attrs);
+      }
+
+      setStep2Mode('form');
+    }
+  };
 
   const handleExampleTweetChange = (index: number, value: string) => {
     setImportFeedback(null);
@@ -304,14 +347,7 @@ const Onboarding: React.FC = () => {
         name: brandVoiceName.trim(),
         description: brandVoiceDescription.trim(),
         exampleTweets: validExamples,
-        toneAttributes: {
-          formality: 50,
-          humor: 50,
-          technicality: 50,
-          empathy: 50,
-          energy: 50,
-          authenticity: 50,
-        },
+        toneAttributes: toneAttributes,
         category: 'custom',
         tags: [],
         isTemplate: false,
@@ -344,7 +380,7 @@ const Onboarding: React.FC = () => {
   const activeStep = steps.find((item) => item.id === step);
 
   return (
-    <div className="relative min-h-screen overflow-hidden light-mode" style={{ backgroundColor: 'var(--koto-bg-light)', color: 'var(--koto-text-primary)' }}>
+    <div className="relative min-h-screen light-mode" style={{ backgroundColor: 'var(--koto-bg-light)', color: 'var(--koto-text-primary)' }}>
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-10 px-5 py-14 sm:px-8 lg:flex-row lg:items-start lg:py-20">
         <aside className="relative w-full overflow-hidden rounded-3xl border p-8 shadow-2xl backdrop-blur xl:w-[340px]" style={{
           borderColor: 'var(--koto-border)',
@@ -353,7 +389,7 @@ const Onboarding: React.FC = () => {
         }}>
           <div className="relative space-y-10">
             <div className="space-y-4">
-              <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.35em]" style={{
+              <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.2em]" style={{
                 borderColor: 'var(--koto-border)',
                 backgroundColor: 'rgba(232, 92, 143, 0.1)',
                 color: 'var(--koto-sakura-pink)'
@@ -372,7 +408,7 @@ const Onboarding: React.FC = () => {
               borderColor: 'var(--koto-border)',
               backgroundColor: 'rgba(240, 242, 248, 0.5)'
             }}>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em]" style={{ color: 'var(--koto-sakura-pink)' }}>You&apos;ll cover</p>
+              <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--koto-sakura-pink)' }}>You&apos;ll cover</p>
               <ul className="space-y-5 text-sm" style={{ color: 'var(--koto-text-secondary)' }}>
                 <li className="flex gap-3">
                   <span className="mt-0.5 inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/80 text-[0.75rem] font-semibold text-white">
@@ -395,7 +431,7 @@ const Onboarding: React.FC = () => {
               </ul>
             </div>
 
-            <div className="space-y-3 text-xs uppercase tracking-[0.35em]" style={{ color: 'var(--koto-text-secondary)' }}>
+            <div className="space-y-3 text-xs font-bold uppercase tracking-[0.15em]" style={{ color: 'var(--koto-text-secondary)' }}>
               <p>Zero accounts. Zero analytics.</p>
               <p>Revoke, export, and delete any time.</p>
             </div>
@@ -403,7 +439,7 @@ const Onboarding: React.FC = () => {
         </aside>
 
         <section className="flex-1">
-          <div className="h-full rounded-3xl border backdrop-blur" style={{
+          <div className="h-full rounded-3xl border backdrop-blur mb-20 md:mb-0" style={{
             borderColor: 'var(--koto-border)',
             backgroundColor: 'var(--koto-surface)',
             boxShadow: 'var(--koto-shadow-lg)'
@@ -411,7 +447,7 @@ const Onboarding: React.FC = () => {
             <header className="space-y-6 border-b px-6 py-8 sm:px-8" style={{ borderColor: 'var(--koto-border)' }}>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.35em]" style={{ color: 'var(--koto-sakura-pink)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--koto-sakura-pink)' }}>
                     Step {step} of {totalSteps}
                   </p>
                   <h2 className="text-2xl font-semibold sm:text-3xl" style={{ color: 'var(--koto-text-primary)' }}>{activeStep?.title}</h2>
@@ -429,13 +465,12 @@ const Onboarding: React.FC = () => {
                     return (
                       <li key={item.id} className="flex items-center gap-2">
                         <span
-                          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${
-                            isCompleted
-                              ? 'bg-indigo-500 text-white'
-                              : isActive
-                                ? 'text-indigo-600'
-                                : ''
-                          }`}
+                          className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${isCompleted
+                            ? 'bg-indigo-500 text-white'
+                            : isActive
+                              ? 'text-indigo-600'
+                              : ''
+                            }`}
                           style={
                             isActive && !isCompleted
                               ? { backgroundColor: 'white', color: 'rgb(79, 70, 229)', boxShadow: '0 0 0 3px rgba(129, 140, 248, 0.25)' }
@@ -545,8 +580,43 @@ const Onboarding: React.FC = () => {
                 </div>
               )}
 
-              {step === 2 && (
-                <div className="space-y-8">
+              {step === 2 && step2Mode === 'selection' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {VOICE_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        onClick={() => handleTemplateSelect(template.id)}
+                        className="group text-left p-5 rounded-2xl border-2 border-slate-100 bg-white hover:border-[var(--koto-sakura-pink)] hover:shadow-lg hover:shadow-pink-500/10 transition-all duration-200 flex flex-col h-full"
+                      >
+                        <div className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-200 origin-left">
+                          {template.icon}
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">{template.name}</h3>
+                        <p className="text-sm text-slate-500 leading-relaxed mb-4 flex-1">
+                          {template.description}
+                        </p>
+                        <div className="w-full py-2 rounded-xl bg-slate-50 text-slate-600 font-bold text-xs text-center group-hover:bg-[var(--koto-sakura-pink)] group-hover:text-white transition-colors uppercase tracking-wide">
+                          Select
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-start">
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="rounded-2xl border px-6 py-3 text-base font-semibold transition bg-slate-50 hover:bg-slate-100 text-slate-600"
+                    >
+                      Back
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {step === 2 && step2Mode === 'form' && (
+                <div className="space-y-8 animate-in slide-in-from-right-4 duration-300">
                   <div className="space-y-3">
                     <label className="block text-sm font-medium" style={{ color: 'var(--koto-text-primary)' }}>
                       Brand voice name <span style={{ color: 'var(--koto-error)' }}>*</span>
@@ -606,22 +676,42 @@ const Onboarding: React.FC = () => {
                       >
                         Upload .md file
                       </button>
-                      <p className="text-xs" style={{ color: 'var(--koto-text-secondary)' }}>
-                        Use headings like "Name", "Description", and "Example Tweets" to prefill the form automatically.
-                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowMarkdownHelp(!showMarkdownHelp)}
+                        className="text-xs underline text-slate-400 hover:text-slate-600"
+                      >
+                        {showMarkdownHelp ? 'Hide example' : 'View format example'}
+                      </button>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".md,.markdown,text/markdown"
+                        onChange={handleMarkdownImport}
+                        className="hidden"
+                      />
                     </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".md,.markdown,text/markdown"
-                      onChange={handleMarkdownImport}
-                      className="hidden"
-                    />
+
+                    {showMarkdownHelp && (
+                      <div className="mt-2 p-4 rounded-xl bg-slate-50 border border-slate-100 text-xs font-mono text-slate-600 overflow-x-auto">
+                        <pre>{`# My Brand Voice
+
+# Description
+Friendly, approachable, and professional. Uses emojis occasionally.
+
+# Example Tweets
+- Just launched our new feature! 🚀 Check it out here.
+- Thanks for the feedback, we really appreciate it! 🙌
+- Dealing with bugs? We've got you covered.`}</pre>
+                      </div>
+                    )}
+
                     {importFeedback && (
                       <p
-                        className={`text-xs ${
-                          importFeedback.type === 'error' ? 'text-rose-400' : 'text-emerald-400'
-                        }`}
+                        className={`text-xs ${importFeedback.type === 'error' ? 'text-rose-400' : 'text-emerald-400'
+                          }`}
                       >
                         {importFeedback.message}
                       </p>
@@ -678,7 +768,7 @@ const Onboarding: React.FC = () => {
                   <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <button
                       type="button"
-                      onClick={() => setStep(1)}
+                      onClick={() => setStep2Mode('selection')}
                       className="flex-1 rounded-2xl border px-4 py-3 text-base font-semibold transition sm:flex-none sm:px-6"
                       style={{
                         borderColor: 'var(--koto-border)',

@@ -18,7 +18,7 @@ interface OpenAIMessage {
   content: string;
 }
 
-const FIXED_TEMPERATURE_MODEL_PREFIXES = ['o1']; // Reasoning models require the default temperature
+const FIXED_TEMPERATURE_MODEL_PREFIXES = ['o1', 'gpt-5']; // Reasoning models and GPT-5 require the default temperature
 const modelsRequiringDefaultTemperature = new Set<string>();
 
 function canAdjustTemperature(modelName: string): boolean {
@@ -287,13 +287,42 @@ export async function generateWithOpenAI(
       throw new Error('Unexpected response format from OpenAI API');
     }
 
-    const content = data.choices[0].message.content.trim();
+    const rawContent = data.choices[0].message.content;
     const tokenUsage = data.usage?.total_tokens || 0;
+
+    // Log raw response for debugging
+    console.log('[Kotodama] Raw API response message:', {
+      rawContent: rawContent,
+      rawContentType: typeof rawContent,
+      finishReason: data.choices[0].finish_reason,
+      refusal: data.choices[0].message.refusal,
+      fullMessage: JSON.stringify(data.choices[0].message)
+    });
+
+    // Handle null, undefined, or empty content
+    if (rawContent === null || rawContent === undefined) {
+      console.error('[Kotodama] API returned null/undefined content. Full response:', JSON.stringify(data, null, 2));
+
+      // Check if there's a refusal
+      if (data.choices[0].message.refusal) {
+        throw new Error(`Content generation refused: ${data.choices[0].message.refusal}`);
+      }
+
+      throw new Error('OpenAI API returned empty content. This may be due to content filtering or model limitations.');
+    }
+
+    const content = String(rawContent).trim();
+
+    if (content.length === 0) {
+      console.error('[Kotodama] API returned empty string after trim. Full response:', JSON.stringify(data, null, 2));
+      throw new Error('OpenAI API returned empty content. Please try again with a different prompt.');
+    }
 
     console.log('[Kotodama] Successfully generated content:', {
       contentLength: content.length,
       tokenUsage,
-      isThread
+      isThread,
+      preview: content.substring(0, 100)
     });
 
     if (isThread) {

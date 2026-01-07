@@ -601,6 +601,8 @@ window.addEventListener('message', async (event) => {
 
   if (event.data.type === 'insert-tweet') {
     insertTweetContent(event.data.content);
+  } else if (event.data.type === 'insert-thread') {
+    insertThreadContent(event.data.content, event.data.delay || 2000);
   } else if (event.data.type === 'close-panel') {
     hidePanel();
   } else if (event.data.type === 'analyze-profile') {
@@ -775,12 +777,11 @@ function insertTweetContent(content: string) {
       composeEditable.focus();
 
       if (panelIframe) {
-        setTimeout(() => {
-          hidePanel();
-        }, 600);
+        // Keeping panel open as requested
       }
     }, 50);
   };
+
 
   if (pasteHandled) {
     requestAnimationFrame(finalizeInsertion);
@@ -788,6 +789,132 @@ function insertTweetContent(content: string) {
     finalizeInsertion();
   }
 
+}
+
+async function insertThreadContent(tweets: string[], delay: number) {
+  console.log('[Kotodama] Starting sequential thread insertion', { tweets: tweets.length, delay });
+
+  // Helper to wait
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  for (let i = 0; i < tweets.length; i++) {
+    const tweetContent = tweets[i];
+    console.log(`[Kotodama] Processing tweet ${i + 1}/${tweets.length}`);
+
+    // For the first tweet, we assume the compose box is already open (or we can find it)
+    // For subsequent tweets, we need to click the (+) button and wait for the new box
+    if (i > 0) {
+      console.log(`[Kotodama] Waiting ${delay}s before next tweet...`);
+      await wait(delay * 1000);
+
+      // Find and click the add button
+      // Strategy: Look for the + button near the current compose area or globally
+      // The "add" button usually has aria-label="Add a tweet" or data-testid="addButton"
+      const addButtonSelectors = [
+        '[data-testid="addButton"]',
+        '[aria-label="Add a post"]',
+        '[aria-label="Add"]',
+        '[aria-label="Add another tweet"]' // Old label?
+      ];
+
+      let addButton: HTMLElement | null = null;
+      for (const selector of addButtonSelectors) {
+        // Try to find the button connected to the currently focused or last active compose area
+        // This is tricky because the DOM changes.
+        // A safe bet is often the last visible add button if we are in a thread flow?
+        // Or query all and pick the one that looks "active" or just the last one.
+        const buttons = document.querySelectorAll<HTMLElement>(selector);
+        if (buttons.length > 0) {
+          // Usually the one we want is the one visible in the composer
+          addButton = buttons[buttons.length - 1]; // Naive approach: take the last one
+          break;
+        }
+      }
+
+      if (addButton) {
+        console.log('[Kotodama] Clicking Add Tweet button');
+        addButton.click();
+        // Wait for the animation/DOM update
+        await wait(500);
+      } else {
+        console.warn('[Kotodama] Could not find "Add Tweet" button. Threading might fail.');
+        // We might already be in a state where the next box is there? 
+        // Or maybe we just try to find the next empty box?
+      }
+    }
+
+    // Now attempt to insert text
+    // We need to find the *correct* compose box.
+    // For i=0, it's the one we started with.
+    // For i>0, it's the new one.
+    // Strategy: Find all valid compose boxes, and pick the one corresponding to our index
+    // OR: Find the *last* empty compose box.
+
+    // Let's retry finding the box a few times if it's not there yet
+    let targetBox: HTMLElement | null = null;
+    let attempts = 0;
+    while (!targetBox && attempts < 5) {
+      const allComposeBoxes = Array.from(document.querySelectorAll('[data-testid^="tweetTextarea_"]')) as HTMLElement[];
+
+      // Filter for visible ones
+      const visibleBoxes = allComposeBoxes.filter(box => {
+        return box.offsetParent !== null; // Crude visibility check
+      });
+
+      // If we are at index i, conceptually we want the i-th visible box... 
+      // BUT, if the user manually closed some, or if we started in a reply, this index is messy.
+
+      // Better heuristic:
+      // If i=0, assume the currently focused one or the first one.
+      // If i>0, taking the last visible box is usually correct for "Add Tweet".
+
+      if (i === 0) {
+        targetBox = findComposeEditable();
+        if (!targetBox && visibleBoxes.length > 0) targetBox = visibleBoxes[0];
+      } else {
+        if (visibleBoxes.length > 0) {
+          targetBox = visibleBoxes[visibleBoxes.length - 1];
+        }
+      }
+
+      if (!targetBox) {
+        await wait(200);
+        attempts++;
+      }
+    }
+
+    if (targetBox) {
+      // We can't reuse insertTweetContent directly nicely because it finds the box internally.
+      // We need a version that accepts an element, OR just rely on focus() + insertTweetContent's logic.
+
+      // Focus the specific box we found
+      targetBox.focus();
+      await wait(100);
+
+      // Now call our existing logic. 
+      // Since we focused the correct box, findComposeEditable() inside insertTweetContent *should* pick it up.
+      insertTweetContent(tweetContent);
+
+      // Wait a bit for the insertion to "settle"
+      await wait(200);
+    } else {
+      console.error(`[Kotodama] Could not find compose box for tweet ${i + 1}`);
+      // Continue anyway? Or stop? 
+      // If we stop, the user is left half-way. 
+      // Better to potentially fail one and try the next? No, if one fails, the chain is broken.
+      // Let's stop.
+      break;
+    }
+  }
+
+  console.log('[Kotodama] Thread insertion complete');
+
+  // Close panel after everything is done
+  if (panelIframe) {
+    setTimeout(() => {
+      hidePanel();
+    }, 1000);
+  }
 }
 
 /**

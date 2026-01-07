@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 interface ResultsAreaProps {
     generatedContent: string | string[];
-    onInsert: (content?: string) => void;
+    onInsert: (content?: string, delay?: number) => void;
     onRegenerate: () => void;
     isLoading: boolean;
 }
@@ -26,6 +26,8 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
         });
     };
 
+    const [threadDelay, setThreadDelay] = useState(2);
+
     return (
         <div className="mt-6 koto-animate-fadeIn mb-8 px-8 flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -36,17 +38,31 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
                     </h3>
                     <p className="text-[10px] mt-0.5 font-medium" style={{ color: 'var(--koto-text-secondary)' }}>Review and refine before inserting</p>
                 </div>
-                <button
-                    onClick={onRegenerate}
-                    disabled={isLoading}
-                    className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(236,72,153,0.1)] active:scale-95 disabled:opacity-50"
-                    style={{ color: 'var(--koto-sakura-pink)' }}
-                >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Regenerate
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onReset}
+                        disabled={isLoading}
+                        className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:bg-[var(--koto-bg-input)] active:scale-95 disabled:opacity-50"
+                        style={{ color: 'var(--koto-text-secondary)' }}
+                        title="Start over with a new prompt"
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New
+                    </button>
+                    <button
+                        onClick={onRegenerate}
+                        disabled={isLoading}
+                        className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(236,72,153,0.1)] active:scale-95 disabled:opacity-50"
+                        style={{ color: 'var(--koto-sakura-pink)' }}
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Regenerate
+                    </button>
+                </div>
             </div>
 
             <div className="flex flex-col gap-4">
@@ -68,9 +84,32 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
                     />
                 )}
 
-                <div className="sticky bottom-0 pt-4 bg-gradient-to-t from-[var(--koto-bg-dark)] via-[var(--koto-bg-dark)] to-transparent z-10 pb-2">
+                <div className="sticky bottom-0 pt-4 bg-gradient-to-t from-[var(--koto-bg-dark)] via-[var(--koto-bg-dark)] to-transparent z-10 pb-2 flex flex-col gap-3">
+                    {isThread && (
+                        <div className="flex items-center justify-between px-1">
+                            <span className="text-[11px] font-medium" style={{ color: 'var(--koto-text-secondary)' }}>
+                                Thread Delay (seconds)
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="10"
+                                    value={threadDelay}
+                                    onChange={(e) => setThreadDelay(Math.max(1, Math.min(10, parseInt(e.target.value) || 2)))}
+                                    className="w-16 px-2 py-1 text-center text-xs rounded-lg border focus:outline-none focus:ring-1 transition-all"
+                                    style={{
+                                        backgroundColor: 'var(--koto-bg-input)',
+                                        borderColor: 'var(--koto-border)',
+                                        color: 'var(--koto-text-primary)'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <button
-                        onClick={() => onInsert()}
+                        onClick={() => onInsert(undefined, threadDelay)}
                         className="w-full rounded-xl py-4 text-xs font-bold uppercase tracking-widest text-white shadow-lg transition-all transform hover:shadow-xl active:scale-[0.99] group flex items-center justify-center gap-2 overflow-hidden relative"
                         style={{
                             background: 'linear-gradient(135deg, #10b981, #059669)', // Emerald gradient
