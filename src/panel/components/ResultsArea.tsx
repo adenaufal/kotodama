@@ -4,6 +4,7 @@ interface ResultsAreaProps {
     generatedContent: string | string[];
     onInsert: (content?: string, delay?: number) => void;
     onRegenerate: () => void;
+    onReset: () => void;
     isLoading: boolean;
 }
 
@@ -11,6 +12,7 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
     generatedContent,
     onInsert,
     onRegenerate,
+    onReset,
     isLoading,
 }) => {
     if (!generatedContent || (Array.isArray(generatedContent) && generatedContent.length === 0)) {
