@@ -6,6 +6,7 @@ import { InputArea } from './components/InputArea';
 import { ResultsArea } from './components/ResultsArea';
 import { ReplyTemplate } from '../constants/templates';
 import { sanitizePrompt, sanitizeTweetContext, escapeForPrompt } from '../utils/sanitize';
+import { sendRuntimeMessage, isRuntimeValid, watchRuntimeValidity, createUserErrorMessage } from '../utils/runtime';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -30,12 +31,28 @@ const Panel: React.FC = () => {
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [tweetLengthPreset, setTweetLengthPreset] = useState<TweetLength>('short');
+  const [runtimeInvalidated, setRuntimeInvalidated] = useState(false);
 
   useEffect(() => {
+    // Check runtime validity before loading
+    if (!isRuntimeValid()) {
+      setRuntimeInvalidated(true);
+      setError('Extension context invalidated. Please reload this page.');
+      return;
+    }
+
     loadInitialData();
     window.addEventListener('message', handleMessage);
+
+    // Watch for runtime invalidation
+    const stopWatching = watchRuntimeValidity(() => {
+      setRuntimeInvalidated(true);
+      setError('Extension was reloaded. Please refresh this page to continue.');
+    });
+
     return () => {
       window.removeEventListener('message', handleMessage);
+      stopWatching();
     };
   }, []);
 
@@ -97,7 +114,14 @@ const Panel: React.FC = () => {
 
   const loadInitialData = async () => {
     try {
-      const settingsResponse = await chrome.runtime.sendMessage({ type: 'get-settings' });
+      const settingsResponse = await sendRuntimeMessage(
+        { type: 'get-settings' },
+        {
+          onRetry: (attempt) => {
+            console.log(`[Kotodama] Retrying get-settings (attempt ${attempt})...`);
+          }
+        }
+      );
 
       if (settingsResponse.success) {
         setSettings(settingsResponse.data);
@@ -107,7 +131,14 @@ const Panel: React.FC = () => {
         }
       }
 
-      const voicesResponse = await chrome.runtime.sendMessage({ type: 'list-brand-voices' });
+      const voicesResponse = await sendRuntimeMessage(
+        { type: 'list-brand-voices' },
+        {
+          onRetry: (attempt) => {
+            console.log(`[Kotodama] Retrying list-brand-voices (attempt ${attempt})...`);
+          }
+        }
+      );
 
       if (voicesResponse.success) {
         const voices: BrandVoice[] = Array.isArray(voicesResponse.data) ? voicesResponse.data : [];
@@ -122,8 +153,15 @@ const Panel: React.FC = () => {
           }
         }
       }
-    } catch (loadError) {
+    } catch (loadError: any) {
       console.error('Failed to load initial data:', loadError);
+      const userMessage = createUserErrorMessage(loadError);
+      setError(userMessage);
+
+      // Mark runtime as invalidated if it's a context error
+      if (userMessage.includes('reload') || userMessage.includes('refresh')) {
+        setRuntimeInvalidated(true);
+      }
     }
   };
 
@@ -185,10 +223,18 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         threadLength: isThread ? threadLength : undefined,
       };
 
-      const response = await chrome.runtime.sendMessage({
-        type: 'generate',
-        payload: request,
-      });
+      const response = await sendRuntimeMessage(
+        {
+          type: 'generate',
+          payload: request,
+        },
+        {
+          maxRetries: 1, // Limit retries for generation as it's expensive
+          onRetry: (attempt, error) => {
+            console.log(`[Kotodama] Retrying generation (attempt ${attempt})...`, error);
+          }
+        }
+      );
 
       if (response.success) {
         const endTime = performance.now();
@@ -210,7 +256,13 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         setError(response.error || 'Generation failed');
       }
     } catch (generateError: any) {
-      setError(generateError.message || 'An error occurred');
+      const userMessage = createUserErrorMessage(generateError);
+      setError(userMessage);
+
+      // Mark runtime as invalidated if it's a context error
+      if (userMessage.includes('reload') || userMessage.includes('refresh')) {
+        setRuntimeInvalidated(true);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -245,8 +297,13 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
     window.parent.postMessage({ type: 'close-panel' }, targetOrigin);
   };
 
-  const handleOpenSettings = () => {
-    chrome.runtime.sendMessage({ type: 'open-settings' });
+  const handleOpenSettings = async () => {
+    try {
+      await sendRuntimeMessage({ type: 'open-settings' });
+    } catch (error: any) {
+      const userMessage = createUserErrorMessage(error);
+      setError(userMessage);
+    }
   };
 
   const handleToggleTheme = async () => {
@@ -263,13 +320,15 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
       };
 
       try {
-        await chrome.runtime.sendMessage({
+        await sendRuntimeMessage({
           type: 'save-settings',
           payload: updatedSettings,
         });
         setSettings(updatedSettings);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to save theme preference:', err);
+        const userMessage = createUserErrorMessage(err);
+        setError(userMessage);
       }
     }
   };
@@ -285,6 +344,30 @@ Keep the tweet ${limit.description} (${limit.min}-${limit.max} characters).`;
         // Add a subtle gradient overlay to the whole panel
         backgroundImage: 'linear-gradient(to bottom right, rgba(255,255,255,0.03), rgba(255,255,255,0))',
       }}>
+
+      {runtimeInvalidated && (
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-[100000] flex items-center justify-center p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md text-center">
+            <div className="mb-4">
+              <svg className="w-16 h-16 mx-auto text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+              Extension Reloaded
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              The Kotodama extension was updated or reloaded. Please refresh this page to continue.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      )}
 
       <PanelHeader
         theme={theme}
