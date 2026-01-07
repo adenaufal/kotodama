@@ -452,13 +452,15 @@ function openPanel() {
     panelRight = '20px';
   } else if (viewportWidth <= 1920) {
     // Medium screens (15-17 inch laptops, 1080p-1440p)
-    panelWidth = 'min(480px, calc(100vw - 60px))';
+    // Capped at 440px to prevent bloated look
+    panelWidth = 'min(440px, calc(100vw - 60px))';
     panelHeight = 'min(750px, calc(100vh - 100px))';
     panelTop = '80px';
     panelRight = '30px';
   } else {
     // Large screens (1440p+)
-    panelWidth = 'min(540px, calc(100vw - 80px))';
+    // Capped at 450px to prevent bloated look
+    panelWidth = 'min(450px, calc(100vw - 80px))';
     panelHeight = 'min(850px, calc(100vh - 120px))';
     panelTop = '90px';
     panelRight = '40px';
