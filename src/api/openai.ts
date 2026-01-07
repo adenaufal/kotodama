@@ -1,28 +1,24 @@
 import { GenerateRequest, GenerateResponse, BrandVoice, UserProfile } from '../types';
+import { ModelPriority } from '../constants/models';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Model Selection Strategy - Using actual available OpenAI models
-// Standard quality models (support temperature)
-const DEFAULT_MODEL = 'gpt-4o-2024-11-20'; // Latest GPT-4o for best quality
-const QUALITY_MODEL = 'gpt-4o-2024-08-06'; // Alternative GPT-4o
+// Model Selection Strategy - Using GPT-5 and GPT-4o models
+// Premium tier models (1M free tokens/day, 250K for tier 1-2)
+const DEFAULT_MODEL = 'gpt-5-2025-08-07'; // Latest GPT-5 for best quality
+const QUALITY_MODEL = 'gpt-4o-2024-11-20'; // GPT-4o as alternative
 
-// Fast/cheap operations (support temperature)
-const FAST_MODEL = 'gpt-4o-mini'; // Latest mini for speed
-const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18'; // Stable fallback
-
-// Reasoning models (do NOT support temperature, top_p, logprobs)
-const REASONING_MODEL = 'o1-2024-12-17'; // Latest o1 for complex reasoning
-
-// Note: GPT-5 models don't exist yet as of January 2025
-// o1-mini is available as an alternative reasoning model if needed
+// Mini tier models (10M free tokens/day, 2.5M for tier 1-2)
+const FAST_MODEL = 'gpt-5-mini-2025-08-07'; // GPT-5 Mini for speed
+const NANO_MODEL = 'gpt-5-nano-2025-08-07'; // GPT-5 Nano for ultra fast
+const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18'; // GPT-4o Mini as stable fallback
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
-const FIXED_TEMPERATURE_MODEL_PREFIXES = ['o1']; // Reasoning models require the default temperature (see https://platform.openai.com/docs/guides/reasoning#parameters)
+const FIXED_TEMPERATURE_MODEL_PREFIXES = ['o1']; // Reasoning models require the default temperature
 const modelsRequiringDefaultTemperature = new Set<string>();
 
 function canAdjustTemperature(modelName: string): boolean {
@@ -80,6 +76,48 @@ async function extractOpenAIErrorMessage(response: Response): Promise<{ message?
     };
   } catch {
     return { message: raw, raw };
+  }
+}
+
+/**
+ * Select optimal model based on user's priority strategy and request type.
+ * This helps maximize free token usage from OpenAI's data sharing program.
+ * 
+ * Token quotas (requires data sharing opt-in):
+ * - Premium tier (gpt-5, gpt-4o): 1M tokens/day (250K for tier 1-2)
+ * - Mini tier (gpt-5-mini, gpt-5-nano, gpt-4o-mini): 10M tokens/day (2.5M for tier 1-2)
+ */
+function selectOptimalModel(
+  request: GenerateRequest,
+  modelPriority: ModelPriority = 'maximize-free',
+  preferredModel?: string
+): string {
+  // If user explicitly set a model override, use it
+  if (preferredModel) {
+    return preferredModel;
+  }
+
+  // Fast mode uses mini models
+  if (request.fastMode === true) {
+    return FAST_MODEL;
+  }
+
+  if (request.fastMode === 'ultra') {
+    return NANO_MODEL; // Ultra fast mode uses nano
+  }
+
+  // Apply model priority strategy
+  switch (modelPriority) {
+    case 'always-quality':
+      return DEFAULT_MODEL; // GPT-5 (1M free tokens/day)
+
+    case 'always-mini':
+      return FAST_MODEL; // GPT-5 Mini (10M free tokens/day)
+
+    case 'maximize-free':
+    default:
+      // Use mini tier by default to maximize free usage (10M vs 1M)
+      return FAST_MODEL;
   }
 }
 
@@ -147,23 +185,15 @@ export async function generateWithOpenAI(
   apiKey: string,
   brandVoice: BrandVoice,
   targetProfile?: UserProfile,
-  preferredModel?: string
+  preferredModel?: string,
+  modelPriority: ModelPriority = 'maximize-free'
 ): Promise<GenerateResponse> {
   const isThread = request.isThread || false;
 
-  // Select model based on request parameters
-  let model = preferredModel || DEFAULT_MODEL;
+  // Select model using smart selection
+  const model = selectOptimalModel(request, modelPriority, preferredModel);
 
-  // Override with mode-specific models if modes are set
-  if (request.fastMode === true) {
-    model = FAST_MODEL;
-  } else if (request.fastMode === 'ultra') {
-    model = FAST_MODEL; // Use same fast model for ultra mode
-  } else if (request.reasoning === true) {
-    model = REASONING_MODEL;
-  } else if (request.coding === true) {
-    model = DEFAULT_MODEL; // Use default model for coding (GPT-4o is good at code)
-  }
+  console.log(`[Kotodama] Using model: ${model} (priority: ${modelPriority})`);
 
   const messages: OpenAIMessage[] = [
     {
@@ -214,11 +244,9 @@ export async function generateWithOpenAI(
 
     if (isThread) {
       // Parse thread into individual tweets
-      // Split on numbered patterns like "1/" or "1." at the start of a line
-      // This preserves line breaks within each tweet
       const tweets = content
-        .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
-        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
+        .split(/\n(?=\d+[.\/]\s)/)
+        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim())
         .filter((tweet: string) => tweet.length > 0);
 
       return {
@@ -240,7 +268,7 @@ export async function generateWithOpenAI(
   } catch (error) {
     console.error('OpenAI generation failed:', error);
 
-    const fallbackCandidates = [QUALITY_MODEL, FALLBACK_MODEL];
+    const fallbackCandidates = [QUALITY_MODEL, FAST_MODEL, FALLBACK_MODEL];
     for (const candidate of fallbackCandidates) {
       if (candidate === model) {
         continue;
@@ -277,7 +305,7 @@ export async function analyzeTwitterProfile(
     async function requestAnalysis(allowCustomTemperature = true): Promise<Response> {
       const includeTemperature = allowCustomTemperature && canAdjustTemperature(FAST_MODEL);
       const body: Record<string, unknown> = {
-        model: FAST_MODEL, // Use faster, cheaper model for analysis
+        model: FAST_MODEL, // Use mini model for analysis
         messages,
         max_completion_tokens: 500,
         response_format: { type: 'json_object' },
@@ -316,7 +344,6 @@ export async function analyzeTwitterProfile(
     return JSON.parse(data.choices[0].message.content);
   } catch (error) {
     console.error('Profile analysis failed:', error);
-    // Return defaults if analysis fails
     return {
       avgLength: 150,
       commonPhrases: [],

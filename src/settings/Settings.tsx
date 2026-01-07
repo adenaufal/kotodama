@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserSettings, BrandVoice } from '../types';
+import { ModelPriority } from '../constants/models';
 import BrandVoiceManager from './BrandVoiceManager';
 import {
   SettingsLayout,
@@ -20,6 +21,7 @@ const Settings: React.FC = () => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [defaultVoiceId, setDefaultVoiceId] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
+  const [modelPriority, setModelPriority] = useState<ModelPriority>('maximize-free');
 
   const loadData = async () => {
     try {
@@ -35,6 +37,7 @@ const Settings: React.FC = () => {
         setOpenaiKey(data.apiKeys?.openai || '');
         setDefaultVoiceId(data.defaultBrandVoiceId || '');
         setDefaultModel(data.defaultModel || '');
+        setModelPriority(data.modelPriority || 'maximize-free');
       }
 
       if (voicesResponse && voicesResponse.success) {
@@ -77,6 +80,7 @@ const Settings: React.FC = () => {
         apiKeys: { ...baseSettings.apiKeys, openai: openaiKey },
         defaultBrandVoiceId: defaultVoiceId,
         defaultModel: defaultModel,
+        modelPriority: modelPriority,
       };
 
       await chrome.runtime.sendMessage({ type: 'save-settings', payload: updatedSettings });
@@ -98,14 +102,15 @@ const Settings: React.FC = () => {
         if (
           openaiKey !== (settings.apiKeys?.openai || '') ||
           defaultVoiceId !== (settings.defaultBrandVoiceId || '') ||
-          defaultModel !== (settings.defaultModel || '')
+          defaultModel !== (settings.defaultModel || '') ||
+          modelPriority !== (settings.modelPriority || 'maximize-free')
         ) {
           handleSave();
         }
       }, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [openaiKey, defaultVoiceId, defaultModel, settings, loading]);
+  }, [openaiKey, defaultVoiceId, defaultModel, modelPriority, settings, loading]);
 
   const handleRestartOnboarding = () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html') });
@@ -128,6 +133,8 @@ const Settings: React.FC = () => {
             setOpenaiKey={setOpenaiKey}
             defaultModel={defaultModel}
             setDefaultModel={setDefaultModel}
+            modelPriority={modelPriority}
+            setModelPriority={setModelPriority}
             saveState={saveState}
           />
 
