@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface ResultsAreaProps {
     generatedContent: string | string[];
@@ -19,17 +19,27 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
 
     const isThread = Array.isArray(generatedContent);
 
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            // Could add a toast notification here if we had a toast system ready
+            // For now, the button state change in ResultItem handles feedback
+        });
+    };
+
     return (
-        <div className="mt-8 koto-animate-fadeIn mb-8 px-8">
-            <div className="flex items-center justify-between mb-4">
+        <div className="mt-6 koto-animate-fadeIn mb-8 px-8 flex flex-col gap-6">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-sm font-bold" style={{ color: 'var(--koto-text-primary)' }}>Generated Output</h3>
-                    <p className="text-[10px]" style={{ color: 'var(--koto-text-secondary)' }}>Review and insert into X</p>
+                    <h3 className="text-sm font-bold tracking-wide" style={{ color: 'var(--koto-text-primary)' }}>
+                        <span role="img" aria-label="sparkles" className="mr-2">✨</span>
+                        Generated Output
+                    </h3>
+                    <p className="text-[10px] mt-0.5 font-medium" style={{ color: 'var(--koto-text-secondary)' }}>Review and refine before inserting</p>
                 </div>
                 <button
                     onClick={onRegenerate}
                     disabled={isLoading}
-                    className="text-xs font-semibold flex items-center gap-1.5 transition-colors hover:opacity-80 disabled:opacity-50"
+                    className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all hover:bg-[rgba(236,72,153,0.1)] active:scale-95 disabled:opacity-50"
                     style={{ color: 'var(--koto-sakura-pink)' }}
                 >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +49,7 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
                 </button>
             </div>
 
-            <div className="stack-sm">
+            <div className="flex flex-col gap-4">
                 {isThread ? (
                     generatedContent.map((tweet, index) => (
                         <ResultItem
@@ -48,25 +58,34 @@ export const ResultsArea: React.FC<ResultsAreaProps> = ({
                             index={index + 1}
                             total={generatedContent.length}
                             onInsert={() => onInsert(tweet)}
+                            onCopy={() => handleCopy(tweet)}
                         />
                     ))
                 ) : (
-                    <ResultItem content={generatedContent as string} />
+                    <ResultItem
+                        content={generatedContent as string}
+                        onCopy={() => handleCopy(generatedContent as string)}
+                    />
                 )}
 
-                <button
-                    onClick={() => onInsert()}
-                    className="w-full rounded-xl py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-transform active:scale-[0.99] mt-2 group flex items-center justify-center gap-2"
-                    style={{
-                        backgroundColor: 'var(--koto-success)',
-                        boxShadow: '0 4px 12px rgba(52, 211, 153, 0.3)'
-                    }}
-                >
-                    Insert {isThread ? 'All Tweets' : 'Tweet'}
-                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                </button>
+                <div className="sticky bottom-0 pt-4 bg-gradient-to-t from-[var(--koto-bg-dark)] via-[var(--koto-bg-dark)] to-transparent z-10 pb-2">
+                    <button
+                        onClick={() => onInsert()}
+                        className="w-full rounded-xl py-4 text-xs font-bold uppercase tracking-widest text-white shadow-lg transition-all transform hover:shadow-xl active:scale-[0.99] group flex items-center justify-center gap-2 overflow-hidden relative"
+                        style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)', // Emerald gradient
+                            boxShadow: '0 8px 20px -6px rgba(16, 185, 129, 0.5)'
+                        }}
+                    >
+                        <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300" />
+                        <span className="relative flex items-center gap-2">
+                            Insert {isThread ? 'All Tweets' : 'Tweet'}
+                            <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </span>
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -77,43 +96,72 @@ const ResultItem: React.FC<{
     index?: number;
     total?: number;
     onInsert?: () => void;
-}> = ({ content, index, total, onInsert }) => {
+    onCopy?: () => void;
+}> = ({ content, index, total, onInsert, onCopy }) => {
+    const [copied, setCopied] = useState(false);
     const charCount = content.length;
     const isOverLimit = charCount > 280;
 
+    const handleCopyClick = () => {
+        if (onCopy) {
+            onCopy();
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
-        <div className="group relative rounded-xl border p-4 transition-all hover:border-[var(--koto-border)] hover:shadow-md" style={{
+        <div className="group relative rounded-xl border p-5 transition-all duration-300 hover:border-[var(--koto-sakura-pink)] hover:shadow-lg hover:shadow-[rgba(236,72,153,0.05)]" style={{
             backgroundColor: 'var(--koto-bg-card)',
             borderColor: 'var(--koto-border)'
         }}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
                 {index && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-[var(--koto-bg-dark)] px-2 py-0.5 rounded text-[var(--koto-text-secondary)]">
-                        {index}/{total}
+                    <span className="text-[9px] font-bold uppercase tracking-wider bg-[var(--koto-bg-input)] border border-[var(--koto-border)] px-2 py-0.5 rounded-full text-[var(--koto-text-secondary)]">
+                        {index} / {total}
                     </span>
                 )}
-                <span className={`text-[10px] font-mono ml-auto ${isOverLimit ? 'text-[var(--koto-error)] font-bold' : 'text-[var(--koto-text-tertiary)]'}`}>
-                    {charCount}/280
-                </span>
+                <div className="ml-auto flex items-center gap-3">
+                    <span className={`text-[10px] font-mono font-medium ${isOverLimit ? 'text-[var(--koto-error)]' : 'text-[var(--koto-text-tertiary)]'}`}>
+                        {charCount} / 280
+                    </span>
+                </div>
             </div>
 
-            <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--koto-text-primary)' }}>
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed font-normal" style={{ color: 'var(--koto-text-primary)' }}>
                 {content}
             </p>
 
-            {onInsert && (
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Action Overlay - Visible on Hover */}
+            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-1 group-hover:translate-y-0">
+                <button
+                    onClick={handleCopyClick}
+                    className="p-1.5 rounded-lg bg-[var(--koto-bg-input)] border border-[var(--koto-border)] text-[var(--koto-text-secondary)] hover:text-[var(--koto-text-primary)] hover:border-[var(--koto-text-secondary)] transition-colors shadow-sm"
+                    title="Copy text"
+                >
+                    {copied ? (
+                        <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                    ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    )}
+                </button>
+
+                {onInsert && (
                     <button
                         onClick={onInsert}
-                        className="p-1.5 rounded-lg bg-[var(--koto-success)] text-white shadow-md hover:translate-y-[-1px] transition-transform"
+                        className="p-1.5 rounded-lg bg-[var(--koto-success)] text-white shadow-md hover:brightness-110 hover:-translate-y-0.5 transition-all"
                         title="Insert this tweet only"
                     >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
                     </button>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };
