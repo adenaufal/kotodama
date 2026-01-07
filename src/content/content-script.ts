@@ -9,6 +9,38 @@ let runtimeInvalidated = false;
 
 const PANEL_TRANSITION_DURATION = 300;
 
+/**
+ * Extract tweet context from a tweet article element
+ */
+async function extractTweetContextFromPage(tweetElement: HTMLElement): Promise<{ text: string; username: string } | null> {
+  try {
+    // Find the tweet text
+    const tweetTextElement = tweetElement.querySelector('[data-testid="tweetText"]');
+    const text = tweetTextElement?.textContent?.trim() || '';
+
+    // Find the username - look for the author link
+    const authorLink = tweetElement.querySelector('a[role="link"][href*="/"]');
+    let username = '';
+    if (authorLink) {
+      const href = authorLink.getAttribute('href') || '';
+      const match = href.match(/^\/([^\/]+)/);
+      if (match) {
+        username = match[1];
+      }
+    }
+
+    if (!text || !username) {
+      console.warn('[Kotodama] Could not extract complete tweet context:', { text, username });
+      return null;
+    }
+
+    return { text, username };
+  } catch (error) {
+    console.error('[Kotodama] Error extracting tweet context:', error);
+    return null;
+  }
+}
+
 type ExtensionRuntime = typeof chrome.runtime | null;
 
 function resolveExtensionRuntime(): ExtensionRuntime {

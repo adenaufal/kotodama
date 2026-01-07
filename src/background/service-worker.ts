@@ -83,9 +83,16 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
 
 async function handleGenerate(request: GenerateRequest): Promise<MessageResponse> {
   try {
+    logger.info('Generation request received:', {
+      brandVoiceId: request.brandVoiceId,
+      isThread: request.isThread,
+      hasPrompt: !!request.prompt
+    });
+
     // Check rate limits first
     const rateLimitCheck = await tryRequest('generate');
     if (!rateLimitCheck.allowed) {
+      logger.warn('Rate limit exceeded');
       return {
         success: false,
         error: rateLimitCheck.error || 'Rate limit exceeded. Please try again later.',
@@ -93,24 +100,47 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
     }
 
     const settings = await getSettings();
+    logger.info('Settings retrieved:', {
+      hasOpenAiKey: !!settings.apiKeys.openai,
+      defaultModel: settings.defaultModel,
+      modelPriority: settings.modelPriority
+    });
 
     if (!settings.apiKeys.openai) {
-      throw new Error('OpenAI API key not configured');
+      logger.error('OpenAI API key not configured');
+      throw new Error('OpenAI API key not configured. Please add your API key in the extension settings.');
     }
 
     // Get brand voice
     const brandVoice = await db.brandVoices.get(request.brandVoiceId);
     if (!brandVoice) {
-      throw new Error('Brand voice not found');
+      logger.error('Brand voice not found:', request.brandVoiceId);
+      // Check if any brand voices exist
+      const allVoices = await db.brandVoices.toArray();
+      logger.info('Available brand voices:', allVoices.length);
+
+      if (allVoices.length === 0) {
+        throw new Error('No brand voices found. Please create a brand voice in settings first.');
+      }
+
+      throw new Error('Selected brand voice not found. Please select a different voice or create a new one.');
     }
+
+    logger.info('Brand voice loaded:', {
+      id: brandVoice.id,
+      name: brandVoice.name,
+      hasExamples: brandVoice.exampleTweets.length > 0
+    });
 
     // Get target profile if specified
     let targetProfile: UserProfile | undefined;
     if (request.targetProfileId) {
       targetProfile = await db.userProfiles.get(request.targetProfileId);
+      logger.info('Target profile loaded:', targetProfile?.username);
     }
 
     // Generate content
+    logger.info('Starting OpenAI generation...');
     const result = await generateWithOpenAI(
       request,
       settings.apiKeys.openai,
@@ -118,6 +148,12 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
       targetProfile,
       settings.defaultModel
     );
+
+    logger.info('Generation successful:', {
+      provider: result.provider,
+      tokenUsage: result.tokenUsage,
+      contentLength: typeof result.content === 'string' ? result.content.length : result.content.length
+    });
 
     // Save generated tweet to history
     const generatedTweet = {
@@ -142,9 +178,24 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
       data: result,
     };
   } catch (error: any) {
+    logger.error('Generation failed:', error);
+
+    // Provide more helpful error messages
+    let userMessage = error.message || 'Failed to generate tweet';
+
+    if (error.message?.includes('API key')) {
+      userMessage = 'OpenAI API key is not configured or invalid. Please check your settings.';
+    } else if (error.message?.includes('rate limit') || error.message?.includes('429')) {
+      userMessage = 'OpenAI API rate limit exceeded. Please try again in a few moments.';
+    } else if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+      userMessage = 'Invalid OpenAI API key. Please check your API key in settings.';
+    } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+      userMessage = 'Network error. Please check your internet connection and try again.';
+    }
+
     return {
       success: false,
-      error: error.message,
+      error: userMessage,
     };
   }
 }

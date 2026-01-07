@@ -131,7 +131,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
                                     <option value="">Select Voice...</option>
                                     {voices.map((voice) => (
                                         <option key={voice.id} value={voice.id}>
-                                            {voice.emoji} {voice.name}
+                                            {voice.name}
                                         </option>
                                     ))}
                                 </select>

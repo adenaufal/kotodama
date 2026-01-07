@@ -190,10 +190,26 @@ export async function generateWithOpenAI(
 ): Promise<GenerateResponse> {
   const isThread = request.isThread || false;
 
+  // Validate API key
+  if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
+    throw new Error('OpenAI API key is missing or invalid');
+  }
+
+  if (!apiKey.startsWith('sk-')) {
+    console.warn('[Kotodama] API key does not start with "sk-" - this may indicate an invalid key');
+  }
+
   // Select model using smart selection
   const model = selectOptimalModel(request, modelPriority, preferredModel);
 
   console.log(`[Kotodama] Using model: ${model} (priority: ${modelPriority})`);
+  console.log(`[Kotodama] Request details:`, {
+    isThread,
+    threadLength: request.threadLength,
+    fastMode: request.fastMode,
+    promptLength: request.prompt?.length || 0,
+    brandVoice: brandVoice.name
+  });
 
   const messages: OpenAIMessage[] = [
     {
@@ -218,29 +234,67 @@ export async function generateWithOpenAI(
       requestBody.temperature = 0.7;
     }
 
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
+    console.log(`[Kotodama] Sending request to OpenAI API...`, {
+      model: modelName,
+      temperature: includeTemperature ? 0.7 : 'default',
+      maxTokens: requestBody.max_completion_tokens
     });
+
+    let response: Response;
+    try {
+      response = await fetch(OPENAI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+    } catch (fetchError: any) {
+      console.error('[Kotodama] Network error calling OpenAI API:', fetchError);
+      throw new Error(`Network error: ${fetchError.message || 'Failed to connect to OpenAI API'}`);
+    }
+
+    console.log(`[Kotodama] OpenAI API response status: ${response.status}`);
 
     if (!response.ok) {
       const { message } = await extractOpenAIErrorMessage(response);
+      console.error('[Kotodama] OpenAI API error:', {
+        status: response.status,
+        message,
+        model: modelName
+      });
 
       if (includeTemperature && isTemperatureUnsupportedError(message)) {
         modelsRequiringDefaultTemperature.add(modelName);
+        console.log('[Kotodama] Retrying without temperature parameter...');
         return requestWithModel(modelName, false);
       }
 
-      throw new Error(message || 'OpenAI API request failed');
+      throw new Error(message || `OpenAI API request failed with status ${response.status}`);
     }
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (parseError: any) {
+      console.error('[Kotodama] Failed to parse OpenAI response as JSON:', parseError);
+      throw new Error('Invalid response from OpenAI API');
+    }
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('[Kotodama] Unexpected OpenAI response structure:', data);
+      throw new Error('Unexpected response format from OpenAI API');
+    }
+
     const content = data.choices[0].message.content.trim();
-    const tokenUsage = data.usage.total_tokens;
+    const tokenUsage = data.usage?.total_tokens || 0;
+
+    console.log('[Kotodama] Successfully generated content:', {
+      contentLength: content.length,
+      tokenUsage,
+      isThread
+    });
 
     if (isThread) {
       // Parse thread into individual tweets
@@ -248,6 +302,8 @@ export async function generateWithOpenAI(
         .split(/\n(?=\d+[.\/]\s)/)
         .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim())
         .filter((tweet: string) => tweet.length > 0);
+
+      console.log('[Kotodama] Parsed thread into', tweets.length, 'tweets');
 
       return {
         content: tweets,
