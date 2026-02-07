@@ -19,6 +19,36 @@ export interface BrandVoice {
   isTemplate?: boolean; // Built-in templates that can't be deleted
   createdAt: Date;
   updatedAt: Date;
+
+  // V2 Fields (Optional for backward compatibility)
+  vocabulary?: {
+    approved: string[];
+    avoid: string[];
+  };
+  platformGuidelines?: Record<string, {
+    style: string;
+    format: string;
+    emojiUsage: string;
+    length: string;
+  }>;
+  characterVoices?: Record<string, {
+    role: string;
+    traits: string;
+    usedFor: string;
+  }>;
+  coreValues?: string[];
+  messagingFramework?: {
+    primaryValue: string;
+    brandPromises: string[];
+    audienceSegments?: Record<string, {
+      tone: string;
+      focus: string;
+      keyMessage: string;
+    }>;
+  };
+  dosList?: string[];
+  dontsList?: string[];
+  version?: string;
 }
 
 export interface UserProfile {

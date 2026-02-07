@@ -1,0 +1,479 @@
+/* ========================================
+   Kotodama Design System v2
+   Light Mode | Minimalistic | Modern
+   ======================================== */
+
+:root {
+    /* === Color Palette (Zen Minimalist) === */
+
+    /* Backgrounds */
+    --koto-bg-primary: #FFFFFF;
+    --koto-bg-secondary: #FAFAFA;
+    /* Very subtle gray for page bg */
+    --koto-bg-tertiary: #F4F4F5;
+    /* Slightly darker for inputs/hovers */
+    --koto-bg-elevated: #FFFFFF;
+
+    /* Borders & Dividers */
+    --koto-border: #E4E4E7;
+    /* Zinc-200 */
+    --koto-border-light: #F4F4F5;
+    /* Zinc-100 */
+    --koto-border-focus: #D4D4D8;
+    /* Zinc-300 */
+
+    /* Text */
+    --koto-text-primary: #18181B;
+    /* Zinc-900 (Softer black) */
+    --koto-text-secondary: #52525B;
+    /* Zinc-600 */
+    --koto-text-tertiary: #A1A1AA;
+    /* Zinc-400 */
+    --koto-text-disabled: #D4D4D8;
+    /* Zinc-300 */
+
+    /* Accent - Sakura Pink (Preserved but refined) */
+    --koto-accent: #F472B6;
+    --koto-accent-hover: #EC4899;
+    --koto-accent-light: #FDF2F8;
+    --koto-accent-muted: rgba(244, 114, 182, 0.08);
+
+    /* Semantic Colors */
+    --koto-success: #10B981;
+    --koto-success-light: #ECFDF5;
+    --koto-warning: #F59E0B;
+    --koto-warning-light: #FFFBEB;
+    --koto-error: #EF4444;
+    --koto-error-light: #FEF2F2;
+    --koto-info: #3B82F6;
+    --koto-info-light: #EFF6FF;
+
+    /* === Typography === */
+    --koto-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --koto-font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+
+    /* Font Sizes */
+    --koto-text-xs: 0.75rem;
+    /* 12px */
+    --koto-text-sm: 0.875rem;
+    /* 14px */
+    --koto-text-base: 1rem;
+    /* 16px */
+    --koto-text-md: 1.125rem;
+    /* 18px */
+    --koto-text-lg: 1.25rem;
+    /* 20px */
+    --koto-text-xl: 1.5rem;
+    /* 24px */
+    --koto-text-2xl: 1.875rem;
+    /* 30px */
+    --koto-text-3xl: 2.25rem;
+    /* 36px */
+
+    /* Font Weights (Lighter overall) */
+    --koto-font-normal: 400;
+    --koto-font-medium: 500;
+    --koto-font-semibold: 600;
+    --koto-font-bold: 700;
+
+    /* Line Heights */
+    --koto-leading-tight: 1.2;
+    --koto-leading-normal: 1.5;
+    --koto-leading-relaxed: 1.75;
+
+    /* === Spacing Scale (4px base) === */
+    --koto-space-0: 0;
+    --koto-space-1: 0.25rem;
+    --koto-space-2: 0.5rem;
+    --koto-space-3: 0.75rem;
+    --koto-space-4: 1rem;
+    --koto-space-5: 1.25rem;
+    --koto-space-6: 1.5rem;
+    --koto-space-8: 2rem;
+    --koto-space-10: 2.5rem;
+    --koto-space-12: 3rem;
+    --koto-space-16: 4rem;
+
+    /* === Border Radius (More rounded) === */
+    --koto-radius-sm: 8px;
+    --koto-radius-md: 12px;
+    --koto-radius-lg: 16px;
+    --koto-radius-xl: 24px;
+    --koto-radius-2xl: 32px;
+    --koto-radius-full: 9999px;
+
+    /* === Shadows (Softer, more diffuse) === */
+    --koto-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.02);
+    --koto-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
+    --koto-shadow-md: 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+    --koto-shadow-lg: 0 12px 24px -6px rgba(0, 0, 0, 0.06);
+    --koto-shadow-xl: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+    --koto-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+    /* Accent Shadow */
+    --koto-shadow-accent: 0 8px 20px -4px rgba(244, 114, 182, 0.25);
+    --koto-shadow-accent-lg: 0 12px 28px -6px rgba(244, 114, 182, 0.35);
+
+    /* === Transitions === */
+    --koto-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --koto-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --koto-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* === Z-Index Scale === */
+    --koto-z-base: 0;
+    --koto-z-dropdown: 10;
+    --koto-z-sticky: 20;
+    --koto-z-fixed: 30;
+    --koto-z-modal-backdrop: 40;
+    --koto-z-modal: 50;
+    --koto-z-popover: 60;
+    --koto-z-tooltip: 70;
+}
+
+/* === Base Styles === */
+.koto-v2 {
+    font-family: var(--koto-font-sans);
+    color: var(--koto-text-primary);
+    background: var(--koto-bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Card Component === */
+.koto-card {
+    background: var(--koto-bg-elevated);
+    border: 1px solid var(--koto-border);
+    border-radius: var(--koto-radius-xl);
+    box-shadow: var(--koto-shadow-sm);
+    transition: box-shadow var(--koto-transition-normal), border-color var(--koto-transition-normal);
+}
+
+.koto-card:hover {
+    box-shadow: var(--koto-shadow-md);
+}
+
+.koto-card-lg {
+    border-radius: var(--koto-radius-2xl);
+    box-shadow: var(--koto-shadow-md);
+}
+
+.koto-card-lg:hover {
+    box-shadow: var(--koto-shadow-lg);
+}
+
+/* === Input Components === */
+.koto-input {
+    width: 100%;
+    padding: var(--koto-space-3) var(--koto-space-4);
+    font-size: var(--koto-text-base);
+    font-weight: var(--koto-font-medium);
+    color: var(--koto-text-primary);
+    background: var(--koto-bg-primary);
+    border: 1.5px solid var(--koto-border);
+    border-radius: var(--koto-radius-md);
+    outline: none;
+    transition: border-color var(--koto-transition-fast), box-shadow var(--koto-transition-fast);
+}
+
+.koto-input::placeholder {
+    color: var(--koto-text-tertiary);
+    font-weight: var(--koto-font-normal);
+}
+
+.koto-input:focus {
+    border-color: var(--koto-accent);
+    box-shadow: 0 0 0 3px var(--koto-accent-muted);
+}
+
+.koto-input:disabled {
+    background: var(--koto-bg-tertiary);
+    color: var(--koto-text-disabled);
+    cursor: not-allowed;
+}
+
+/* Textarea variant */
+.koto-textarea {
+    resize: none;
+    min-height: 80px;
+}
+
+/* === Button Components === */
+.koto-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--koto-space-2);
+    padding: var(--koto-space-3) var(--koto-space-5);
+    font-size: var(--koto-text-base);
+    font-weight: var(--koto-font-semibold);
+    line-height: 1;
+    border-radius: var(--koto-radius-md);
+    border: none;
+    cursor: pointer;
+    transition: all var(--koto-transition-fast);
+    outline: none;
+}
+
+.koto-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Primary Button */
+.koto-btn-primary {
+    background: var(--koto-accent);
+    color: white;
+    box-shadow: var(--koto-shadow-accent);
+}
+
+.koto-btn-primary:hover:not(:disabled) {
+    background: var(--koto-accent-hover);
+    box-shadow: var(--koto-shadow-accent-lg);
+    transform: translateY(-1px);
+}
+
+.koto-btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Secondary Button */
+.koto-btn-secondary {
+    background: var(--koto-bg-primary);
+    color: var(--koto-text-primary);
+    border: 1.5px solid var(--koto-border);
+}
+
+.koto-btn-secondary:hover:not(:disabled) {
+    background: var(--koto-bg-tertiary);
+    border-color: var(--koto-border-focus);
+}
+
+/* Ghost Button */
+.koto-btn-ghost {
+    background: transparent;
+    color: var(--koto-text-secondary);
+}
+
+.koto-btn-ghost:hover:not(:disabled) {
+    background: var(--koto-bg-tertiary);
+    color: var(--koto-text-primary);
+}
+
+/* === Label === */
+.koto-label {
+    display: block;
+    font-size: var(--koto-text-xs);
+    font-weight: var(--koto-font-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--koto-text-secondary);
+    margin-bottom: var(--koto-space-2);
+}
+
+/* === Section Header === */
+.koto-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--koto-space-3);
+    padding-bottom: var(--koto-space-4);
+    margin-bottom: var(--koto-space-4);
+    border-bottom: 1px solid var(--koto-border-light);
+}
+
+.koto-section-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--koto-radius-md);
+    background: var(--koto-accent-light);
+    color: var(--koto-accent);
+}
+
+.koto-section-title {
+    font-size: var(--koto-text-lg);
+    font-weight: var(--koto-font-bold);
+    color: var(--koto-text-primary);
+}
+
+/* === Divider === */
+.koto-divider {
+    height: 1px;
+    background: var(--koto-border);
+    margin: var(--koto-space-6) 0;
+}
+
+/* === Alert/Info Box === */
+.koto-alert {
+    padding: var(--koto-space-4);
+    border-radius: var(--koto-radius-md);
+    font-size: var(--koto-text-sm);
+    font-weight: var(--koto-font-medium);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--koto-space-3);
+}
+
+.koto-alert-info {
+    background: var(--koto-info-light);
+    color: var(--koto-info);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.koto-alert-success {
+    background: var(--koto-success-light);
+    color: var(--koto-success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.koto-alert-warning {
+    background: var(--koto-warning-light);
+    color: #B45309;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.koto-alert-error {
+    background: var(--koto-error-light);
+    color: var(--koto-error);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* === Badge/Tag === */
+.koto-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--koto-space-1) var(--koto-space-2);
+    font-size: var(--koto-text-xs);
+    font-weight: var(--koto-font-semibold);
+    border-radius: var(--koto-radius-sm);
+    background: var(--koto-bg-tertiary);
+    color: var(--koto-text-secondary);
+}
+
+.koto-badge-accent {
+    background: var(--koto-accent-light);
+    color: var(--koto-accent);
+}
+
+/* === Slider === */
+.koto-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: var(--koto-radius-full);
+    background: var(--koto-bg-tertiary);
+    outline: none;
+    cursor: pointer;
+}
+
+.koto-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--koto-accent);
+    cursor: pointer;
+    box-shadow: var(--koto-shadow-sm);
+    transition: transform var(--koto-transition-fast), box-shadow var(--koto-transition-fast);
+}
+
+.koto-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: var(--koto-shadow-accent);
+}
+
+.koto-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--koto-accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--koto-shadow-sm);
+}
+
+/* === Scrollbar === */
+.koto-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.koto-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.koto-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--koto-border);
+    border-radius: var(--koto-radius-full);
+}
+
+.koto-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--koto-text-tertiary);
+}
+
+/* === Animations === */
+@keyframes koto-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes koto-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes koto-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.koto-animate-fade-in {
+    animation: koto-fade-in var(--koto-transition-normal) ease forwards;
+}
+
+.koto-animate-slide-up {
+    animation: koto-slide-up var(--koto-transition-slow) ease forwards;
+}
+
+.koto-animate-scale-in {
+    animation: koto-scale-in var(--koto-transition-slow) ease forwards;
+}
+
+/* Staggered animations */
+.koto-delay-1 {
+    animation-delay: 50ms;
+}
+
+.koto-delay-2 {
+    animation-delay: 100ms;
+}
+
+.koto-delay-3 {
+    animation-delay: 150ms;
+}
+
+.koto-delay-4 {
+    animation-delay: 200ms;
+}

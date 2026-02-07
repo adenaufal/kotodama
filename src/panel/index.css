@@ -1,125 +1,89 @@
 @import "tailwindcss";
-@import "../styles/tokens.css";
-@import "../styles/kotodama-tokens.css";
+@import "../styles/design-system.css";
 
-* {
-  box-sizing: border-box;
-  /*IMPORTANT: do not set margin and padding 0 here as it may conflict with third-party components*/
+:root {
+  /* Panel-specific overrides for light mode */
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-bg-hover: rgba(248, 250, 252, 0.98);
+  --glass-border: var(--koto-border);
+  --glass-shadow: var(--koto-shadow-xl);
+
+  --text-primary: var(--koto-text-primary);
+  --text-secondary: var(--koto-text-secondary);
+  --text-tertiary: var(--koto-text-tertiary);
 }
 
-html {
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--koto-font-sans);
+  background-color: transparent !important;
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  font-family: var(--koto-font-family);
-  background: var(--koto-bg-light);
-  color: var(--koto-text-primary);
-  transition: background-color var(--koto-transition-normal), color var(--koto-transition-normal);
-  overflow-x: hidden;
-  /* Removed flex centering to fix top/bottom gaps */
-  width: 100%;
-  height: 100vh;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-#root {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-@layer utilities {
-  .glass-card {
-    background: rgb(var(--bg-glass));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgb(var(--border-subtle));
-    box-shadow: var(--shadow-glass), var(--shadow-md);
+::-webkit-scrollbar-thumb {
+  background: var(--koto-border);
+  border-radius: var(--koto-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--koto-text-tertiary);
+}
+
+/* Glass Panel - Light Mode */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 
-  .focus-ring {
-    outline: none;
-    transition: box-shadow 0.15s ease;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
 
-  .focus-ring:focus-visible {
-    box-shadow: 0 0 0 2px rgb(var(--bg-elevated)), 0 0 0 4px rgb(var(--accent-primary));
-  }
-
-  .animate-in {
-    animation: slideIn 0.2s ease-out;
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .gradient-topbar {
-    background: linear-gradient(to right, rgb(37 99 235), rgb(99 102 241), rgb(192 38 211));
-  }
-
-  .dark .gradient-topbar {
-    background: linear-gradient(to right, rgb(29 78 216), rgb(79 70 229), rgb(168 85 247));
-  }
-
-  .btn-hover {
-    transition: all 0.15s ease;
-  }
-
-  .btn-hover:hover:not(:disabled) {
-    transform: scale(0.98);
-  }
-
-  .btn-hover:active:not(:disabled) {
+@keyframes scaleIn {
+  from {
+    opacity: 0;
     transform: scale(0.96);
   }
 
-  .page-shell {
-    width: min(100%, 1100px);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(1.5rem, 3vw, 3rem);
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
+}
 
-  .stack {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: clamp(1rem, 2.5vw, 2rem);
-  }
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
 
-  .stack-sm {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(0.75rem, 2vw, 1.25rem);
-  }
-
-  @media (max-width: 768px) {
-    body {
-      align-items: flex-start;
-      padding: clamp(16px, 6vw, 32px);
-    }
-
-    .page-shell {
-      gap: clamp(1.25rem, 4vw, 2.5rem);
-    }
-
-    .stack {
-      gap: clamp(0.75rem, 3vw, 1.5rem);
-    }
-  }
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
 }

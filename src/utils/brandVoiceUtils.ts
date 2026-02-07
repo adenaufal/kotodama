@@ -372,6 +372,35 @@ export function exportBrandVoiceAsMarkdown(voice: BrandVoice): string {
     });
   }
 
+  if (voice.vocabulary) {
+    markdown += `## Vocabulary\n\n`;
+    if (voice.vocabulary.approved && voice.vocabulary.approved.length > 0) {
+      markdown += `### Approved Terms\n${voice.vocabulary.approved.map(t => `- ${t}`).join('\n')}\n\n`;
+    }
+    if (voice.vocabulary.avoid && voice.vocabulary.avoid.length > 0) {
+      markdown += `### Terms to Avoid\n${voice.vocabulary.avoid.map(t => `- ${t}`).join('\n')}\n\n`;
+    }
+  }
+
+  if (voice.dosList && voice.dosList.length > 0) {
+    markdown += `## Do's\n${voice.dosList.map(t => `- ${t}`).join('\n')}\n\n`;
+  }
+
+  if (voice.dontsList && voice.dontsList.length > 0) {
+    markdown += `## Don'ts\n${voice.dontsList.map(t => `- ${t}`).join('\n')}\n\n`;
+  }
+
+  if (voice.platformGuidelines) {
+    markdown += `## Platform Guidelines\n\n`;
+    Object.entries(voice.platformGuidelines).forEach(([platform, guide]) => {
+      markdown += `### ${platform.charAt(0).toUpperCase() + platform.slice(1)}\n`;
+      markdown += `- **Style**: ${guide.style}\n`;
+      markdown += `- **Format**: ${guide.format}\n`;
+      markdown += `- **Emoji Usage**: ${guide.emojiUsage}\n`;
+      markdown += `- **Length**: ${guide.length}\n\n`;
+    });
+  }
+
   return markdown;
 }
 
@@ -397,6 +426,15 @@ export function importBrandVoice(jsonString: string): BrandVoice {
     ...parsed,
     id: parsed.id || `voice_${Date.now()}`,
     toneAttributes,
+    // Ensure arrays are initialized even if missing in JSON
+    vocabulary: parsed.vocabulary || undefined,
+    platformGuidelines: parsed.platformGuidelines || undefined,
+    characterVoices: parsed.characterVoices || undefined,
+    coreValues: parsed.coreValues || undefined,
+    messagingFramework: parsed.messagingFramework || undefined,
+    dosList: parsed.dosList || undefined,
+    dontsList: parsed.dontsList || undefined,
+    version: parsed.version || '1.0',
     isTemplate: false, // Imported voices are never templates
     createdAt: new Date(),
     updatedAt: new Date(),

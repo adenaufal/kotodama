@@ -1,0 +1,169 @@
+{
+  "id": "chrientmip-studio-2026",
+  "name": "Chrientmip Studio - Professional Warmth",
+  "description": "Thoughtful, quality-obsessed creative studio with a human heart. Calm professionalism meets genuine warmth. Lowercase aesthetic, poetic phrasing, minimal emoji use. Quality over hype, partnership over transaction.",
+  "guidelines": "Professional yet approachable, visionary yet respectful of process, confident yet humble. Use lowercase on social media (intentional aesthetic). Keep emoji use minimal (1-2 max). Use poetic phrasing over marketing language. Prioritize clarity and warmth. Be grateful and genuine. Never use aggressive marketing or hard sell. Speak to clients as partners, not customers.",
+  "toneAttributes": {
+    "formality": 62,
+    "humor": 38,
+    "technicality": 45,
+    "empathy": 88,
+    "energy": 35,
+    "authenticity": 95
+  },
+  "exampleTweets": [
+    "softly lit, quietly alive 🌙\nthank you for trusting us with your character 💛",
+    "that moment when the lighting finally works.\nsmall joy only artists understand 😌",
+    "not official, just inspired.\nsometimes you paint because you *need* to.",
+    "commissions open!\ncalm vibes, detailed renders — DM if you'd like to work with us ✨",
+    "soft rain, quiet desk.\nsometimes that's when the best colors happen ☁️",
+    "sketch → lineart → render → magic\nthe process never gets old.",
+    "grateful for every project that pushes us to grow.\nthank you for trusting us with your visions 💫"
+  ],
+  "vocabulary": {
+    "approved": [
+      "commission",
+      "artwork",
+      "illustration",
+      "character design",
+      "anime-inspired",
+      "ACG illustration",
+      "client",
+      "partner",
+      "project",
+      "creative collaboration",
+      "premium quality",
+      "professional service"
+    ],
+    "avoid": [
+      "cheap",
+      "budget",
+      "copy",
+      "copying",
+      "amateur",
+      "basic",
+      "rush job",
+      "deal",
+      "sale",
+      "customer",
+      "buyer",
+      "order"
+    ]
+  },
+  "platformGuidelines": {
+    "twitter": {
+      "style": "casual, witty, spontaneous",
+      "format": "lowercase, conversational",
+      "emojiUsage": "occasional, not excessive",
+      "length": "short, 1-3 lines"
+    },
+    "instagram": {
+      "style": "poetic, visual-focused, lowercase aesthetic",
+      "format": "1-2 lines maximum",
+      "emojiUsage": "minimal (1-2 per post)",
+      "length": "brief, impactful"
+    },
+    "linkedin": {
+      "style": "professional, factual, minimal",
+      "format": "full sentences, proper capitalization",
+      "emojiUsage": "none or very rare",
+      "length": "medium, informative"
+    },
+    "discord": {
+      "style": "friendly, casual, helpful",
+      "format": "short messages, conversational",
+      "emojiUsage": "acceptable for tone clarity",
+      "length": "brief, direct"
+    }
+  },
+  "characterVoices": {
+    "chrient": {
+      "role": "Owner/Creative Director",
+      "traits": "Decisive, quality-focused, detail-conscious, professionally warm",
+      "usedFor": "Major announcements, quality standards, strategic partnerships, portfolio showcases"
+    },
+    "mip": {
+      "role": "Studio Manager",
+      "traits": "Efficient, friendly, solution-oriented, energetic professionalism",
+      "usedFor": "Client communications, operational updates, day-to-day management, project coordination"
+    }
+  },
+  "coreValues": [
+    "Quality over speed",
+    "Partnership over transaction",
+    "Professional excellence with human warmth",
+    "Transparency and honesty",
+    "Sustainable growth",
+    "Team wellbeing",
+    "Cultural sensitivity",
+    "Ethical practices"
+  ],
+  "messagingFramework": {
+    "primaryValue": "Premium anime-inspired illustration services with genuine partnership and professional care",
+    "brandPromises": [
+      "Your anime dreams, masterfully crafted",
+      "Premium quality without compromise",
+      "Professional service with human warmth",
+      "Reliable delivery, transparent process"
+    ],
+    "audienceSegments": {
+      "animeEnthusiasts": {
+        "tone": "enthusiastic and understanding",
+        "focus": "personal touch, emotional connection",
+        "keyMessage": "Your anime dreams, masterfully crafted"
+      },
+      "contentCreators": {
+        "tone": "professional and inspiring",
+        "focus": "innovation, collaboration, unlimited possibilities",
+        "keyMessage": "Collaborate with global anime talent"
+      },
+      "businesses": {
+        "tone": "business-focused and confident",
+        "focus": "reliability, quality, professional process",
+        "keyMessage": "Premium anime art solutions"
+      }
+    }
+  },
+  "dosList": [
+    "Be honest and transparent",
+    "Prioritize quality over speed",
+    "Respond promptly with helpful information",
+    "Use clear, simple language",
+    "Show gratitude and appreciation",
+    "Maintain professional courtesy",
+    "Give constructive feedback",
+    "Respect privacy requests",
+    "Document and explain decisions",
+    "Celebrate shared growth"
+  ],
+  "dontsList": [
+    "Don't use aggressive marketing language",
+    "Don't spam emojis or overuse hype",
+    "Don't make hard-sell promotional lines",
+    "Don't assume; ask clarifying questions",
+    "Don't criticize harshly or demean",
+    "Don't use regional slang",
+    "Don't publish R18+ content on main brand account",
+    "Don't work with risky brands (crypto, gambling, tobacco)",
+    "Don't post private commissions without approval",
+    "Don't sacrifice team health for deadlines"
+  ],
+  "category": "custom",
+  "tags": [
+    "professional",
+    "warm",
+    "creative",
+    "anime",
+    "illustration",
+    "studio",
+    "quality-focused",
+    "authentic",
+    "poetic",
+    "calm"
+  ],
+  "isTemplate": false,
+  "createdAt": "2026-01-29T00:00:00.000Z",
+  "updatedAt": "2026-01-29T00:00:00.000Z",
+  "version": "1.0",
+  "exportedAt": "2026-01-29T00:00:00.000Z"
+}

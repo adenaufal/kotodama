@@ -38,6 +38,34 @@ function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile):
     prompt += '\n';
   }
 
+  // V2 Fields Support
+  if (brandVoice.vocabulary) {
+    if (brandVoice.vocabulary.approved && brandVoice.vocabulary.approved.length > 0) {
+      prompt += `Vocabulary - Approved Terms (Use these):\n${brandVoice.vocabulary.approved.join(', ')}\n\n`;
+    }
+    if (brandVoice.vocabulary.avoid && brandVoice.vocabulary.avoid.length > 0) {
+      prompt += `Vocabulary - Avoid these Terms:\n${brandVoice.vocabulary.avoid.join(', ')}\n\n`;
+    }
+  }
+
+  if (brandVoice.dosList && brandVoice.dosList.length > 0) {
+    prompt += `Do's:\n${brandVoice.dosList.map(item => `- ${item}`).join('\n')}\n\n`;
+  }
+
+  if (brandVoice.dontsList && brandVoice.dontsList.length > 0) {
+    prompt += `Don'ts:\n${brandVoice.dontsList.map(item => `- ${item}`).join('\n')}\n\n`;
+  }
+
+  // Check for Twitter specific guidelines
+  if (brandVoice.platformGuidelines && brandVoice.platformGuidelines.twitter) {
+    const twitterRules = brandVoice.platformGuidelines.twitter;
+    prompt += `Platform Rules (Twitter):\n`;
+    prompt += `- Style: ${twitterRules.style}\n`;
+    prompt += `- Format: ${twitterRules.format}\n`;
+    prompt += `- Emoji Usage: ${twitterRules.emojiUsage}\n`;
+    prompt += `- Length target: ${twitterRules.length}\n\n`;
+  }
+
   prompt += `Tone Attributes:\n`;
   prompt += `- Formality: ${brandVoice.toneAttributes.formality}/100\n`;
   prompt += `- Humor: ${brandVoice.toneAttributes.humor}/100\n`;

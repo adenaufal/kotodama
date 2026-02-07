@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.6.0](https://github.com/adenaufal/kotodama/compare/v1.5.0...v1.6.0) (2026-02-08)
+
+### 🚀 Added
+
+* **Settings Sidebar Navigation:** Settings page now uses a left sidebar for navigation (General, Brand Voices) with About at the footer.
+* **Brand Voices Page:** Brand Voices is now a dedicated settings page with full inline editing (no popup modals).
+* **Onboarding Split Layout:** Onboarding now uses a modern split-screen layout (info on left, form on right).
+* **Design System:** New `design-system.css` and `pages.css` with CSS variables for consistent theming.
+
+### 🔧 Changed
+
+* **Zen Minimalist Aesthetic:** Flattened UI across Settings and Onboarding, removing nested cards and heavy shadows.
+* **About Page:** Redesigned with clean, flat sections and philosophy cards.
+* **PageLayout Component:** Now supports `default`, `dashboard`, and `split` variants for flexible page layouts.
+
+### Refactor
+
+* **Settings State Consolidation:** All settings state now managed in a single `App.tsx` component.
+* **BrandVoicePage:** New inline component replaces modal-based BrandVoiceManager for create/edit flows.
+
 ## [1.5.0](https://github.com/adenaufal/kotodama/compare/v1.4.0...v1.5.0) (2026-01-07)
 
 
