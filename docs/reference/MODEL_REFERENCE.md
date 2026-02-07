@@ -1,6 +1,6 @@
-# Model Reference (v1.3.0)
+# Model Reference (v1.6.0)
 
-Updated 2025-10-18 — aligns with the shipping Kotodama codebase.
+Updated 2026-02-08 — aligns with the shipping Kotodama codebase.
 
 Kotodama currently routes all AI generation through OpenAI’s GPT-4o family. Gemini and Claude clients exist in `src/api/`, but the service worker still targets OpenAI exclusively. This reference documents what is live today and what’s ready for the next integration step.
 
@@ -10,10 +10,11 @@ Kotodama currently routes all AI generation through OpenAI’s GPT-4o family. Ge
 
 | ID | Friendly Name | Typical Use | Notes |
 |----|---------------|-------------|-------|
-| `gpt-4o-2024-11-20` | GPT-4o (Latest) | Default path for tweets, threads, replies | Configurable as the default model in settings |
-| `gpt-4o-2024-08-06` | GPT-4o (August 2024) | Alternate quality model | Optional override via settings |
-| `gpt-4o-mini` | GPT-4o Mini | Fast mode (`fastMode = true`) | Lower cost, lower latency |
-| `gpt-4o-mini-2024-07-18` | GPT-4o Mini (July 2024) | Fallback | Auto-retry when the latest mini fails |
+| `gpt-5-2025-08-07` | GPT-5 (Latest) | Default path for tweets, threads, replies | Configurable as the default model in settings |
+| `gpt-4o-2024-11-20` | GPT-4o Quality | High-quality alternative | Preferred model for non-reasoning tasks |
+| `gpt-5-mini-2025-08-07` | GPT-5 Mini | Fast mode (`fastMode = true`) | High speed, 10M free tokens/day |
+| `gpt-5-nano-2025-08-07` | GPT-5 Nano | Ultra fast mode (`fastMode = 'ultra'`) | Direct ultra-low-latency generation |
+| `gpt-4o-mini-2024-07-18` | GPT-4o Mini | Fallback | Auto-retry when the latest models fail |
 | `o1-2024-12-17` | OpenAI o1 | Reasoning (`reasoning = true`) | Temperature removed automatically |
 
 All OpenAI requests hit `https://api.openai.com/v1/chat/completions`. Thread requests cap `max_completion_tokens` at 1500; single tweets use 300.
@@ -45,8 +46,8 @@ interface GenerateRequest {
 }
 ```
 
-- **`fastMode = true`** → `gpt-4o-mini`
-- **`fastMode = 'ultra'`** → `gpt-4o-mini` (placeholder until additional models are introduced)
+- **`fastMode = true`** → `gpt-5-mini-2025-08-07`
+- **`fastMode = 'ultra'`** → `gpt-5-nano-2025-08-07`
 - **`reasoning = true`** → `o1-2024-12-17`
 - **`coding = true`** → stays on GPT-4o but frames prompts for structured/code output
 - **Threads**: `isThread = true` transforms the UI response into an array of tweets after stripping numbering

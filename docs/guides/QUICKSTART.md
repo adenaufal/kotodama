@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Kotodama v1.3.0 in a nutshell — install, load, and start composing on Twitter/X in minutes.
+Kotodama v1.6.0 in a nutshell — install, load, and start composing on Twitter/X in minutes.
 
 ## Prerequisites
 
@@ -65,9 +65,9 @@ Finishing the wizard saves your settings, creates a default brand voice, and ope
 ### Manage Voices & Preferences
 
 - From the panel, tap the gear icon to open the settings dashboard.
-- Refresh, edit, or delete brand voices with live validation.
+- Navigation: Use the left sidebar to switch between **General** and **Brand Voices**.
+- Manage Voices: Refresh, edit, or delete brand voices with live validation in the dedicated dashboard view.
 - Import additional voices via Markdown, tweak tone sliders, or set a new default voice/model.
-- Use the moon/sun button to toggle light/dark theming globally.
 
 ## Recommended Dev Workflow
 

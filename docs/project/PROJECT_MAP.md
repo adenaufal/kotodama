@@ -1,4 +1,4 @@
-# Project Map – Kotodama v1.4.0
+# Project Map – Kotodama v1.6.0
 
 High-level tour of the repository, updated for the current release.
 
@@ -32,14 +32,14 @@ kotodama/
 
 | Path | Purpose |
 |------|---------|
-| `api/openai.ts` | Shipping OpenAI client with fallback logic |
+| `api/openai.ts` | Shipping OpenAI client with fallback logic (GPT-5 default) |
 | `api/gemini.ts`, `api/claude.ts` | Ready-to-wire clients for upcoming provider support |
 | `background/service-worker.ts` | Message router, OpenAI invocation, storage access |
 | `content/content-script.ts` | Injects panel iframe, handles context capture and insertion |
 | `panel/Panel.tsx` | Main React component (prompting, reply templates, thread toggle) |
-| `settings/Settings.tsx` | API key management, default model/voice, theme toggle |
-| `settings/BrandVoiceManager.tsx` | Create/edit/delete brand voices with validation |
-| `onboarding/Onboarding.tsx` | Two-step setup with tweet URL + Markdown import |
+| `settings/App.tsx` | Settings dashboard state management and sidebar navigation |
+| `settings/components/BrandVoicePage.tsx` | Dashboard view for brand voice CRUD (replaces modal) |
+| `onboarding/Onboarding.tsx` | Multi-step setup flow with modern Split Layout |
 | `storage/db.ts` | Dexie schema for voices, history, user profiles |
 | `storage/settings.ts` | Chrome storage wrapper with encryption |
 

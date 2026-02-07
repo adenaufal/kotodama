@@ -4,12 +4,12 @@
 
 An intelligent Chrome/Edge browser extension that helps you compose tweets and replies that maintain your unique brand voice while adapting to your audience's communication style.
 
-## Highlights (v1.5.0)
+## Highlights (v1.6.0)
 
 - **🎨 Brand Voice Studio**: Create, import (Markdown or tweet links), edit, and delete brand voices with tone controls
-- **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-4o family with automatic fallback handling
+- **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-5 with automatic fallback handling
 - **💬 Reply Intelligence**: Auto-captures tweet context, surfaces reply templates, and blends in with the original conversation
-- **🌓 Premium Settings**: Redesigned dashboard with floating navigation, full-page gradients, and API key visibility toggle
+- **🏙️ Dashboard Sidebar**: Modern settings layout with sidebar navigation, flat UI, and API key visibility toggle
 - **🧵 Sequential Threads**: Intelligent thread posting that clicks the "Add" button and inserts tweets one-by-one with configurable delays
 - **🔒 Local-First Security**: API keys encrypted via Web Crypto; no data leaves the browser beyond OpenAI requests
 
@@ -90,7 +90,7 @@ An intelligent Chrome/Edge browser extension that helps you compose tweets and r
 
 - Open the panel and click the gear icon to launch the settings dashboard
 - View, edit, or delete saved brand voices with real-time validation
-- Set a default voice and model, toggle dark/light mode, and rerun onboarding
+- Set a default voice and model, and rerun onboarding
 
 ## Project Structure
 
@@ -164,7 +164,7 @@ Comprehensive documentation is available in the [docs/](docs/) directory:
 - **State Management**: Zustand 5
 - **Encryption**: Web Crypto API
 - **AI Models**:
-  - OpenAI `gpt-4o-2024-11-20` (default), `gpt-4o-mini`, and `o1-2024-12-17`
+  - OpenAI `gpt-5-2025-08-07` (default), `gpt-5-mini`, and `gpt-4o-2024-11-20`
   - Gemini and Claude clients exist but are not yet wired into the runtime
 
 ## Architecture
@@ -206,17 +206,21 @@ Content Script (inserts to Twitter)
 
 ## Roadmap
 
+### Shipped in v1.6.0 (February 2026)
+- **Settings Overhaul**: Replaced floating navigation with a modern sidebar layout (General, Brand Voices, About)
+- **Onboarding Redesign**: New split-screen layout for a more guided and premium setup experience
+- **UI Flat Design**: Removed nested cards and heavy shadows for a professional Zen minimalist aesthetic
+- **Design System Consolidation**: Centralized theming in `design-system.css` and `pages.css`
+- **Model Upgrade**: Updated default model to OpenAI GPT-5
+
+### Shipped in v1.5.0 (January 2026)
+- Sequential thread posting with automated insertion and progress toasts
+- API key visibility toggle and improved security messaging
+- Stability fixes for AI generation and tweet insertion
+
 ### Shipped in v1.4.0 (January 2026)
 - Redesigned Settings dashboard with floating navigation and full-page gradients
-- API key visibility toggle and improved security messaging
 - Enhanced brand voice management with better modal responsiveness
-- Fixed GitHub repository links and About page content
-- Improved tweet insertion robustness and panel positioning
-
-### Shipped in v1.3.0 (October 2025)
-- Brand voice manager with edit/delete and Markdown import
-- Reply context fixes with templates and performance logging
-- Design tokens refresh with light/dark switching
 
 ### Up Next
 1. Wire up Gemini and Claude providers end-to-end (service worker + UI selection)
@@ -262,4 +266,4 @@ For issues, questions, or feature requests, please open an issue on the GitHub r
 
 ---
 
-**Note**: This is v1.5.0. The extension is under active development. Features and UI may change.
+**Note**: This is v1.6.0. The extension is under active development. Features and UI may change.

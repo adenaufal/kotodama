@@ -156,7 +156,9 @@ Tweet insertion ([src/content/content-script.ts:225-261](src/content/content-scr
 - Entry points for each context have corresponding HTML files in their directories
 - API clients are in `src/api/` with one file per provider
 - Storage utilities are in `src/storage/` with separation of concerns (db, encryption, settings)
-- **Settings UI Layout**: Uses a unified full-page gradient background and fixed floating navigation pill at the top for consistent tab switching.
+- **Settings UI Layout**: Uses a `dashboard` variant of `PageLayout` with a left sidebar for navigation (General, Brand Voices) and an "About" link at the bottom.
+- **Onboarding UI Layout**: Uses a `split` variant of `PageLayout` with informational content on the left and input forms on the right.
+- **Visual Style**: Zen minimalist aesthetic with flat surfaces, subtle borders, and CSS-variable based theming defined in `design-system.css`.
 - Tests are colocated in `__tests__` subdirectories
 
 ### TypeScript Configuration
