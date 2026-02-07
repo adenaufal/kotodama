@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/adenaufal/kotodama/compare/v1.5.0...v1.6.0) (2026-02-07)
+
+
+### Features
+
+* **ux:** overhaul Settings and Onboarding layout for v1.6.0 ([2802e34](https://github.com/adenaufal/kotodama/commit/2802e3459dc9e0de4facfb62c6c2fec3449d27a7))
+
 ## [1.6.0](https://github.com/adenaufal/kotodama/compare/v1.5.0...v1.6.0) (2026-02-08)
 
 ### 🚀 Added
