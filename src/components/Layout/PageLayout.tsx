@@ -57,7 +57,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
                 <aside className="w-64 flex-shrink-0 bg-[var(--koto-bg-primary)] border-r border-[var(--koto-border-light)] flex flex-col">
                     <div className="p-6">
                         <div className="flex items-center gap-3 mb-8">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--koto-accent)] to-purple-500 flex items-center justify-center text-white font-bold">
+                            <div className="flex items-center justify-center">
                                 {logoIcon}
                             </div>
                             <span className="font-bold text-lg tracking-tight">Kotodama</span>
@@ -86,7 +86,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
                     <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,var(--koto-accent-muted)_0%,transparent_70%)] blur-3xl pointer-events-none" />
 
                     <div className="relative z-10">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--koto-accent)] to-purple-500 flex items-center justify-center text-2xl mb-8 shadow-lg shadow-[var(--koto-shadow-accent)]">
+                        <div className="mb-8">
                             {logoIcon}
                         </div>
                         {title && <h1 className="text-3xl font-bold mb-3 text-[var(--koto-text-primary)] tracking-tight">{title}</h1>}

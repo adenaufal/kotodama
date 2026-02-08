@@ -1,6 +1,6 @@
 {
   "name": "kotodama",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "main": "index.js",
   "scripts": {
     "dev": "vite build --watch",

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Kotodama",
   "short_name": "Kotodama",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Compose tweets and replies that maintain your brand voice while adapting to your audience",
   "permissions": [
     "storage",
@@ -61,7 +61,7 @@
         "panel.js",
         "index.js",
         "index.css",
-        "icons/icon32.png"
+        "icons/*.png"
       ],
       "matches": [
         "https://twitter.com/*",

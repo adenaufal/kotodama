@@ -46,8 +46,8 @@ const Panel: React.FC<PanelProps> = ({
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
   const [tweetLength, setTweetLength] = useState<LengthOption>('short');
-  const [selectedModelId, setSelectedModelId] = useState<string>('gpt-4o-mini');
-  const [customModelId, setCustomModelId] = useState<string>('');
+  // selectedModelId and customModelId removed as they are now global settings
+
   const [runtimeInvalidated, setRuntimeInvalidated] = useState(false);
 
   // Update context when prop changes
@@ -89,21 +89,7 @@ const Panel: React.FC<PanelProps> = ({
         const settings = settingsRes.data as UserSettings;
         setSettings(settings);
         setSelectedVoiceId(settings.defaultBrandVoiceId || '');
-
-        // Load custom model ID if present (previously defaultModel)
-        if (settings.defaultModel) {
-          setCustomModelId(settings.defaultModel);
-        }
-
-        // Restore last selected model from storage, or use default
-        chrome.storage.local.get(['lastSelectedModelId'], (result) => {
-          if (result.lastSelectedModelId) {
-            setSelectedModelId(result.lastSelectedModelId as string);
-          } else {
-            // Default to custom model if compatible, or standard mini
-            setSelectedModelId(settings.defaultModel ? settings.defaultModel : 'gpt-4o-mini');
-          }
-        });
+        // No longer managing local model state here
       }
 
       if (voicesRes.success && Array.isArray(voicesRes.data)) {
@@ -133,22 +119,8 @@ const Panel: React.FC<PanelProps> = ({
         prompt: sanitizedPrompt,
         brandVoiceId: selectedVoiceId,
         provider: 'openai', // Default to OpenAI for now
-        // Pass selected model explicitly as preferredModel
+        // Model ID is now handled by the background script using user settings
       };
-
-      // We'll pass the model ID in the request payload or handled by the backend
-      // But GenerateRequest doesn't have a 'modelId' field yet, it has 'preferredModel' in the function signature but not in the interface?
-      // Checking types/index.ts: generateWithOpenAI takes preferredModel argument.
-      // But GenerateRequest interface only has provider, fastMode, reasoning, quality.
-      // I should update GenerateRequest to include 'modelId' or 'preferredModel', OR rely on the backend to match 'fastMode' etc.
-      // However, the new requirement is specific model selection.
-      // Let's modify the payload sent to runtime. The runtime handler for 'generate' likely extracts these.
-      // For now, I'll attach it to the payload and update the backend if needed, or pass it via existing fields if possible.
-      // Actually, checking OpenAI.ts, selectOptimalModel takes 'preferredModel' as a separate argument.
-      // The message payload structure in background script needs to support this.
-      // I'll assume I can pass it in the payload.
-
-      (request as any).modelId = selectedModelId;
 
       if (context.type === 'reply' && context.tweetContext) {
         // Pass full context to backend for better prompting
@@ -159,10 +131,9 @@ const Panel: React.FC<PanelProps> = ({
       request.prompt = `${request.prompt}. Keep it ${tweetLength} (${charLimit} chars).`;
 
       // 2. Send API Call
-      // We need to update the message payload to include modelId
       const response = await sendRuntimeMessage({
         type: 'generate',
-        payload: { ...request, modelId: selectedModelId }
+        payload: request
       });
 
       if (response.success) {
@@ -192,11 +163,6 @@ const Panel: React.FC<PanelProps> = ({
 
   const hasResults = !!generatedContent && generatedContent.length > 0;
 
-  const handleModelSelect = (modelId: string) => {
-    setSelectedModelId(modelId);
-    chrome.storage.local.set({ lastSelectedModelId: modelId });
-  };
-
   return (
     <div className="w-full h-full p-4 flex items-center justify-center">
       <SolidContainer>
@@ -215,9 +181,6 @@ const Panel: React.FC<PanelProps> = ({
           onClose={handleClose}
           onOpenSettings={() => sendRuntimeMessage({ type: 'open-settings' })}
           context={context}
-          selectedModelId={selectedModelId}
-          onSelectModel={handleModelSelect}
-          customModelId={customModelId}
         />
 
         <div className="flex-1 overflow-hidden relative">

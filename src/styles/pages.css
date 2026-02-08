@@ -82,14 +82,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
     margin-bottom: var(--koto-space-4);
-    border-radius: var(--koto-radius-lg);
-    background: linear-gradient(135deg, var(--koto-accent) 0%, #A855F7 100%);
-    box-shadow: var(--koto-shadow-accent-lg);
-    font-size: 2rem;
-    transition: transform var(--koto-transition-normal), box-shadow var(--koto-transition-normal);
+    transition: transform var(--koto-transition-normal);
 }
 
 .koto-page-logo:hover {

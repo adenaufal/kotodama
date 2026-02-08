@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.7.1] - 2026-02-08
+
+### 🐛 Fixed
+- **Build Process**: Memperbaiki kegagalan build yang disebabkan oleh file ikon yang hilang.
+- **Panel Header UI**: Memperbaiki ukuran logo yang terlalu besar di header panel samping agar lebih proporsional.
+
+### 🔧 Changed
+- **SVG Logo Integration**: Migrasi `BrandLogo` ke format inline SVG menggunakan aset resmi `kotodama.svg` untuk rendering yang lebih tajam.
+- **Icon Optimization**: Menghapus set ikon yang tidak terpakai (apple-icons, redundant favicon) untuk mengurangi ukuran paket ekstensi.
+
+### 🛠️ Refactor
+- **Robust Build Script**: Menambahkan pengecekan `existsSync` pada `scripts/build.js` agar proses build lebih stabil terhadap aset opsional yang hilang.
+
 ## [1.7.0](https://github.com/adenaufal/kotodama/compare/v1.6.0...v1.7.0) - 2026-02-08
 
 ### 🚀 Added

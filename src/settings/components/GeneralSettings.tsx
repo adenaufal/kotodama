@@ -1,22 +1,44 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Key as KeyIcon, Eye, EyeOff } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Key as KeyIcon, Eye, EyeOff, Bot } from 'lucide-react';
+import { OPENAI_MODELS } from '../../constants/models';
+import { ModelManager } from './ModelManager';
 
 interface GeneralSettingsProps {
     openaiKey: string;
     setOpenaiKey: (key: string) => void;
-    customModelId: string;
-    setCustomModelId: (modelId: string) => void;
+
+    selectedModelId: string;
+    setSelectedModelId: (modelId: string) => void;
+
+    customModels: { id: string; name: string }[];
+    setCustomModels: (models: { id: string; name: string }[]) => void;
+
     saveState: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
     openaiKey,
     setOpenaiKey,
-    customModelId,
-    setCustomModelId,
+    selectedModelId,
+    setSelectedModelId,
+    customModels,
+    setCustomModels,
     saveState
 }) => {
-    const [showApiKey, setShowApiKey] = useState(false);
+    const [showApiKey, setShowApiKey] = React.useState(false);
+
+    // Combine standard models with custom models
+    const allModels = useMemo(() => {
+        const customOptions = customModels.map(m => ({
+            id: m.id,
+            name: m.name,
+            provider: 'openai'
+        }));
+
+        // Filter out any standard models that might have been added as custom (though valid)
+        // We prioritizing standard definitions if IDs match isn't critical here as we just want a list
+        return [...OPENAI_MODELS, ...customOptions];
+    }, [customModels]);
 
     return (
         <div className="space-y-12 max-w-3xl">
@@ -64,30 +86,40 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
 
             <div className="h-px bg-[var(--koto-border-light)]" />
 
-            {/* Custom Model Section */}
+            {/* AI Model Section */}
             <section className="space-y-6">
                 <div>
-                    <h2 className="text-xl font-semibold text-[var(--koto-text-primary)] mb-1">Custom Model</h2>
+                    <h2 className="text-xl font-semibold text-[var(--koto-text-primary)] mb-1">AI Model</h2>
                     <p className="text-sm text-[var(--koto-text-secondary)]">
-                        Use a specific model ID (e.g., <code className="bg-slate-100 px-1 py-0.5 rounded text-xs">gpt-4-turbo-preview</code>).
-                        If set, this model will be available in the extension panel.
+                        Select the model to use for generating content.
                     </p>
                 </div>
 
                 <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--koto-text-secondary)]">Active Model</label>
                     <div className="relative">
-                        <input
-                            type="text"
-                            value={customModelId || ''}
-                            onChange={(e) => setCustomModelId(e.target.value)}
-                            placeholder="e.g. gpt-4-0125-preview"
-                            className="w-full px-4 py-3 bg-[var(--koto-bg-elevated)] border border-[var(--koto-border)] rounded-xl focus:ring-2 focus:ring-[var(--koto-accent)] focus:border-transparent outline-none transition-all font-mono text-sm shadow-sm"
-                        />
+                        <select
+                            value={selectedModelId}
+                            onChange={(e) => setSelectedModelId(e.target.value)}
+                            className="w-full px-4 py-3 bg-[var(--koto-bg-elevated)] border border-[var(--koto-border)] rounded-xl focus:ring-2 focus:ring-[var(--koto-accent)] focus:border-transparent outline-none transition-all text-sm shadow-sm appearance-none"
+                        >
+                            {allModels.map(model => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name} ({model.id})
+                                </option>
+                            ))}
+                        </select>
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--koto-text-tertiary)] pointer-events-none p-1">
-                            <SettingsIcon size={16} />
+                            <Bot size={16} />
                         </div>
                     </div>
                 </div>
+
+                {/* Model Manager */}
+                <ModelManager
+                    customModels={customModels}
+                    onUpdateModels={setCustomModels}
+                />
             </section>
         </div>
     );

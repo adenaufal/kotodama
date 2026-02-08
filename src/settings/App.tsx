@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [defaultVoiceId, setDefaultVoiceId] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
+  const [customModels, setCustomModels] = useState<{ id: string; name: string }[]>([]);
 
   const loadData = async () => {
     try {
@@ -44,6 +45,7 @@ const App: React.FC = () => {
       setOpenaiKey(settingsData.apiKeys?.openai || '');
       setDefaultVoiceId(settingsData.defaultBrandVoiceId || '');
       setDefaultModel(settingsData.defaultModel || '');
+      setCustomModels(settingsData.customModels || []);
       setBrandVoices(voicesData);
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -59,7 +61,13 @@ const App: React.FC = () => {
       setSaveState('saving');
       const defaultSettings: UserSettings = { apiKeys: {}, analysisDepth: 20, ui: { buttonPosition: 'bottom-right', panelWidth: 400, theme: 'auto' }, features: { autoAnalyze: true, rememberHistory: true, showToneControls: true } };
       const baseSettings = settings || defaultSettings;
-      const updatedSettings: UserSettings = { ...baseSettings, apiKeys: { ...baseSettings.apiKeys, openai: openaiKey }, defaultBrandVoiceId: defaultVoiceId, defaultModel: defaultModel };
+      const updatedSettings: UserSettings = {
+        ...baseSettings,
+        apiKeys: { ...baseSettings.apiKeys, openai: openaiKey },
+        defaultBrandVoiceId: defaultVoiceId,
+        defaultModel: defaultModel,
+        customModels: customModels
+      };
       await sendMessage({ type: 'save-settings', payload: updatedSettings });
       setSettings(updatedSettings);
       setSaveState('saved');
@@ -73,13 +81,18 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!loading && settings) {
       const timeoutId = setTimeout(() => {
-        if (openaiKey !== (settings.apiKeys?.openai || '') || defaultVoiceId !== (settings.defaultBrandVoiceId || '') || defaultModel !== (settings.defaultModel || '')) {
+        if (
+          openaiKey !== (settings.apiKeys?.openai || '') ||
+          defaultVoiceId !== (settings.defaultBrandVoiceId || '') ||
+          defaultModel !== (settings.defaultModel || '') ||
+          JSON.stringify(customModels) !== JSON.stringify(settings.customModels || [])
+        ) {
           handleSave();
         }
       }, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [openaiKey, defaultVoiceId, defaultModel, settings, loading]);
+  }, [openaiKey, defaultVoiceId, defaultModel, customModels, settings, loading]);
 
   const handleRestartOnboarding = () => { chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html?skipRedirect=1') }); };
 
@@ -172,8 +185,10 @@ const App: React.FC = () => {
             <GeneralSettings
               openaiKey={openaiKey}
               setOpenaiKey={setOpenaiKey}
-              customModelId={defaultModel}
-              setCustomModelId={setDefaultModel}
+              selectedModelId={defaultModel}
+              setSelectedModelId={setDefaultModel}
+              customModels={customModels}
+              setCustomModels={setCustomModels}
               saveState={saveState}
             />
           )}
