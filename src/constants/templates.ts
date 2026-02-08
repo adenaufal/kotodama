@@ -92,3 +92,84 @@ export const REPLY_TEMPLATES: ReplyTemplate[] = [
     category: 'appreciative',
   },
 ];
+
+export interface TweetTemplate {
+  id: string;
+  label: string;
+  icon: string;
+  prompt: string;
+  category: 'general' | 'engagement' | 'promotion' | 'educational';
+}
+
+export const TWEET_TEMPLATES: TweetTemplate[] = [
+  {
+    id: 'tweet-thought',
+    label: 'Quick Thought',
+    icon: '💭',
+    prompt: 'Write a short, punchy tweet about a random thought or observation.',
+    category: 'general',
+  },
+  {
+    id: 'tweet-question',
+    label: 'Ask Audience',
+    icon: '❓',
+    prompt: 'Write an engaging question to ask my followers to spark conversation.',
+    category: 'engagement',
+  },
+  {
+    id: 'tweet-story',
+    label: 'Mini Story',
+    icon: '📖',
+    prompt: 'Write a short storytelling tweet with a hook, a conflict, and a resolution.',
+    category: 'engagement',
+  },
+  {
+    id: 'tweet-tip',
+    label: 'Share Tip',
+    icon: '💡',
+    prompt: 'Share a helpful tip or trick related to my niche.',
+    category: 'educational',
+  },
+  {
+    id: 'tweet-poll',
+    label: 'Poll Idea',
+    icon: '📊',
+    prompt: 'Suggest a poll question with 3-4 interesting options.',
+    category: 'engagement',
+  },
+  {
+    id: 'tweet-thread',
+    label: 'Thread Starter',
+    icon: '🧵',
+    prompt: 'Write an attention-grabbing opening tweet for a thread about a specific topic.',
+    category: 'educational',
+  },
+  {
+    id: 'tweet-promo',
+    label: 'Promotion',
+    icon: '🚀',
+    prompt: 'Write a promotional tweet for a new product or service, focusing on benefits.',
+    category: 'promotion',
+  },
+  {
+    id: 'tweet-announcement',
+    label: 'Announcement',
+    icon: '📢',
+    prompt: 'Write an exciting announcement tweet.',
+    category: 'general',
+  },
+  {
+    id: 'tweet-motivation',
+    label: 'Motivation',
+    icon: '💪',
+    prompt: 'Write a motivational quote or message to inspire followers.',
+    category: 'general',
+  },
+  {
+    id: 'tweet-meme',
+    label: 'Meme Concept',
+    icon: '🤣',
+    prompt: 'Describe a funny meme concept or write a relatable humorous tweet.',
+    category: 'engagement',
+  },
+];

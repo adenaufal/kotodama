@@ -29,8 +29,9 @@ Welcome to the Kotodama documentation! This directory contains all project docum
 - [Project Summary](project/SUMMARY.md) - High-level project overview
 - [TODO](project/TODO.md) - Planned features and improvements
 - [Release Notes](project/README_RELEASES.md) - Release process documentation
-- [Recent Updates (2025)](project/UPDATES_2025.md) - Changelog of recent updates
-- [Final Updates (2025)](project/UPDATES_FINAL_2025.md) - Latest changes
+- [Recent Updates (2026)](project/UPDATES_2026.md) - Latest breakthrough changes (v1.6.0, v1.7.0)
+- [Updates (2025)](project/UPDATES_2025.md) - Archive of 2025 development
+- [Final Updates (2025)](project/UPDATES_FINAL_2025.md) - v1.3.0 snapshot
 - [Reply Context Fix](project/REPLY-CONTEXT-FIX.md) - Technical fix documentation
 
 ## Documentation Structure

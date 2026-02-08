@@ -53,7 +53,7 @@ export const ResultCarousel: React.FC<ResultCarouselProps> = ({
                 </AnimatePresence>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 mt-auto">
+            <div className="pt-4 border-t border-slate-200 mt-auto">
                 <Button
                     variant="secondary"
                     onClick={onRegenerate}

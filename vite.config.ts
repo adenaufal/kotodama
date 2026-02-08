@@ -41,7 +41,7 @@ export default defineConfig({
       input: {
         panel: resolve(__dirname, 'src/panel/index.html'),
         background: resolve(__dirname, 'src/background/service-worker.ts'),
-        content: resolve(__dirname, 'src/content/content-script.ts'),
+        content: resolve(__dirname, 'src/content/content-script.tsx'),
         onboarding: resolve(__dirname, 'src/onboarding/index.html'),
         settings: resolve(__dirname, 'src/settings/index.html'),
       },

@@ -4,9 +4,9 @@
 
 An intelligent Chrome/Edge browser extension that helps you compose tweets and replies that maintain your unique brand voice while adapting to your audience's communication style.
 
-## Highlights (v1.6.0)
+## Highlights (v1.7.0)
 
-- **🎨 Brand Voice Studio**: Create, import (Markdown or tweet links), edit, and delete brand voices with tone controls
+- **🖼️ New Logo Branding**: Modern and sharp visual identity across extension icons and UI components
 - **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-5 with automatic fallback handling
 - **💬 Reply Intelligence**: Auto-captures tweet context, surfaces reply templates, and blends in with the original conversation
 - **🏙️ Dashboard Sidebar**: Modern settings layout with sidebar navigation, flat UI, and API key visibility toggle
@@ -206,6 +206,11 @@ Content Script (inserts to Twitter)
 
 ## Roadmap
 
+### Shipped in v1.7.0 (February 2026)
+- **New Logo Branding**: Refreshed visual identity with high-resolution PNG icons
+- **Cross-Platform Compatibility**: Complete set of icons from 16px to 192px and PWA manifests
+- **Asset Migration**: Successfully transitioned from SVG placeholders to production-ready assets
+
 ### Shipped in v1.6.0 (February 2026)
 - **Settings Overhaul**: Replaced floating navigation with a modern sidebar layout (General, Brand Voices, About)
 - **Onboarding Redesign**: New split-screen layout for a more guided and premium setup experience
@@ -236,7 +241,6 @@ Content Script (inserts to Twitter)
 
 ## Known Issues
 
-- Icon files are SVG placeholders (convert to PNG before publishing)
 - Only the OpenAI provider is currently wired; Gemini/Claude clients are experimental
 - Twitter DOM selectors may break with Twitter UI updates
 - Profile tweet scraping is still stubbed (manual tweet samples required)
@@ -266,4 +270,4 @@ For issues, questions, or feature requests, please open an issue on the GitHub r
 
 ---
 
-**Note**: This is v1.6.0. The extension is under active development. Features and UI may change.
+**Note**: This is v1.7.0. The extension is under active development. Features and UI may change.

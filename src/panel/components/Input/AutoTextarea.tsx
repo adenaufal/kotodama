@@ -34,7 +34,7 @@ export const AutoTextarea: React.FC<AutoTextareaProps> = ({
                 rows={1}
                 placeholder={placeholder}
                 className={cn(
-                    "w-full bg-transparent text-lg text-slate-800 placeholder-slate-400 resize-none outline-none",
+                    "w-full bg-transparent text-lg text-slate-900 placeholder-slate-400 resize-none outline-none",
                     "max-h-[200px] overflow-y-auto no-scrollbar",
                     className
                 )}
@@ -42,8 +42,8 @@ export const AutoTextarea: React.FC<AutoTextareaProps> = ({
                 {...props}
             />
 
-            {/* Active line indicator */}
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-pink-400 transition-all duration-200 group-focus-within:w-full rounded-full" />
+            {/* Active line indicator - Minimalist Black */}
+            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-slate-900 transition-all duration-200 group-focus-within:w-full rounded-full" />
         </div>
     );
 };

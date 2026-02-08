@@ -9,9 +9,6 @@ export interface ModelOption {
   tokenTier?: 'premium' | 'mini'; // For OpenAI free token quota tracking
 }
 
-// Model priority strategies for maximizing free token usage
-export type ModelPriority = 'maximize-free' | 'always-quality' | 'always-mini';
-
 export const OPENAI_MODELS: ModelOption[] = [
   // Premium tier - 1M free tokens/day (250K for tier 1-2)
   {

@@ -19,10 +19,10 @@ export const Button: React.FC<ButtonProps> = ({
     ...props
 }) => {
     const variants = {
-        primary: "bg-pink-500 text-white shadow-md shadow-pink-200 border border-pink-400 hover:bg-pink-600",
-        secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
-        ghost: "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-        glass: "bg-white/80 backdrop-blur-md border border-slate-200 text-slate-700 hover:bg-white"
+        primary: "bg-slate-900 text-white border border-slate-900 hover:bg-slate-800 shadow-none",
+        secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-none",
+        ghost: "bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 shadow-none",
+        glass: "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" // Fallback to secondary style
     };
 
     return (

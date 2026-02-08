@@ -14,7 +14,6 @@ import About from './About';
 import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
 import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
 import { UserSettings, BrandVoice } from '../types';
-import { ModelPriority } from '../constants/models';
 
 export type PageType = 'general' | 'voices' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -33,7 +32,6 @@ const App: React.FC = () => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [defaultVoiceId, setDefaultVoiceId] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
-  const [modelPriority, setModelPriority] = useState<ModelPriority>('maximize-free');
 
   const loadData = async () => {
     try {
@@ -46,7 +44,6 @@ const App: React.FC = () => {
       setOpenaiKey(settingsData.apiKeys?.openai || '');
       setDefaultVoiceId(settingsData.defaultBrandVoiceId || '');
       setDefaultModel(settingsData.defaultModel || '');
-      setModelPriority(settingsData.modelPriority || 'maximize-free');
       setBrandVoices(voicesData);
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -62,7 +59,7 @@ const App: React.FC = () => {
       setSaveState('saving');
       const defaultSettings: UserSettings = { apiKeys: {}, analysisDepth: 20, ui: { buttonPosition: 'bottom-right', panelWidth: 400, theme: 'auto' }, features: { autoAnalyze: true, rememberHistory: true, showToneControls: true } };
       const baseSettings = settings || defaultSettings;
-      const updatedSettings: UserSettings = { ...baseSettings, apiKeys: { ...baseSettings.apiKeys, openai: openaiKey }, defaultBrandVoiceId: defaultVoiceId, defaultModel: defaultModel, modelPriority: modelPriority };
+      const updatedSettings: UserSettings = { ...baseSettings, apiKeys: { ...baseSettings.apiKeys, openai: openaiKey }, defaultBrandVoiceId: defaultVoiceId, defaultModel: defaultModel };
       await sendMessage({ type: 'save-settings', payload: updatedSettings });
       setSettings(updatedSettings);
       setSaveState('saved');
@@ -76,13 +73,13 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!loading && settings) {
       const timeoutId = setTimeout(() => {
-        if (openaiKey !== (settings.apiKeys?.openai || '') || defaultVoiceId !== (settings.defaultBrandVoiceId || '') || defaultModel !== (settings.defaultModel || '') || modelPriority !== (settings.modelPriority || 'maximize-free')) {
+        if (openaiKey !== (settings.apiKeys?.openai || '') || defaultVoiceId !== (settings.defaultBrandVoiceId || '') || defaultModel !== (settings.defaultModel || '')) {
           handleSave();
         }
       }, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [openaiKey, defaultVoiceId, defaultModel, modelPriority, settings, loading]);
+  }, [openaiKey, defaultVoiceId, defaultModel, settings, loading]);
 
   const handleRestartOnboarding = () => { chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html?skipRedirect=1') }); };
 
@@ -175,10 +172,8 @@ const App: React.FC = () => {
             <GeneralSettings
               openaiKey={openaiKey}
               setOpenaiKey={setOpenaiKey}
-              defaultModel={defaultModel}
-              setDefaultModel={setDefaultModel}
-              modelPriority={modelPriority}
-              setModelPriority={setModelPriority}
+              customModelId={defaultModel}
+              setCustomModelId={setDefaultModel}
               saveState={saveState}
             />
           )}

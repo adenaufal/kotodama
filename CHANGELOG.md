@@ -1,31 +1,36 @@
 # Changelog
 
-## [1.6.0](https://github.com/adenaufal/kotodama/compare/v1.5.0...v1.6.0) (2026-02-07)
-
-
-### Features
-
-* **ux:** overhaul Settings and Onboarding layout for v1.6.0 ([2802e34](https://github.com/adenaufal/kotodama/commit/2802e3459dc9e0de4facfb62c6c2fec3449d27a7))
-
-## [1.6.0](https://github.com/adenaufal/kotodama/compare/v1.5.0...v1.6.0) (2026-02-08)
+## [1.7.0](https://github.com/adenaufal/kotodama/compare/v1.6.0...v1.7.0) - 2026-02-08
 
 ### 🚀 Added
-
-* **Settings Sidebar Navigation:** Settings page now uses a left sidebar for navigation (General, Brand Voices) with About at the footer.
-* **Brand Voices Page:** Brand Voices is now a dedicated settings page with full inline editing (no popup modals).
-* **Onboarding Split Layout:** Onboarding now uses a modern split-screen layout (info on left, form on right).
-* **Design System:** New `design-system.css` and `pages.css` with CSS variables for consistent theming.
+- **New Logo Branding**: Implementasi branding logo baru yang lebih tajam dan modern di seluruh ekstensi.
+- **Enhanced Icon Support**: Dukungan set ikon lengkap (16px, 32px, 48px, 72px, 96px, 128px, 144px, 192px) untuk kompatibilitas lintas platform.
+- **PWA Configuration**: Menambahkan `site.webmanifest` dan `browserconfig.xml` untuk integrasi browser yang lebih baik.
 
 ### 🔧 Changed
+- **Asset Migration**: Transisi dari file SVG tunggal (`kotodama-button.svg`) ke set ikon PNG yang dioptimalkan untuk performa dan rendering yang konsisten.
+- **Project Structure**: Organisasi file statis yang lebih rapi (file konfigurasi di root `public`, semua aset gambar di `public/icons`).
 
-* **Zen Minimalist Aesthetic:** Flattened UI across Settings and Onboarding, removing nested cards and heavy shadows.
-* **About Page:** Redesigned with clean, flat sections and philosophy cards.
-* **PageLayout Component:** Now supports `default`, `dashboard`, and `split` variants for flexible page layouts.
+### 🛠️ Refactor
+- **Build Script Update**: Memperbarui `scripts/build.js` untuk mendukung distribusi aset ikon dan konfigurasi baru ke folder `dist`.
 
-### Refactor
+## [1.6.0](https://github.com/adenaufal/kotodama/compare/v1.5.0...v1.6.0) - 2026-02-08
 
-* **Settings State Consolidation:** All settings state now managed in a single `App.tsx` component.
-* **BrandVoicePage:** New inline component replaces modal-based BrandVoiceManager for create/edit flows.
+### 🚀 Added
+- **Settings Sidebar Navigation**: Halaman Settings sekarang menggunakan sidebar kiri untuk navigasi (General, Brand Voices) dengan bagian About di footer.
+- **Brand Voices Page**: Brand Voices sekarang menjadi halaman pengaturan khusus dengan pengeditan inline (tanpa modal popup).
+- **Onboarding Split Layout**: Onboarding menggunakan layout split-screen modern (informasi di kiri, formulir di kanan).
+- **Design System**: File `design-system.css` dan `pages.css` baru dengan variabel CSS untuk tema yang konsisten.
+
+### 🔧 Changed
+- **Zen Minimalist Aesthetic**: UI yang lebih flat di seluruh Settings dan Onboarding, menghapus card bersarang dan shadow yang berat.
+- **About Page**: Desain ulang dengan bagian yang bersih dan flat serta philosophy cards.
+- **PageLayout Component**: Sekarang mendukung varian `default`, `dashboard`, and `split` untuk tata letak halaman yang fleksibel.
+
+### 🛠️ Refactor
+- **Settings State Consolidation**: Semua state pengaturan sekarang dikelola dalam satu komponen `App.tsx`.
+- **BrandVoicePage**: Komponen inline baru menggantikan `BrandVoiceManager` berbasis modal untuk alur buat/edit.
+
 
 ## [1.5.0](https://github.com/adenaufal/kotodama/compare/v1.4.0...v1.5.0) (2026-01-07)
 

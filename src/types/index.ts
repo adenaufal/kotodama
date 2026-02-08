@@ -67,6 +67,20 @@ export interface UserProfile {
   lastAnalyzed: Date;
 }
 
+export interface TweetContext {
+  text: string;
+  username: string; // @handle
+  displayName?: string; // Display Name
+  timestamp?: string; // ISO string or relative time
+  images?: string[]; // Alt text of attached images
+  metrics?: {
+    replies?: number;
+    retweets?: number;
+    likes?: number;
+  };
+  isThread?: boolean;
+}
+
 export interface GeneratedTweet {
   id: string;
   prompt: string;
@@ -80,6 +94,7 @@ export interface GeneratedTweet {
   timestamp: Date;
   apiUsed: 'openai' | 'gemini' | 'claude';
   tokenUsage: number;
+  replyContext?: TweetContext; // Store context for history
 }
 
 export interface UserSettings {
@@ -116,6 +131,7 @@ export interface GenerateRequest {
   targetProfileId?: string;
   isThread?: boolean;
   threadLength?: number;
+  replyContext?: TweetContext; // New field for structured context
   toneAdjustment?: Partial<ToneAttributes>;
   provider?: AIProvider;
   fastMode?: boolean | 'ultra' | 'haiku-45'; // true=fast, 'ultra'=ultra fast, 'haiku-45'=Haiku 4.5

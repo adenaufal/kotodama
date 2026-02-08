@@ -1,17 +1,11 @@
 import { GenerateRequest, GenerateResponse, BrandVoice, UserProfile } from '../types';
-import { ModelPriority } from '../constants/models';
 
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Model Selection Strategy - Using GPT-5 and GPT-4o models
-// Premium tier models (1M free tokens/day, 250K for tier 1-2)
-const DEFAULT_MODEL = 'gpt-5-2025-08-07'; // Latest GPT-5 for best quality
-const QUALITY_MODEL = 'gpt-4o-2024-11-20'; // GPT-4o as alternative
-
-// Mini tier models (10M free tokens/day, 2.5M for tier 1-2)
-const FAST_MODEL = 'gpt-5-mini-2025-08-07'; // GPT-5 Mini for speed
-const NANO_MODEL = 'gpt-5-nano-2025-08-07'; // GPT-5 Nano for ultra fast
-const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18'; // GPT-4o Mini as stable fallback
+// Default fallback models
+const DEFAULT_MODEL = 'gpt-4o-2024-11-20';
+const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18';
+const FAST_MODEL = 'gpt-4o-mini-2024-07-18'; // Used for analysis
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -79,50 +73,12 @@ async function extractOpenAIErrorMessage(response: Response): Promise<{ message?
   }
 }
 
-/**
- * Select optimal model based on user's priority strategy and request type.
- * This helps maximize free token usage from OpenAI's data sharing program.
- * 
- * Token quotas (requires data sharing opt-in):
- * - Premium tier (gpt-5, gpt-4o): 1M tokens/day (250K for tier 1-2)
- * - Mini tier (gpt-5-mini, gpt-5-nano, gpt-4o-mini): 10M tokens/day (2.5M for tier 1-2)
- */
-function selectOptimalModel(
-  request: GenerateRequest,
-  modelPriority: ModelPriority = 'maximize-free',
-  preferredModel?: string
-): string {
-  // If user explicitly set a model override, use it
-  if (preferredModel) {
-    return preferredModel;
-  }
-
-  // Fast mode uses mini models
-  if (request.fastMode === true) {
-    return FAST_MODEL;
-  }
-
-  if (request.fastMode === 'ultra') {
-    return NANO_MODEL; // Ultra fast mode uses nano
-  }
-
-  // Apply model priority strategy
-  switch (modelPriority) {
-    case 'always-quality':
-      return DEFAULT_MODEL; // GPT-5 (1M free tokens/day)
-
-    case 'always-mini':
-      return FAST_MODEL; // GPT-5 Mini (10M free tokens/day)
-
-    case 'maximize-free':
-    default:
-      // Use mini tier by default to maximize free usage (10M vs 1M)
-      return FAST_MODEL;
-  }
-}
-
 function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile): string {
   let prompt = `You are a tweet composition assistant. Your task is to write tweets that match the following brand voice:\n\n`;
+  // ... (rest of function unchanged, just ensuring signature matches if I cut it off)
+  // Actually I am replacing the top part of the file, so I need to include buildSystemPrompt if I cut it off in TargetContent?
+  // No, I'll target up to generateWithOpenAI and keep buildSystemPrompt intact if possible, or include it.
+  // The TargetContent used below starts from line 1.
 
   if (brandVoice.description) {
     prompt += `Brand Voice Description: ${brandVoice.description}\n\n`;
@@ -201,11 +157,46 @@ function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile):
 }
 
 function buildUserPrompt(request: GenerateRequest, isThread: boolean): string {
-  if (isThread) {
-    return `Create a Twitter thread with ${request.threadLength || 5} tweets based on this topic:\n\n${request.prompt}\n\nReturn each tweet on a new line, numbered 1-${request.threadLength || 5}.`;
+  let prompt = '';
+
+  // 1. Add Context if present
+  if (request.replyContext) {
+    const ctx = request.replyContext;
+    prompt += `[CONTEXT - THE TWEET WE ARE REPLYING TO]\n`;
+    prompt += `Author: @${ctx.username}${ctx.displayName ? ` (${ctx.displayName})` : ''}\n`;
+    if (ctx.timestamp) prompt += `Time: ${ctx.timestamp}\n`;
+    prompt += `Content: "${ctx.text}"\n`;
+
+    if (ctx.images && ctx.images.length > 0) {
+      prompt += `Visual Context (Image Alt Text): ${ctx.images.join('; ')}\n`;
+    }
+
+    if (ctx.metrics) {
+      const m = ctx.metrics;
+      const parts = [];
+      if (m.replies) parts.push(`${m.replies} replies`);
+      if (m.retweets) parts.push(`${m.retweets} retweets`);
+      if (m.likes) parts.push(`${m.likes} likes`);
+      if (parts.length > 0) prompt += `Metrics: ${parts.join(', ')}\n`;
+    }
+    prompt += `\n[YOUR TASK]\n`;
+    prompt += `Write a reply to the above tweet based on this instruction:\n"${request.prompt}"\n`;
+  } else {
+    // Standard compose mode
+    prompt = request.prompt;
+
+    if (isThread) {
+      return `Create a Twitter thread with ${request.threadLength || 5} tweets based on this topic:\n\n${prompt}\n\nReturn each tweet on a new line, numbered 1-${request.threadLength || 5}.`;
+    }
+
+    return prompt;
   }
 
-  return request.prompt;
+  if (isThread) {
+    prompt += `\n\nFormat as a thread of ${request.threadLength || 5} tweets. Return each tweet on a new line, numbered 1-${request.threadLength || 5}.`;
+  }
+
+  return prompt;
 }
 
 export async function generateWithOpenAI(
@@ -214,7 +205,6 @@ export async function generateWithOpenAI(
   brandVoice: BrandVoice,
   targetProfile?: UserProfile,
   preferredModel?: string,
-  modelPriority: ModelPriority = 'maximize-free'
 ): Promise<GenerateResponse> {
   const isThread = request.isThread || false;
 
@@ -227,10 +217,11 @@ export async function generateWithOpenAI(
     console.warn('[Kotodama] API key does not start with "sk-" - this may indicate an invalid key');
   }
 
-  // Select model using smart selection
-  const model = selectOptimalModel(request, modelPriority, preferredModel);
+  // Use the requested model, or fallback to default
+  // Allow the request to pass 'modelId' if it was added to the type, otherwise use preferredModel or default
+  const requestedModel = (request as any).modelId || preferredModel || DEFAULT_MODEL;
 
-  console.log(`[Kotodama] Using model: ${model} (priority: ${modelPriority})`);
+  console.log(`[Kotodama] Using model: ${requestedModel}`);
   console.log(`[Kotodama] Request details:`, {
     isThread,
     threadLength: request.threadLength,
@@ -377,13 +368,13 @@ export async function generateWithOpenAI(
   }
 
   try {
-    return await requestWithModel(model);
+    return await requestWithModel(requestedModel);
   } catch (error) {
     console.error('OpenAI generation failed:', error);
 
-    const fallbackCandidates = [QUALITY_MODEL, FAST_MODEL, FALLBACK_MODEL];
+    const fallbackCandidates = [DEFAULT_MODEL, FALLBACK_MODEL];
     for (const candidate of fallbackCandidates) {
-      if (candidate === model) {
+      if (candidate === requestedModel) {
         continue;
       }
 

@@ -15,6 +15,13 @@ Kotodama (言霊) is a Chrome/Edge browser extension that helps users compose tw
 - `npm run lint` - Lint the codebase with ESLint
 - `npm test` - Run all tests with Vitest
 
+## Post-Task Procedure
+
+**IMPORTANT**: After finishing EVERY task or making significant changes, you MUST run:
+- `npm run build`
+
+This ensures the extension remains in a valid state for testing in `dist/`.
+
 ### Testing Extension
 After building, load the `dist/` folder as an unpacked extension in Chrome/Edge at `chrome://extensions/` with Developer mode enabled. Reload the extension and refresh Twitter/X pages after each rebuild.
 
@@ -58,7 +65,7 @@ Vite builds multiple entry points defined in [vite.config.ts](vite.config.ts):
 
 **Critical Build Detail**: The build uses custom filename sanitization to strip leading underscores from Rollup outputs, which prevents Chrome extension loading errors. See [vite.config.ts:5-26](vite.config.ts#L5-L26).
 
-The [scripts/build.js](scripts/build.js) post-build script copies `manifest.json` and icon files from `public/` to `dist/`.
+The [scripts/build.js](scripts/build.js) post-build script copies `manifest.json`, icon files, and configuration files (`browserconfig.xml`, `site.webmanifest`) from `public/` to `dist/`.
 
 ### Data Flow: Tweet Generation
 
@@ -194,8 +201,7 @@ The project includes pre-defined workflows in `.agent/workflows/` to automate co
 
 ## Known Issues
 
-1. **SVG Icons**: Icon files are currently SVG placeholders. Chrome requires PNG for production extensions.
-2. **Twitter DOM Selectors**: May break with Twitter UI updates. Monitor for compose box detection failures.
+1. **Twitter DOM Selectors**: May break with Twitter UI updates. Monitor for compose box detection failures.
 3. **Profile Tweet Scraping**: Not yet implemented. The `fetchUserTweets` function ([src/content/content-script.ts:263](src/content/content-script.ts#L263)) returns empty array as placeholder.
 4. **Service Worker Status**: The background service worker may show as "inactive" in chrome://extensions when idle, but it activates automatically when messages are sent. This is normal Chrome MV3 behavior for event-based service workers.
 5. **Multi-language Generation**: Language support depends on the AI model's capabilities. GPT-4 and GPT-5 models support multiple languages well, but responses may default to English if the prompt isn't explicit about language requirements.

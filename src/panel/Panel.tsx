@@ -3,30 +3,39 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 
 // Types & Utilities
-import { GenerateRequest, BrandVoice, UserSettings } from '../types';
-import { sanitizePrompt, sanitizeTweetContext } from '../utils/sanitize';
+import { GenerateRequest, BrandVoice, UserSettings, TweetContext } from '../types';
+import { REPLY_TEMPLATES, TWEET_TEMPLATES } from '../constants/templates';
+import { sanitizePrompt } from '../utils/sanitize';
 import { sendRuntimeMessage, isRuntimeValid, watchRuntimeValidity, createUserErrorMessage } from '../utils/runtime';
 
 // Components
-import { GlassContainer } from './components/Layout/GlassContainer';
+import { SolidContainer } from './components/Layout/SolidContainer';
 import { PanelHeader } from './components/Layout/PanelHeader';
 import { AutoTextarea } from './components/Input/AutoTextarea';
 import { VoiceSelector } from './components/Input/VoiceSelector';
+import { TemplateSelector } from './components/Input/TemplateSelector';
 import { LengthSlider, LengthOption } from './components/Input/LengthSlider';
 import { Button } from './components/Shared/Button';
 import { ResultCarousel } from './components/Output/ResultCarousel';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
-  tweetContext?: {
-    text: string;
-    username: string;
-  };
+  tweetContext?: TweetContext;
 }
 
-const Panel: React.FC = () => {
+interface PanelProps {
+  initialContext?: ContextData;
+  onClose?: () => void;
+  onInsert?: (content: string) => void;
+}
+
+const Panel: React.FC<PanelProps> = ({
+  initialContext = { type: null },
+  onClose,
+  onInsert
+}) => {
   // State
-  const [context, setContext] = useState<ContextData>({ type: null });
+  const [context, setContext] = useState<ContextData>(initialContext);
   const [prompt, setPrompt] = useState('');
   const [generatedContent, setGeneratedContent] = useState<string | string[]>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,8 +46,16 @@ const Panel: React.FC = () => {
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
   const [tweetLength, setTweetLength] = useState<LengthOption>('short');
-  const [modelMode, setModelMode] = useState<'fast' | 'smart'>('fast');
+  const [selectedModelId, setSelectedModelId] = useState<string>('gpt-4o-mini');
+  const [customModelId, setCustomModelId] = useState<string>('');
   const [runtimeInvalidated, setRuntimeInvalidated] = useState(false);
+
+  // Update context when prop changes
+  useEffect(() => {
+    if (initialContext) {
+      setContext(initialContext);
+    }
+  }, [initialContext]);
 
   // Initialization
   useEffect(() => {
@@ -49,7 +66,7 @@ const Panel: React.FC = () => {
     }
 
     loadInitialData();
-    window.addEventListener('message', handleMessage);
+    // Removed window.addEventListener('message') as we now use props
 
     const stopWatching = watchRuntimeValidity(() => {
       setRuntimeInvalidated(true);
@@ -57,22 +74,9 @@ const Panel: React.FC = () => {
     });
 
     return () => {
-      window.removeEventListener('message', handleMessage);
       stopWatching();
     };
   }, []);
-
-  const handleMessage = (event: MessageEvent) => {
-    if (event.data.type === 'context') {
-      setContext({
-        type: event.data.context,
-        tweetContext: event.data.tweetContext,
-      });
-      if (event.data.context === 'reply' && event.data.tweetContext) {
-        // Optional: clear prompt or set default
-      }
-    }
-  };
 
   const loadInitialData = async () => {
     try {
@@ -82,8 +86,24 @@ const Panel: React.FC = () => {
       ]);
 
       if (settingsRes.success) {
-        setSettings(settingsRes.data);
-        setSelectedVoiceId(settingsRes.data.defaultBrandVoiceId || '');
+        const settings = settingsRes.data as UserSettings;
+        setSettings(settings);
+        setSelectedVoiceId(settings.defaultBrandVoiceId || '');
+
+        // Load custom model ID if present (previously defaultModel)
+        if (settings.defaultModel) {
+          setCustomModelId(settings.defaultModel);
+        }
+
+        // Restore last selected model from storage, or use default
+        chrome.storage.local.get(['lastSelectedModelId'], (result) => {
+          if (result.lastSelectedModelId) {
+            setSelectedModelId(result.lastSelectedModelId as string);
+          } else {
+            // Default to custom model if compatible, or standard mini
+            setSelectedModelId(settings.defaultModel ? settings.defaultModel : 'gpt-4o-mini');
+          }
+        });
       }
 
       if (voicesRes.success && Array.isArray(voicesRes.data)) {
@@ -109,22 +129,41 @@ const Panel: React.FC = () => {
       const sanitizedPrompt = sanitizePrompt(prompt);
       const charLimit = tweetLength === 'short' ? '100-150' : tweetLength === 'medium' ? '150-220' : '220-280';
 
-      let enhancedPrompt = sanitizedPrompt;
-      if (context.type === 'reply' && context.tweetContext) {
-        const safeContext = sanitizeTweetContext(context.tweetContext);
-        enhancedPrompt = `Reply to @${safeContext.username}: "${safeContext.text}". User instruction: ${sanitizedPrompt}. Keep it ${tweetLength} (${charLimit} chars).`;
-      } else {
-        enhancedPrompt = `${sanitizedPrompt}. Keep it ${tweetLength} (${charLimit} chars).`;
-      }
-
       const request: GenerateRequest = {
-        prompt: enhancedPrompt,
+        prompt: sanitizedPrompt,
         brandVoiceId: selectedVoiceId,
-        // TODO: Pass model mode if backend supports it
+        provider: 'openai', // Default to OpenAI for now
+        // Pass selected model explicitly as preferredModel
       };
 
+      // We'll pass the model ID in the request payload or handled by the backend
+      // But GenerateRequest doesn't have a 'modelId' field yet, it has 'preferredModel' in the function signature but not in the interface?
+      // Checking types/index.ts: generateWithOpenAI takes preferredModel argument.
+      // But GenerateRequest interface only has provider, fastMode, reasoning, quality.
+      // I should update GenerateRequest to include 'modelId' or 'preferredModel', OR rely on the backend to match 'fastMode' etc.
+      // However, the new requirement is specific model selection.
+      // Let's modify the payload sent to runtime. The runtime handler for 'generate' likely extracts these.
+      // For now, I'll attach it to the payload and update the backend if needed, or pass it via existing fields if possible.
+      // Actually, checking OpenAI.ts, selectOptimalModel takes 'preferredModel' as a separate argument.
+      // The message payload structure in background script needs to support this.
+      // I'll assume I can pass it in the payload.
+
+      (request as any).modelId = selectedModelId;
+
+      if (context.type === 'reply' && context.tweetContext) {
+        // Pass full context to backend for better prompting
+        request.replyContext = context.tweetContext as any;
+      }
+
+      // Append length constraint
+      request.prompt = `${request.prompt}. Keep it ${tweetLength} (${charLimit} chars).`;
+
       // 2. Send API Call
-      const response = await sendRuntimeMessage({ type: 'generate', payload: request });
+      // We need to update the message payload to include modelId
+      const response = await sendRuntimeMessage({
+        type: 'generate',
+        payload: { ...request, modelId: selectedModelId }
+      });
 
       if (response.success) {
         let content = response.data.content;
@@ -144,20 +183,23 @@ const Panel: React.FC = () => {
   };
 
   const handleInsert = (content: string) => {
-    const targetOrigin = window.location.ancestorOrigins?.[0] || 'https://twitter.com';
-    window.parent.postMessage({ type: 'insert-tweet', content }, targetOrigin);
+    onInsert?.(content);
   };
 
   const handleClose = () => {
-    const targetOrigin = window.location.ancestorOrigins?.[0] || 'https://twitter.com';
-    window.parent.postMessage({ type: 'close-panel' }, targetOrigin);
+    onClose?.();
   };
 
   const hasResults = !!generatedContent && generatedContent.length > 0;
 
+  const handleModelSelect = (modelId: string) => {
+    setSelectedModelId(modelId);
+    chrome.storage.local.set({ lastSelectedModelId: modelId });
+  };
+
   return (
     <div className="w-full h-full p-4 flex items-center justify-center">
-      <GlassContainer>
+      <SolidContainer>
         {/* Runtime Error Overlay */}
         {runtimeInvalidated && (
           <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-6 text-center">
@@ -173,8 +215,9 @@ const Panel: React.FC = () => {
           onClose={handleClose}
           onOpenSettings={() => sendRuntimeMessage({ type: 'open-settings' })}
           context={context}
-          modelMode={modelMode}
-          toggleModel={() => setModelMode(m => m === 'fast' ? 'smart' : 'fast')}
+          selectedModelId={selectedModelId}
+          onSelectModel={handleModelSelect}
+          customModelId={customModelId}
         />
 
         <div className="flex-1 overflow-hidden relative">
@@ -189,11 +232,19 @@ const Panel: React.FC = () => {
                 className="h-full flex flex-col"
               >
                 {/* Voice Selector */}
-                <div className="pt-4 pb-2 border-b border-white/5">
+                <div className="pt-4 pb-2 border-b border-zinc-800 light:border-zinc-200">
                   <VoiceSelector
                     voices={brandVoices}
                     selectedId={selectedVoiceId}
                     onSelect={setSelectedVoiceId}
+                  />
+                </div>
+
+                {/* Template Selector */}
+                <div className="pt-2 pb-2">
+                  <TemplateSelector
+                    templates={context.type === 'reply' ? REPLY_TEMPLATES : TWEET_TEMPLATES}
+                    onSelect={(t) => setPrompt(t.prompt)}
                   />
                 </div>
 
@@ -209,7 +260,7 @@ const Panel: React.FC = () => {
                   </div>
 
                   {/* Controls */}
-                  <div className="flex items-center justify-between gap-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center justify-between gap-4 pt-4 border-t border-zinc-800 light:border-zinc-200">
                     <div className="w-[180px]">
                       <LengthSlider value={tweetLength} onChange={setTweetLength} />
                     </div>
@@ -250,7 +301,7 @@ const Panel: React.FC = () => {
             )}
           </AnimatePresence>
         </div>
-      </GlassContainer>
+      </SolidContainer>
     </div>
   );
 };

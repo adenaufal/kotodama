@@ -12,29 +12,108 @@ const PANEL_TRANSITION_DURATION = 300;
 /**
  * Extract tweet context from a tweet article element
  */
-async function extractTweetContextFromPage(tweetElement: HTMLElement): Promise<{ text: string; username: string } | null> {
+
+interface TweetContext {
+  text: string;
+  username: string;
+  displayName?: string;
+  timestamp?: string;
+  images?: string[];
+  metrics?: {
+    replies?: number;
+    retweets?: number;
+    likes?: number;
+  };
+  isThread?: boolean;
+}
+
+/**
+ * Extract tweet context from a tweet article element
+ */
+async function extractTweetContextFromPage(tweetElement: HTMLElement): Promise<TweetContext | null> {
   try {
-    // Find the tweet text
+    // 1. Text Content
     const tweetTextElement = tweetElement.querySelector('[data-testid="tweetText"]');
     const text = tweetTextElement?.textContent?.trim() || '';
 
-    // Find the username - look for the author link
+    // 2. Author Info
     const authorLink = tweetElement.querySelector('a[role="link"][href*="/"]');
     let username = '';
+    let displayName = '';
+
     if (authorLink) {
       const href = authorLink.getAttribute('href') || '';
       const match = href.match(/^\/([^\/]+)/);
       if (match) {
         username = match[1];
       }
+
+      // Display name is usually in the text content of the link or adjacent
+      // Twitter structure: Link > div > div > span > span (Display Name)
+      displayName = authorLink.textContent?.trim() || '';
+      // Cleanup handle from display name if present
+      displayName = displayName.replace(/@\w+/, '').trim();
     }
 
-    if (!text || !username) {
-      console.warn('[Kotodama] Could not extract complete tweet context:', { text, username });
+    // 3. Timestamp
+    const timeElement = tweetElement.querySelector('time');
+    const timestamp = timeElement?.getAttribute('datetime') || undefined;
+
+    // 4. Images (Alt Text)
+    const imageElements = tweetElement.querySelectorAll('[data-testid="tweetPhoto"] img');
+    const images: string[] = [];
+    imageElements.forEach((img) => {
+      const alt = img.getAttribute('alt');
+      if (alt && alt !== 'Image') {
+        images.push(alt);
+      }
+    });
+
+    // 5. Metrics
+    const metrics: TweetContext['metrics'] = {};
+
+    const parseMetric = (testId: string): number | undefined => {
+      const el = tweetElement.querySelector(`[data-testid="${testId}"]`);
+      if (!el) return undefined;
+      const label = el.getAttribute('aria-label') || el.textContent || '';
+      // Extract number from "123 replies" or "1.5K likes"
+      // This is approximate as aria-labels vary by language, but typically contain the number
+      const match = label.match(/([\d,.]+[KMB]?)/);
+      if (match) {
+        let valStr = match[1].replace(/,/g, '');
+        let multiplier = 1;
+        if (valStr.endsWith('K')) { multiplier = 1000; valStr = valStr.slice(0, -1); }
+        else if (valStr.endsWith('M')) { multiplier = 1000000; valStr = valStr.slice(0, -1); }
+        else if (valStr.endsWith('B')) { multiplier = 1000000000; valStr = valStr.slice(0, -1); }
+        return parseFloat(valStr) * multiplier;
+      }
+      return undefined;
+    };
+
+    metrics.replies = parseMetric('reply');
+    metrics.retweets = parseMetric('retweet');
+    metrics.likes = parseMetric('like');
+
+    // 6. Validation
+    if (!text && images.length === 0) {
+      console.warn('[Kotodama] Could not extract text or images:', { username });
+      // If there's no text but there are images, we still want to proceed
+      if (images.length === 0) return null;
+    }
+
+    if (!username) {
+      console.warn('[Kotodama] Could not extract username');
       return null;
     }
 
-    return { text, username };
+    return {
+      text,
+      username,
+      displayName,
+      timestamp,
+      images: images.length > 0 ? images : undefined,
+      metrics
+    };
   } catch (error) {
     console.error('[Kotodama] Error extracting tweet context:', error);
     return null;
@@ -100,6 +179,12 @@ function watchRuntimeValidity(): void {
  * Shows a notification when the runtime is invalidated
  */
 function showRuntimeInvalidatedNotification(): void {
+  // If the panel is open, it will show its own error overlay foundation
+  // so we don't need to show a double notification here.
+  if (isPanelOpen) {
+    return;
+  }
+
   // Remove any existing notification
   const existingNotification = document.querySelector('.kotodama-reload-notification');
   if (existingNotification) {
@@ -196,7 +281,7 @@ function showRuntimeInvalidatedNotification(): void {
 }
 
 const extensionRuntime = resolveExtensionRuntime();
-const KOTODAMA_ICON_URL = extensionRuntime?.getURL('icons/kotodama-button.svg') ?? '';
+const KOTODAMA_ICON_URL = extensionRuntime?.getURL('icons/icon32.png') ?? '';
 const FALLBACK_ICON_SVG = `
   <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M10 2L12 8L18 10L12 12L10 18L8 12L2 10L8 8L10 2Z" fill="currentColor"/>
@@ -277,6 +362,7 @@ function init() {
   createFloatingButton();
 }
 
+
 function createFloatingButton() {
   console.time('[Kotodama Performance] Button injection');
 
@@ -300,7 +386,7 @@ function createFloatingButton() {
 
   button.append(iconWrapper);
 
-  // Floating button style
+  // Floating button style - Minimalist & Modern
   Object.assign(button.style, {
     position: 'fixed',
     top: '24px',
@@ -311,34 +397,97 @@ function createFloatingButton() {
     width: '48px',
     height: '48px',
     padding: '0',
-    borderRadius: '16px', // Soft square look
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    background: 'linear-gradient(135deg, #1d9bf0, #ec4899)', // Twitter Blue to Sakura Pink
-    cursor: 'pointer',
-    boxShadow: '0 8px 20px -4px rgba(29, 155, 240, 0.5), 0 4px 12px rgba(0, 0, 0, 0.1)',
-    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)', // Bouncy transition
+    borderRadius: '50%', // Perfect circle
+    border: 'none',
+    background: '#18181b', // Zinc-900 (Dark)
+    color: '#ffffff',
+    cursor: 'move', // Indicate draggable
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', // Subtle shadow
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
     outline: 'none',
-    zIndex: '9999', // Higher z-index to be safe
-    backdropFilter: 'blur(8px)',
+    zIndex: '9999',
+    userSelect: 'none',
   } as CSSStyleDeclaration);
 
-  // White icon for contrast against gradient
+  // White icon
   const iconSvg = button.querySelector('img, svg');
   if (iconSvg) {
     (iconSvg as HTMLElement).style.filter = 'brightness(0) invert(1)';
   }
 
+  // Hover effects
   button.addEventListener('mouseenter', () => {
-    button.style.transform = 'scale(1.1) rotate(5deg)';
-    button.style.boxShadow = '0 12px 28px -6px rgba(236, 72, 153, 0.6), 0 8px 16px rgba(0, 0, 0, 0.15)';
+    button.style.transform = 'scale(1.05)';
+    button.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)';
   });
 
   button.addEventListener('mouseleave', () => {
-    button.style.transform = 'scale(1) rotate(0deg)';
-    button.style.boxShadow = '0 8px 20px -4px rgba(29, 155, 240, 0.5), 0 4px 12px rgba(0, 0, 0, 0.1)';
+    button.style.transform = 'scale(1)';
+    button.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
   });
 
+  // Dragging Logic
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+  let initialLeft = 0;
+  let initialTop = 0;
+  const DRAG_THRESHOLD = 5;
+
+  const onMouseDown = (e: MouseEvent) => {
+    isDragging = false;
+    startX = e.clientX;
+    startY = e.clientY;
+
+    const rect = button.getBoundingClientRect();
+    initialLeft = rect.left;
+    initialTop = rect.top;
+
+    // Switch to absolute positioning relative to viewport for dragging
+    // We remove 'right' and use 'left'/'top' calculated from current position
+    button.style.right = 'auto';
+    button.style.left = `${initialLeft}px`;
+    button.style.top = `${initialTop}px`;
+    button.style.cursor = 'grabbing';
+    button.style.transition = 'none'; // Disable transition for instant follow
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const onMouseMove = (e: MouseEvent) => {
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+      isDragging = true;
+    }
+
+    button.style.left = `${initialLeft + dx}px`;
+    button.style.top = `${initialTop + dy}px`;
+  };
+
+  const onMouseUp = () => {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+
+    button.style.cursor = 'move';
+    button.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+
+    // Snap to edges or constrain to viewport (Optional polish)
+    // For now, just leave it where it was dropped
+  };
+
+  button.addEventListener('mousedown', onMouseDown);
+
   button.addEventListener('click', async (e) => {
+    // If it was a drag operation, prevent click
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -505,10 +654,10 @@ function openPanel() {
     width: panelWidth,
     height: panelHeight,
     minHeight: '550px',
-    border: 'none',
+    border: '1px solid #e2e8f0', // Slate-200 for flat look
     borderRadius: '24px', // More rounded corners
     zIndex: '999999',
-    boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(29, 155, 240, 0.2)', // Deeper shadow
+    boxShadow: 'none', // Remove shadow for flat design
     background: 'transparent',
     overflow: 'hidden',
     transform: 'translateY(30px) scale(0.98)',

@@ -1,5 +1,6 @@
 import React from 'react';
 import '../../styles/pages.css';
+import { BrandLogo } from '../BrandLogo';
 
 const maxWidthClasses = {
     sm: 'max-w-md',
@@ -24,7 +25,7 @@ interface PageLayoutProps {
     showLogo?: boolean;
     title?: string;
     subtitle?: string;
-    logoIcon?: string;
+    logoIcon?: React.ReactNode;
     className?: string;
     maxWidth?: keyof typeof maxWidthClasses;
     centerContent?: boolean;
@@ -42,7 +43,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
     showLogo = true,
     title,
     subtitle,
-    logoIcon = '🌸',
+    logoIcon = <BrandLogo />,
     className = '',
     maxWidth = 'lg',
     centerContent = true,

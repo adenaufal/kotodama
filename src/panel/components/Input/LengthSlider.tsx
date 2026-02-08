@@ -23,7 +23,7 @@ export const LengthSlider: React.FC<LengthSliderProps> = ({ value, onChange }) =
             <div className="flex items-center justify-between bg-slate-100 rounded-full p-1 border border-slate-200 relative z-0">
                 {/* Sliding background */}
                 <motion.div
-                    className="absolute top-1 bottom-1 bg-white rounded-full shadow-sm z-0"
+                    className="absolute top-1 bottom-1 bg-white rounded-full shadow-sm z-0 border border-slate-200"
                     initial={false}
                     animate={{
                         left: `calc(${(activeIndex * 100) / 3}% + 4px)`,
@@ -38,7 +38,7 @@ export const LengthSlider: React.FC<LengthSliderProps> = ({ value, onChange }) =
                         onClick={() => onChange(option.id)}
                         className={cn(
                             "flex-1 py-1.5 text-xs font-semibold text-center rounded-full relative z-10 transition-colors",
-                            value === option.id ? "text-pink-600" : "text-slate-500 hover:text-slate-700"
+                            value === option.id ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
                         )}
                     >
                         {option.label}

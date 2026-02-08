@@ -55,7 +55,12 @@
   1. Load the freshly built extension in Chrome/Edge.
   2. Trigger the content script on Twitter/X and open the panel.
   3. Exercise the feature or bug fix you worked on (panel UI, onboarding, background messaging, etc.).
-- **Required before finishing any task:** Run `npm run type-check` **and** `npm run build`, then manually validate in the browser extension. Do not submit work with failing builds or unchecked behavior.
+
+- **CRITICAL PROCEDURE**: After finishing EVERY task or making significant changes, you MUST run:
+  ```bash
+  npm run build
+  ```
+  Do not consider a task finished until a successful build has been confirmed and the `dist/` folder is updated.
 
 ## Code Style & Conventions
 - **TypeScript/React**

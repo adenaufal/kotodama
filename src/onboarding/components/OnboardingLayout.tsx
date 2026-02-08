@@ -1,5 +1,6 @@
 import React from 'react';
 import { PageLayout, StepIndicator } from '../../components/Layout/PageLayout';
+import { BrandLogo } from '../../components/BrandLogo';
 
 interface OnboardingLayoutProps {
     children: React.ReactNode;
@@ -23,7 +24,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             variant="split"
             title="Welcome to Kotodama"
             subtitle="Let's set up your personal AI companion."
-            logoIcon="🌸"
+            logoIcon={<BrandLogo size={40} />}
             sidebarContent={
                 <div className="space-y-8">
                     <StepIndicator

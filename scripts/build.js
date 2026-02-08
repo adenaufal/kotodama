@@ -8,11 +8,20 @@ const root = join(__dirname, '..');
 // Copy manifest and icons to dist
 const filesToCopy = [
   { from: 'public/manifest.json', to: 'dist/manifest.json' },
+  { from: 'public/browserconfig.xml', to: 'dist/browserconfig.xml' },
+  { from: 'public/site.webmanifest', to: 'dist/site.webmanifest' },
   { from: 'public/icons/icon16.png', to: 'dist/icons/icon16.png' },
   { from: 'public/icons/icon32.png', to: 'dist/icons/icon32.png' },
   { from: 'public/icons/icon48.png', to: 'dist/icons/icon48.png' },
+  { from: 'public/icons/icon72.png', to: 'dist/icons/icon72.png' },
+  { from: 'public/icons/icon96.png', to: 'dist/icons/icon96.png' },
   { from: 'public/icons/icon128.png', to: 'dist/icons/icon128.png' },
-  { from: 'public/icons/kotodama-button.svg', to: 'dist/icons/kotodama-button.svg' },
+  { from: 'public/icons/icon144.png', to: 'dist/icons/icon144.png' },
+  { from: 'public/icons/icon192.png', to: 'dist/icons/icon192.png' },
+  { from: 'public/icons/ms-icon-70x70.png', to: 'dist/icons/ms-icon-70x70.png' },
+  { from: 'public/icons/ms-icon-144x144.png', to: 'dist/icons/ms-icon-144x144.png' },
+  { from: 'public/icons/ms-icon-150x150.png', to: 'dist/icons/ms-icon-150x150.png' },
+  { from: 'public/icons/ms-icon-310x310.png', to: 'dist/icons/ms-icon-310x310.png' },
 ];
 
 console.log('Copying static files to dist...');

@@ -30,9 +30,9 @@ export const ResultCard: React.FC<ResultCardProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex flex-col gap-4 p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all"
+            className="flex flex-col gap-4 p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 transition-all"
         >
-            <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+            <div className="text-slate-900 text-sm leading-relaxed whitespace-pre-wrap font-medium">
                 {content}
             </div>
 

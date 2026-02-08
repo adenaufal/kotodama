@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { cn } from '../Layout/GlassContainer';
+import { Select, SelectOption } from '../Shared/Select';
 
 export interface VoiceOption {
     id: string;
@@ -15,37 +14,25 @@ interface VoiceSelectorProps {
 }
 
 export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ voices, selectedId, onSelect }) => {
+    // Map voices to SelectOptions
+    const options: SelectOption[] = voices.map(v => ({
+        id: v.id,
+        label: v.name,
+        icon: v.icon ? <span>{v.icon}</span> : undefined
+    }));
+
     return (
-        <div className="w-full overflow-x-auto no-scrollbar py-2">
-            <div className="flex items-center gap-2 px-5 min-w-max">
-                {voices.map((voice) => {
-                    const isSelected = voice.id === selectedId;
-                    return (
-                        <button
-                            key={voice.id}
-                            onClick={() => onSelect(voice.id)}
-                            className={cn(
-                                "relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-                                "border flex items-center gap-2",
-                                isSelected
-                                    ? "border-pink-400 bg-pink-50 text-pink-600 shadow-sm"
-                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-300"
-                            )}
-                        >
-                            {isSelected && (
-                                <motion.div
-                                    layoutId="activeVoiceGlow"
-                                    className="absolute inset-0 rounded-full bg-pink-100/50 -z-10"
-                                    initial={false}
-                                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                />
-                            )}
-                            {voice.icon && <span>{voice.icon}</span>}
-                            {voice.name}
-                        </button>
-                    );
-                })}
-            </div>
+        <div className="w-full px-5 py-2">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+                Brand Voice
+            </label>
+            <Select
+                options={options}
+                value={selectedId}
+                onChange={onSelect}
+                placeholder="Select a voice..."
+                className="w-full"
+            />
         </div>
     );
 };
