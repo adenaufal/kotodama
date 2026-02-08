@@ -15,8 +15,11 @@ import { AutoTextarea } from './components/Input/AutoTextarea';
 import { VoiceSelector } from './components/Input/VoiceSelector';
 import { TemplateSelector } from './components/Input/TemplateSelector';
 import { LengthSlider, LengthOption } from './components/Input/LengthSlider';
+import { ThreadControl } from './components/Input/ThreadControl';
+import { TonePresetButtons } from './components/Input/TonePresetButtons';
 import { Button } from './components/Shared/Button';
 import { ResultCarousel } from './components/Output/ResultCarousel';
+import { TonePreset, calculateToneAdjustment } from './utils/toneModifiers';
 
 interface ContextData {
   type: 'compose' | 'reply' | null;
@@ -46,6 +49,11 @@ const Panel: React.FC<PanelProps> = ({
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
   const [tweetLength, setTweetLength] = useState<LengthOption>('short');
+  // Thread mode state
+  const [isThreadMode, setIsThreadMode] = useState(false);
+  const [threadLength, setThreadLength] = useState(5);
+  // Tone preset state
+  const [activeTonePresets, setActiveTonePresets] = useState<TonePreset[]>([]);
   // selectedModelId and customModelId removed as they are now global settings
 
   const [runtimeInvalidated, setRuntimeInvalidated] = useState(false);
@@ -120,6 +128,13 @@ const Panel: React.FC<PanelProps> = ({
         brandVoiceId: selectedVoiceId,
         provider: 'openai', // Default to OpenAI for now
         // Model ID is now handled by the background script using user settings
+        // Thread mode
+        isThread: isThreadMode,
+        threadLength: isThreadMode ? threadLength : undefined,
+        // Tone adjustment
+        toneAdjustment: activeTonePresets.length > 0
+          ? calculateToneAdjustment(activeTonePresets)
+          : undefined,
       };
 
       if (context.type === 'reply' && context.tweetContext) {
@@ -155,6 +170,14 @@ const Panel: React.FC<PanelProps> = ({
 
   const handleInsert = (content: string) => {
     onInsert?.(content);
+  };
+
+  const handleTonePresetToggle = (preset: TonePreset) => {
+    setActiveTonePresets(prev =>
+      prev.includes(preset)
+        ? prev.filter(p => p !== preset)
+        : [...prev, preset]
+    );
   };
 
   const handleClose = () => {
@@ -203,6 +226,14 @@ const Panel: React.FC<PanelProps> = ({
                   />
                 </div>
 
+                {/* Tone Preset Buttons */}
+                <div className="pt-2 pb-2 border-b border-zinc-800 light:border-zinc-200">
+                  <TonePresetButtons
+                    activePresets={activeTonePresets}
+                    onToggle={handleTonePresetToggle}
+                  />
+                </div>
+
                 {/* Template Selector */}
                 <div className="pt-2 pb-2">
                   <TemplateSelector
@@ -223,20 +254,30 @@ const Panel: React.FC<PanelProps> = ({
                   </div>
 
                   {/* Controls */}
-                  <div className="flex items-center justify-between gap-4 pt-4 border-t border-zinc-800 light:border-zinc-200">
-                    <div className="w-[180px]">
-                      <LengthSlider value={tweetLength} onChange={setTweetLength} />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="w-[180px]">
+                        <LengthSlider value={tweetLength} onChange={setTweetLength} />
+                      </div>
+
+                      <Button
+                        onClick={handleGenerate}
+                        isLoading={isLoading}
+                        disabled={!prompt.trim() || !selectedVoiceId}
+                        icon={<Sparkles className="w-4 h-4" />}
+                        className="px-8 shadow-blue-500/20"
+                      >
+                        Generate
+                      </Button>
                     </div>
 
-                    <Button
-                      onClick={handleGenerate}
-                      isLoading={isLoading}
-                      disabled={!prompt.trim() || !selectedVoiceId}
-                      icon={<Sparkles className="w-4 h-4" />}
-                      className="px-8 shadow-blue-500/20"
-                    >
-                      Generate
-                    </Button>
+                    {/* Thread Control */}
+                    <ThreadControl
+                      isThread={isThreadMode}
+                      threadLength={threadLength}
+                      onThreadToggle={setIsThreadMode}
+                      onLengthChange={setThreadLength}
+                    />
                   </div>
 
                   {error && (

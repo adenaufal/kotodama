@@ -73,7 +73,25 @@ async function extractOpenAIErrorMessage(response: Response): Promise<{ message?
   }
 }
 
-function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile): string {
+function applyToneAdjustment(
+  base: import('../types').ToneAttributes,
+  adjustment?: import('../types').ToneAttributes
+): import('../types').ToneAttributes {
+  if (!adjustment) return base;
+
+  const clamp = (val: number) => Math.max(0, Math.min(100, val));
+
+  return {
+    formality: clamp(base.formality + (adjustment.formality ?? 0)),
+    humor: clamp(base.humor + (adjustment.humor ?? 0)),
+    technicality: clamp(base.technicality + (adjustment.technicality ?? 0)),
+    empathy: clamp(base.empathy + (adjustment.empathy ?? 0)),
+    energy: clamp(base.energy + (adjustment.energy ?? 0)),
+    authenticity: clamp(base.authenticity + (adjustment.authenticity ?? 0)),
+  };
+}
+
+function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile, toneAdjustment?: Partial<import('../types').ToneAttributes>): string {
   let prompt = `You are a tweet composition assistant. Your task is to write tweets that match the following brand voice:\n\n`;
   // ... (rest of function unchanged, just ensuring signature matches if I cut it off)
   // Actually I am replacing the top part of the file, so I need to include buildSystemPrompt if I cut it off in TargetContent?
@@ -124,13 +142,16 @@ function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile):
     prompt += `- Length target: ${twitterRules.length}\n\n`;
   }
 
+  // Apply tone adjustments if provided
+  const finalTone = applyToneAdjustment(brandVoice.toneAttributes, toneAdjustment);
+
   prompt += `Tone Attributes (adjust your writing style to match these values):\n`;
-  prompt += `- Formality: ${brandVoice.toneAttributes.formality}/100 (0=very casual, 100=very professional)\n`;
-  prompt += `- Humor: ${brandVoice.toneAttributes.humor}/100 (0=serious, 100=humorous)\n`;
-  prompt += `- Technicality: ${brandVoice.toneAttributes.technicality}/100 (0=simple language, 100=technical jargon)\n`;
-  prompt += `- Empathy: ${brandVoice.toneAttributes.empathy}/100 (0=direct, 100=empathetic)\n`;
-  prompt += `- Energy: ${brandVoice.toneAttributes.energy}/100 (0=calm, 100=energetic)\n`;
-  prompt += `- Authenticity: ${brandVoice.toneAttributes.authenticity}/100 (0=reserved, 100=vulnerable/personal)\n\n`;
+  prompt += `- Formality: ${finalTone.formality}/100 (0=very casual, 100=very professional)\n`;
+  prompt += `- Humor: ${finalTone.humor}/100 (0=serious, 100=humorous)\n`;
+  prompt += `- Technicality: ${finalTone.technicality}/100 (0=simple language, 100=technical jargon)\n`;
+  prompt += `- Empathy: ${finalTone.empathy}/100 (0=direct, 100=empathetic)\n`;
+  prompt += `- Energy: ${finalTone.energy}/100 (0=calm, 100=energetic)\n`;
+  prompt += `- Authenticity: ${finalTone.authenticity}/100 (0=reserved, 100=vulnerable/personal)\n\n`;
 
   if (targetProfile) {
     prompt += `Additionally, adapt your response to match the communication style of the person you're replying to:\n`;
@@ -233,7 +254,7 @@ export async function generateWithOpenAI(
   const messages: OpenAIMessage[] = [
     {
       role: 'system',
-      content: buildSystemPrompt(brandVoice, targetProfile),
+      content: buildSystemPrompt(brandVoice, targetProfile, request.toneAdjustment),
     },
     {
       role: 'user',

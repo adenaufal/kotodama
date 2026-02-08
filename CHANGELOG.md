@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.2] - 2026-02-08
+
+### 🚀 Added
+- **New Reply Categories**: Witty (Playful Banter, Meme Energy, Light Sarcasm, Friendly Roast, Clever Pun) dan Constructive (Respectful Counter, Add Nuance, Share Resource).
+- **New Tweet Categories**: Storytelling (Thread Hook, Before/After, Lesson Learned, Behind the Scenes, Confession), Controversial (Hot Take, Contrarian View, Hard Truth, Myth Buster, Mini Rant), dan Relatable (So Relatable, Introvert Mood, Adulting Fails, Work Life Mood, Inner Dialogue).
+- **Enhanced Engagement Templates**: This or That, Fill in Blank, Unpopular Opinion untuk meningkatkan interaksi.
+- **Enhanced Educational Templates**: Framework, Tool Discovery, Common Mistake, Breakdown.
+
+### 🔧 Changed
+- **Template Expansion**: Reply templates diperluas dari 12 menjadi 27 template, Tweet templates dari 18 menjadi 31 template.
+- **Improved Prompts**: Semua prompt template di-enhance dengan instruksi lebih spesifik dan actionable (contoh: "Write a short tweet" → "Write a short, punchy tweet about a random thought or observation. Make it feel authentic and off-the-cuff.").
+
 ## [1.7.1] - 2026-02-08
 
 ### 🐛 Fixed
