@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/adenaufal/kotodama/compare/v1.6.0...v1.7.0) (2026-02-08)
+
+
+### Features
+
+* expand tweet templates with engaging patterns (v1.7.2) ([76bad33](https://github.com/adenaufal/kotodama/commit/76bad33e3b2993961e86c127ba2fc3d4770c890e))
+
 ## [1.7.2] - 2026-02-08
 
 ### 🚀 Added
