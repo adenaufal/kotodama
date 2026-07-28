@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.0](https://github.com/adenaufal/kotodama/compare/v1.6.0...v1.7.0) (2026-07-28)
+
+
+### Features
+
+* draft replies from the tweet in view ([d23b501](https://github.com/adenaufal/kotodama/commit/d23b5012304991d0b9ef81f6e9eedc8299724c39))
+* expand tweet templates with engaging patterns (v1.7.2) ([76bad33](https://github.com/adenaufal/kotodama/commit/76bad33e3b2993961e86c127ba2fc3d4770c890e))
+* reply-only pivot ([#44](https://github.com/adenaufal/kotodama/issues/44)) ([e5ccd7d](https://github.com/adenaufal/kotodama/commit/e5ccd7dc11d58bb31e7f54de53865f2ecf7d8538))
+
 ## [1.8.0] - 2026-07-28
 
 Kotodama menyempit dari "compose tweet dan reply" menjadi **reply-only**. Ekstensi sekarang membaca
