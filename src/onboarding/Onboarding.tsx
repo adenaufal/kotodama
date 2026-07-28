@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { BrandVoice, UserSettings } from '../types';
+import { AIProvider, BrandVoice, UserSettings } from '../types';
+import { getDefaultModelForProvider } from '../constants/models';
 import { parseBrandVoiceMarkdown } from './brandVoiceImport';
 import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
 import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
 import { VOICE_TEMPLATES } from './constants/voiceTemplates';
 import { getDefaultToneAttributes } from '../utils/brandVoiceUtils';
-import { OnboardingLayout } from './components/OnboardingLayout';
+import { BrandLogo } from '../components/BrandLogo';
+import { applyTheme } from '../utils/theme';
 
 const MAX_EXAMPLE_TWEETS = 5;
 
@@ -54,18 +56,22 @@ const fetchTweetText = async (url: string): Promise<string | null> => {
   return null;
 };
 
+const PROVIDER_META: { id: AIProvider; label: string; placeholder: string; keyUrl: string }[] = [
+  { id: 'openai', label: 'OpenAI', placeholder: 'sk-...', keyUrl: 'https://platform.openai.com/api-keys' },
+  { id: 'gemini', label: 'Gemini', placeholder: 'AIza...', keyUrl: 'https://aistudio.google.com/app/apikey' },
+  { id: 'claude', label: 'Claude', placeholder: 'sk-ant-...', keyUrl: 'https://console.anthropic.com/settings/keys' },
+];
+
 const steps = [
   {
     id: 1,
-    title: 'Connect OpenAI',
-    description:
-      'Securely store your OpenAI API key so Kotodama can craft drafts that sound like you.',
+    title: 'Connect an AI',
+    description: 'One API key. Kotodama uses it to read tweets and draft your replies.',
   },
   {
     id: 2,
-    title: 'Teach Your Voice',
-    description:
-      'Share a few cues and examples so responses match the tone you use on social.',
+    title: 'Teach your voice',
+    description: 'A description and a few examples are enough for replies to sound like you.',
   },
 ];
 
@@ -74,7 +80,8 @@ const Onboarding: React.FC = () => {
   const [step, setStep] = useState(1);
   const [step2Mode, setStep2Mode] = useState<Step2Mode>('selection');
 
-  const [openaiKey, setOpenaiKey] = useState('');
+  const [provider, setProvider] = useState<AIProvider>('openai');
+  const [apiKey, setApiKey] = useState('');
   const [brandVoiceName, setBrandVoiceName] = useState('');
   const [brandVoiceDescription, setBrandVoiceDescription] = useState('');
   const [exampleTweets, setExampleTweets] = useState<string[]>(() =>
@@ -89,6 +96,7 @@ const Onboarding: React.FC = () => {
 
   const [toneAttributes, setToneAttributes] = useState(getDefaultToneAttributes());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<
     { type: 'success' | 'error'; message: string } | null
   >(null);
@@ -102,9 +110,10 @@ const Onboarding: React.FC = () => {
 
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (url.searchParams.get('skipRedirect') === '1') {
-      return;
-    }
+    // `skipRedirect` means "re-running setup on purpose" — still load settings,
+    // just don't bounce back out. That's also the case where an explicit theme
+    // exists to honour.
+    const skipRedirect = url.searchParams.get('skipRedirect') === '1';
 
     const checkExistingConfiguration = async () => {
       try {
@@ -112,9 +121,11 @@ const Onboarding: React.FC = () => {
           type: 'get-settings',
         });
 
-        const existingKey = existingSettings.apiKeys.openai;
+        applyTheme(existingSettings.ui?.theme);
 
-        if (typeof existingKey === 'string' && existingKey.trim()) {
+        const hasKey = PROVIDER_META.some(({ id }) => existingSettings.apiKeys?.[id]?.trim());
+
+        if (hasKey && !skipRedirect) {
           const settingsUrl = chrome.runtime.getURL('src/settings/index.html');
           window.location.replace(settingsUrl);
         }
@@ -292,34 +303,26 @@ const Onboarding: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    if (!brandVoiceName.trim()) {
-      alert('Please enter a name for your brand voice');
-      return;
-    }
-
-    if (!brandVoiceDescription.trim()) {
-      alert('Please enter a description for your brand voice');
-      return;
-    }
-
     const validExamples = exampleTweets.filter((tweet) => tweet.trim() !== '');
-    if (validExamples.length === 0) {
-      alert('Please provide at least one example tweet');
-      return;
-    }
 
+    // Inline, next to the button that failed — not an OS alert box.
+    if (!brandVoiceName.trim()) return setSubmitError('Give this voice a name.');
+    if (!brandVoiceDescription.trim()) return setSubmitError('Add a short description of how this voice sounds.');
+    if (validExamples.length === 0) return setSubmitError('Add at least one example so the model has something to imitate.');
+
+    setSubmitError(null);
     setIsSubmitting(true);
 
     try {
       const settings: UserSettings = {
-        apiKeys: {
-          openai: openaiKey,
-        },
+        apiKeys: { [provider]: apiKey.trim() },
+        defaultProvider: provider,
+        defaultModel: getDefaultModelForProvider(provider),
         analysisDepth: 20,
         ui: {
           buttonPosition: 'top-right',
           panelWidth: 400,
-          theme: 'light',
+          theme: 'auto',
         },
         features: {
           autoAnalyze: true,
@@ -357,288 +360,304 @@ const Onboarding: React.FC = () => {
         payload: settings,
       });
 
-      alert('Setup complete! Visit Twitter/X and click the sparkle button in any compose box.');
-      window.close();
+      setStep(3);
     } catch (error) {
       console.error('Setup failed:', error);
-      alert('Setup failed. Please try again.');
+      setSubmitError('Could not save your setup. Check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const activeStep = steps.find((item) => item.id === step);
+  const activeProvider = PROVIDER_META.find((item) => item.id === provider) ?? PROVIDER_META[0];
 
   return (
     <>
-      <OnboardingLayout
-        currentStep={step}
-        totalSteps={steps.length}
-        stepLabels={steps.map(s => s.title)}
-      >
-        {/* Step Header */}
-        <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-[var(--koto-sakura-pink)] mb-2">
-            Step {step} of {steps.length}
-          </p>
-          <h2 className="text-2xl font-bold text-[var(--koto-text-primary)] mb-2">
-            {activeStep?.title}
-          </h2>
-          <p className="text-sm text-[var(--koto-text-secondary)]">
-            {activeStep?.description}
-          </p>
-        </div>
+      <div className="mx-auto flex min-h-screen w-full max-w-[34rem] flex-col px-6 py-12 sm:py-20">
+        <header className="flex items-center gap-2.5">
+          <BrandLogo size={22} />
+          <span className="text-sm font-medium tracking-tight text-ink">Kotodama</span>
+        </header>
 
-        <div className="koto-divider" />
-
-        {/* Step 1: API Key */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="koto-label">OpenAI API Key</label>
-              <input
-                type="password"
-                value={openaiKey}
-                onChange={(event) => setOpenaiKey(event.target.value)}
-                placeholder="sk-..."
-                className="koto-input font-mono"
+        {/* Progress: one segment per step. A row of numbered circles was
+            three elements saying what two hairlines say. */}
+        {step <= steps.length && (
+          <div className="mt-10 flex gap-1.5" role="group" aria-label={`Step ${step} of ${steps.length}`}>
+            {steps.map((s) => (
+              <span
+                key={s.id}
+                className={`h-0.5 flex-1 rounded-full transition-colors duration-300 ${s.id <= step ? 'bg-accent' : 'bg-line'
+                  }`}
               />
-              <p className="text-xs text-[var(--koto-text-tertiary)]">
-                Don&apos;t have a key?{' '}
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[var(--koto-sakura-pink)] hover:underline"
-                >
-                  Generate one here
-                </a>
-                .
-              </p>
-            </div>
-
-            <div className="koto-info-box neutral">
-              <p className="font-semibold text-[var(--koto-text-primary)] mb-1">🔒 Your data is safe</p>
-              <p>
-                Keys are encrypted locally using the Web Crypto API before they&apos;re stored. You can revoke or replace them any time from settings.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setOpenaiKey('')}
-                className="koto-btn koto-btn-secondary flex-1 sm:flex-none"
-              >
-                Clear field
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                disabled={!openaiKey.trim()}
-                className="koto-btn koto-btn-primary flex-1 sm:flex-none"
-              >
-                Continue
-              </button>
-            </div>
+            ))}
           </div>
         )}
 
-        {/* Step 2: Template Selection */}
-        {step === 2 && step2Mode === 'selection' && (
-          <div className="space-y-6">
-            <p className="text-sm text-[var(--koto-text-secondary)]">
-              Choose a starting point for your voice profile:
+        {/* Step 3 is the done screen — no form, no progress bar. */}
+        {step === 3 ? (
+          <main className="koto-rise mt-16 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">You&apos;re set up.</h1>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              Open any tweet on X and hit Reply. The sparkle button reads the tweet — text, images and the
+              thread above it — then drafts a response in your voice.
             </p>
+            <button type="button" onClick={() => window.close()} className="koto-btn koto-btn-primary mt-8">
+              Close this tab
+            </button>
+          </main>
+        ) : (
+          <main className="koto-rise mt-8 flex-1">
+            <p className="text-xs font-medium text-accent-text">Step {step} of {steps.length}</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">{activeStep?.title}</h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted">{activeStep?.description}</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {VOICE_TEMPLATES.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => handleTemplateSelect(template.id)}
-                  className="group relative overflow-hidden text-left p-6 rounded-2xl border border-[var(--koto-border-light)] bg-[var(--koto-bg-elevated)] hover:border-[var(--koto-border)] hover:shadow-lg transition-all duration-300 flex flex-col h-full"
-                >
-                  <div className="text-4xl mb-4 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300 origin-bottom-left text-[var(--koto-text-primary)] opacity-80 group-hover:opacity-100">
-                    {template.icon}
+            {/* Step 1: API key */}
+            {step === 1 && (
+              <div className="mt-10 space-y-8">
+                <fieldset>
+                  <legend className="koto-label">Provider</legend>
+                  <div className="flex flex-wrap gap-2">
+                    {PROVIDER_META.map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setProvider(id)}
+                        aria-pressed={provider === id}
+                        className={`h-9 rounded-koto border px-3.5 text-sm transition-colors duration-150 ${provider === id
+                          ? 'border-ink bg-ink font-medium text-canvas'
+                          : 'border-line bg-surface text-muted hover:border-line-strong hover:text-ink'
+                          }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                  <h3 className="text-lg font-bold text-[var(--koto-text-primary)] mb-2 group-hover:text-[var(--koto-accent)] transition-colors">
-                    {template.name}
-                  </h3>
-                  <p className="text-sm text-[var(--koto-text-secondary)] leading-relaxed mb-6 flex-1">
-                    {template.description}
+                  <p className="mt-2 text-xs text-faint">
+                    One key is enough. The others can be added later in settings.
                   </p>
-                  <div className="w-full py-2.5 rounded-xl bg-[var(--koto-bg-tertiary)] text-[var(--koto-text-secondary)] font-semibold text-xs text-center group-hover:bg-[var(--koto-accent)] group-hover:text-white transition-all tracking-wide">
-                    Select Voice
-                  </div>
-                </button>
-              ))}
-            </div>
+                </fieldset>
 
-            <div className="flex justify-start pt-4">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="koto-btn koto-btn-secondary"
-              >
-                Back
-              </button>
-            </div>
-          </div>
-        )}
+                <div>
+                  <label className="koto-label" htmlFor="onboarding-api-key">
+                    {activeProvider.label} API key
+                  </label>
+                  <input
+                    id="onboarding-api-key"
+                    type="password"
+                    value={apiKey}
+                    onChange={(event) => setApiKey(event.target.value)}
+                    placeholder={activeProvider.placeholder}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="koto-field font-mono"
+                  />
+                  <p className="mt-2 text-xs text-faint">
+                    No key yet?{' '}
+                    <a
+                      href={activeProvider.keyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent-text underline underline-offset-2"
+                    >
+                      Generate one
+                    </a>
+                    . It is encrypted with the Web Crypto API before it touches storage, and never leaves
+                    your machine except to call {activeProvider.label}.
+                  </p>
+                </div>
 
-        {/* Step 2: Voice Form */}
-        {step === 2 && step2Mode === 'form' && (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="koto-label">
-                Brand voice name <span className="text-[var(--koto-error)]">*</span>
-              </label>
-              <input
-                type="text"
-                value={brandVoiceName}
-                onChange={(event) => {
-                  setBrandVoiceName(event.target.value);
-                  setImportFeedback(null);
-                }}
-                placeholder="e.g., Confident, Playful, Technical"
-                required
-                className="koto-input"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label className="koto-label">
-                Description <span className="text-[var(--koto-error)]">*</span>
-              </label>
-              <textarea
-                value={brandVoiceDescription}
-                onChange={(event) => {
-                  setBrandVoiceDescription(event.target.value);
-                  setImportFeedback(null);
-                }}
-                placeholder="Share key phrases, tone notes, or instructions for the AI..."
-                rows={4}
-                required
-                className="koto-input resize-none"
-              />
-            </div>
-
-            <div className="koto-divider" />
-
-            <div className="space-y-3">
-              <label className="koto-label">Import from markdown</label>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="koto-btn koto-btn-secondary text-sm !py-2"
-                >
-                  📄 Upload .md file
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowMarkdownHelp(!showMarkdownHelp)}
-                  className="text-xs underline text-[var(--koto-text-tertiary)] hover:text-[var(--koto-text-primary)] transition-colors"
-                >
-                  {showMarkdownHelp ? 'Hide example' : 'View format example'}
-                </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".md,.markdown,text/markdown"
-                  onChange={handleMarkdownImport}
-                  className="hidden"
-                />
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    disabled={!apiKey.trim()}
+                    className="koto-btn koto-btn-primary"
+                  >
+                    Continue
+                  </button>
+                </div>
               </div>
+            )}
 
-              {showMarkdownHelp && (
-                <div className="mt-2 p-4 rounded-xl bg-[var(--koto-bg-card)] border border-[var(--koto-border)] text-xs font-mono text-[var(--koto-text-secondary)] overflow-x-auto">
-                  <pre>{`# My Brand Voice
+            {/* Step 2a: pick a starting point */}
+            {step === 2 && step2Mode === 'selection' && (
+              <div className="mt-10">
+                {/* A list, not a grid of emoji cards — these are options, not products. */}
+                <ul className="divide-y divide-line border-y border-line">
+                  {VOICE_TEMPLATES.map((template) => (
+                    <li key={template.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleTemplateSelect(template.id)}
+                        className="group flex w-full items-start gap-3 py-4 text-left transition-colors duration-150 hover:bg-raise"
+                      >
+                        <span aria-hidden className="mt-0.5 w-5 shrink-0 text-center text-sm">
+                          {template.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-ink">{template.name}</span>
+                          <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                            {template.description}
+                          </span>
+                        </span>
+                        <span
+                          aria-hidden
+                          className="mt-0.5 text-sm text-faint transition-colors group-hover:text-ink"
+                        >
+                          →
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-8">
+                  <button type="button" onClick={() => setStep(1)} className="koto-btn koto-btn-ghost -ml-3.5">
+                    Back
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2b: the voice itself */}
+            {step === 2 && step2Mode === 'form' && (
+              <div className="mt-10 space-y-8">
+                <div>
+                  <label className="koto-label" htmlFor="voice-name">Name</label>
+                  <input
+                    id="voice-name"
+                    type="text"
+                    value={brandVoiceName}
+                    onChange={(event) => {
+                      setBrandVoiceName(event.target.value);
+                      setImportFeedback(null);
+                      setSubmitError(null);
+                    }}
+                    placeholder="Confident, Playful, Technical…"
+                    className="koto-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="koto-label" htmlFor="voice-description">How it sounds</label>
+                  <textarea
+                    id="voice-description"
+                    value={brandVoiceDescription}
+                    onChange={(event) => {
+                      setBrandVoiceDescription(event.target.value);
+                      setImportFeedback(null);
+                      setSubmitError(null);
+                    }}
+                    placeholder="Key phrases, tone notes, things to avoid…"
+                    rows={4}
+                    className="koto-field resize-none"
+                  />
+                </div>
+
+                <div>
+                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                    <label className="koto-label mb-0" htmlFor="example-0">Examples</label>
+                    <span className="text-xs text-faint">Up to {MAX_EXAMPLE_TWEETS}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {exampleTweets.map((tweet, index) => (
+                      <div key={index}>
+                        <input
+                          id={`example-${index}`}
+                          type="text"
+                          value={tweet}
+                          onChange={(event) => handleExampleTweetChange(index, event.target.value)}
+                          placeholder={index === 0 ? 'Paste a tweet you wrote, or its link' : ''}
+                          aria-label={`Example ${index + 1}`}
+                          className="koto-field"
+                        />
+                        {exampleTweetStatuses[index] === 'loading' && (
+                          <p className="mt-1 text-xs text-faint">Fetching tweet text…</p>
+                        )}
+                        {exampleTweetStatuses[index] === 'error' && (
+                          <p className="mt-1 text-xs text-danger">{exampleTweetErrors[index]}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-faint">
+                    Paste a tweet link and its text is pulled in automatically. Mixing short and long ones
+                    gives the model more to work with.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="koto-btn koto-btn-secondary h-9 text-xs"
+                    >
+                      Import markdown
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMarkdownHelp(!showMarkdownHelp)}
+                      className="text-xs text-muted underline underline-offset-2 hover:text-ink"
+                    >
+                      {showMarkdownHelp ? 'Hide format' : 'What format?'}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".md,.markdown,text/markdown"
+                      onChange={handleMarkdownImport}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {showMarkdownHelp && (
+                    <pre className="mt-3 overflow-x-auto rounded-koto border border-line bg-raise p-3 font-mono text-xs leading-relaxed text-muted">{`# My Brand Voice
 
 # Description
-Friendly, approachable, and professional. Uses emojis occasionally.
+Friendly, approachable, professional. Occasional emoji.
 
 # Example Tweets
-- Just launched our new feature! 🚀 Check it out here.
-- Thanks for the feedback, we really appreciate it! 🙌
-- Dealing with bugs? We've got you covered.`}</pre>
+- Just shipped the new feature. Go break it.
+- Thanks for the feedback — genuinely useful.`}</pre>
+                  )}
+
+                  {importFeedback && (
+                    <p
+                      className={`mt-2 text-xs ${importFeedback.type === 'error' ? 'text-danger' : 'text-ok'}`}
+                    >
+                      {importFeedback.message}
+                    </p>
+                  )}
                 </div>
-              )}
 
-              {importFeedback && (
-                <p
-                  className={`text-xs font-medium ${importFeedback.type === 'error'
-                    ? 'text-[var(--koto-error)]'
-                    : 'text-[var(--koto-success)]'
-                    }`}
-                >
-                  {importFeedback.message}
-                </p>
-              )}
-            </div>
+                {submitError && (
+                  <p role="alert" className="text-xs text-danger">{submitError}</p>
+                )}
 
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="koto-label !mb-0">
-                  Example tweets <span className="text-[var(--koto-text-tertiary)] font-normal">(up to {MAX_EXAMPLE_TWEETS})</span>
-                </label>
-                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--koto-sakura-pink)]">
-                  Optional but powerful
-                </span>
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep2Mode('selection')}
+                    className="koto-btn koto-btn-ghost -ml-3.5"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleComplete}
+                    disabled={isSubmitting}
+                    className="koto-btn koto-btn-primary"
+                  >
+                    {isSubmitting ? 'Saving…' : 'Finish setup'}
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2">
-                {exampleTweets.map((tweet, index) => (
-                  <div key={index} className="space-y-1">
-                    <input
-                      type="text"
-                      value={tweet}
-                      onChange={(event) => handleExampleTweetChange(index, event.target.value)}
-                      placeholder={`Example ${index + 1}...`}
-                      className="koto-input !py-2.5 text-sm"
-                    />
-                    {exampleTweetStatuses[index] === 'loading' && (
-                      <p className="px-1 text-xs text-[var(--koto-sakura-pink)]">Fetching tweet text…</p>
-                    )}
-                    {exampleTweetStatuses[index] === 'error' && (
-                      <p className="px-1 text-xs text-[var(--koto-error)]">{exampleTweetErrors[index]}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-[var(--koto-text-tertiary)]">
-                Paste a tweet link to pull in its text automatically.
-              </p>
-            </div>
-
-            <div className="koto-info-box neutral">
-              <p className="font-semibold text-[var(--koto-text-primary)] mb-1">💡 Pro tip</p>
-              <p>
-                Mix short and long examples. Mention catchphrases or hashtags so Kotodama highlights them when drafting replies.
-              </p>
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => setStep2Mode('selection')}
-                className="koto-btn koto-btn-secondary flex-1 sm:flex-none"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={handleComplete}
-                disabled={isSubmitting}
-                className="koto-btn koto-btn-primary flex-1 sm:flex-none"
-              >
-                {isSubmitting ? 'Setting up…' : 'Complete setup'}
-              </button>
-            </div>
-          </div>
+            )}
+          </main>
         )}
-      </OnboardingLayout>
+      </div>
 
       <RuntimeInvalidatedModal isOpen={isInvalidated} />
     </>

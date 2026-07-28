@@ -1,33 +1,21 @@
-@import "tailwindcss";
-@import "../styles/design-system.css";
+@import 'tailwindcss';
+@import '../styles/design-system.css';
 
-:root {
-  /* Panel-specific overrides for light mode */
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --glass-bg-hover: rgba(248, 250, 252, 0.98);
-  --glass-border: var(--koto-border);
-  --glass-shadow: var(--koto-shadow-xl);
-
-  --text-primary: var(--koto-text-primary);
-  --text-secondary: var(--koto-text-secondary);
-  --text-tertiary: var(--koto-text-tertiary);
-}
-
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  font-family: var(--koto-font-sans);
-  background-color: transparent !important;
-  color: var(--text-primary);
+/*
+ * This sheet is inlined into the content script's shadow root, where `:root`
+ * matches nothing and `html`/`body` don't exist. `:host` is the only hook that
+ * reaches the panel — design-system.css declares the tokens on `:host` too, and
+ * font / color-scheme inherit down from here.
+ *
+ * The panel follows the OS by default; the content script stamps
+ * `data-theme` on the host element when the user picked a scheme explicitly.
+ */
+:host {
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -38,52 +26,6 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--koto-border);
-  border-radius: var(--koto-radius-full);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--koto-text-tertiary);
-}
-
-/* Glass Panel - Light Mode */
-.glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.25s ease-out forwards;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.2s ease-out forwards;
+  background: var(--koto-line-strong);
+  border-radius: 9999px;
 }

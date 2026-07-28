@@ -15,27 +15,29 @@ export const ModelManager: React.FC<ModelManagerProps> = ({
     const [newModelName, setNewModelName] = useState('');
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     const handleAdd = () => {
-        if (!newModelId.trim() || !newModelName.trim()) return;
-
-        // Prevent duplicates
-        if (customModels.some(m => m.id === newModelId)) {
-            alert('Model ID already exists');
+        if (!newModelId.trim() || !newModelName.trim()) {
+            setError('Both fields are required.');
             return;
         }
 
-        const updated = [...customModels, { id: newModelId.trim(), name: newModelName.trim() }];
-        onUpdateModels(updated);
+        if (customModels.some(m => m.id === newModelId.trim())) {
+            setError('That model ID is already in the list.');
+            return;
+        }
+
+        onUpdateModels([...customModels, { id: newModelId.trim(), name: newModelName.trim() }]);
         setNewModelId('');
         setNewModelName('');
+        setError(null);
         setIsAdding(false);
     };
 
     const handleDelete = (id: string) => {
-        if (window.confirm('Are you sure you want to remove this model?')) {
-            const updated = customModels.filter(m => m.id !== id);
-            onUpdateModels(updated);
+        if (window.confirm('Remove this model?')) {
+            onUpdateModels(customModels.filter(m => m.id !== id));
         }
     };
 
@@ -45,104 +47,114 @@ export const ModelManager: React.FC<ModelManagerProps> = ({
     };
 
     const saveEdit = (id: string) => {
-        const updated = customModels.map(m =>
-            m.id === id ? { ...m, name: editName } : m
-        );
-        onUpdateModels(updated);
+        onUpdateModels(customModels.map(m => (m.id === id ? { ...m, name: editName } : m)));
         setEditingId(null);
     };
 
     return (
-        <section className="space-y-4">
-            <div>
-                <h3 className="text-lg font-medium text-[var(--koto-text-primary)]">Custom Models</h3>
-                <p className="text-sm text-[var(--koto-text-secondary)]">
-                    Add specific model IDs that aren't in the default list.
-                </p>
-            </div>
+        <div className="mt-8">
+            <h3 className="koto-label">Custom models</h3>
 
-            <div className="space-y-2">
-                {customModels.map(model => (
-                    <div key={model.id} className="flex items-center justify-between p-3 bg-[var(--koto-bg-elevated)] border border-[var(--koto-border)] rounded-lg group">
-                        <div className="flex-1 min-w-0 mr-4">
-                            {editingId === model.id ? (
-                                <input
-                                    value={editName}
-                                    onChange={e => setEditName(e.target.value)}
-                                    className="w-full bg-[var(--koto-bg)] border border-[var(--koto-border)] px-2 py-1 rounded text-sm"
-                                    autoFocus
-                                />
-                            ) : (
-                                <div>
-                                    <div className="font-medium text-sm text-[var(--koto-text-primary)]">{model.name}</div>
-                                    <div className="text-xs text-[var(--koto-text-tertiary)] font-mono">{model.id}</div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
+            {customModels.length > 0 && (
+                <ul className="divide-y divide-line border-y border-line">
+                    {customModels.map(model => (
+                        <li key={model.id} className="group flex items-center gap-3 py-2.5">
                             {editingId === model.id ? (
                                 <>
-                                    <button onClick={() => saveEdit(model.id)} className="p-1.5 text-green-500 hover:bg-green-500/10 rounded">
-                                        <Check size={14} />
+                                    <input
+                                        value={editName}
+                                        onChange={e => setEditName(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && saveEdit(model.id)}
+                                        className="koto-field h-8 min-h-0 flex-1 py-1 text-xs"
+                                        autoFocus
+                                    />
+                                    <button
+                                        onClick={() => saveEdit(model.id)}
+                                        aria-label="Save name"
+                                        className="grid size-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:text-ink"
+                                    >
+                                        <Check size={14} strokeWidth={1.5} />
                                     </button>
-                                    <button onClick={() => setEditingId(null)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded">
-                                        <X size={14} />
+                                    <button
+                                        onClick={() => setEditingId(null)}
+                                        aria-label="Cancel"
+                                        className="grid size-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:text-ink"
+                                    >
+                                        <X size={14} strokeWidth={1.5} />
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    <button onClick={() => startEdit(model)} className="p-1.5 text-[var(--koto-text-tertiary)] hover:text-blue-400 hover:bg-blue-400/10 rounded opacity-0 group-hover:opacity-100 transition-all">
-                                        <Edit2 size={14} />
-                                    </button>
-                                    <button onClick={() => handleDelete(model.id)} className="p-1.5 text-[var(--koto-text-tertiary)] hover:text-red-400 hover:bg-red-400/10 rounded opacity-0 group-hover:opacity-100 transition-all">
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm text-ink">{model.name}</p>
+                                        <p className="truncate font-mono text-xs text-faint">{model.id}</p>
+                                    </div>
+                                    {/* Visible on focus too — hover-only actions are unreachable by keyboard. */}
+                                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                                        <button
+                                            onClick={() => startEdit(model)}
+                                            aria-label={`Rename ${model.name}`}
+                                            className="grid size-7 place-items-center rounded-md text-faint transition-colors hover:text-ink"
+                                        >
+                                            <Edit2 size={14} strokeWidth={1.5} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(model.id)}
+                                            aria-label={`Remove ${model.name}`}
+                                            className="grid size-7 place-items-center rounded-md text-faint transition-colors hover:text-danger"
+                                        >
+                                            <Trash2 size={14} strokeWidth={1.5} />
+                                        </button>
+                                    </div>
                                 </>
                             )}
-                        </div>
-                    </div>
-                ))}
+                        </li>
+                    ))}
+                </ul>
+            )}
 
-                {isAdding ? (
-                    <div className="p-4 bg-[var(--koto-bg-elevated)] border border-[var(--koto-border)] rounded-lg space-y-3">
-                        <div>
-                            <label className="block text-xs font-medium text-[var(--koto-text-secondary)] mb-1">Model ID</label>
-                            <input
-                                value={newModelId}
-                                onChange={e => setNewModelId(e.target.value)}
-                                placeholder="e.g. gpt-4-turbo-preview"
-                                className="w-full bg-[var(--koto-bg)] border border-[var(--koto-border)] px-3 py-2 rounded-md text-sm font-mono"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-[var(--koto-text-secondary)] mb-1">Display Name</label>
-                            <input
-                                value={newModelName}
-                                onChange={e => setNewModelName(e.target.value)}
-                                placeholder="e.g. GPT-4 Turbo"
-                                className="w-full bg-[var(--koto-bg)] border border-[var(--koto-border)] px-3 py-2 rounded-md text-sm"
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2 pt-1">
-                            <button onClick={() => setIsAdding(false)} className="px-3 py-1.5 text-xs text-[var(--koto-text-secondary)] hover:bg-[var(--koto-bg)] rounded">
-                                Cancel
-                            </button>
-                            <button onClick={handleAdd} className="px-3 py-1.5 text-xs bg-[var(--koto-accent)] text-white rounded hover:opacity-90">
-                                Add Model
-                            </button>
-                        </div>
+            {isAdding ? (
+                <div className="mt-3 space-y-3 rounded-koto border border-line p-3">
+                    <div>
+                        <label htmlFor="new-model-id" className="koto-label">Model ID</label>
+                        <input
+                            id="new-model-id"
+                            value={newModelId}
+                            onChange={e => { setNewModelId(e.target.value); setError(null); }}
+                            placeholder="gpt-4-turbo-preview"
+                            className="koto-field h-9 min-h-0 font-mono text-xs"
+                            autoFocus
+                        />
                     </div>
-                ) : (
-                    <button
-                        onClick={() => setIsAdding(true)}
-                        className="w-full py-2 flex items-center justify-center gap-2 border border-dashed border-[var(--koto-border)] rounded-lg text-sm text-[var(--koto-text-secondary)] hover:border-[var(--koto-accent)] hover:text-[var(--koto-accent)] transition-colors"
-                    >
-                        <Plus size={14} />
-                        Add Custom Model
-                    </button>
-                )}
-            </div>
-        </section>
+                    <div>
+                        <label htmlFor="new-model-name" className="koto-label">Display name</label>
+                        <input
+                            id="new-model-name"
+                            value={newModelName}
+                            onChange={e => { setNewModelName(e.target.value); setError(null); }}
+                            placeholder="GPT-4 Turbo"
+                            className="koto-field h-9 min-h-0 text-xs"
+                        />
+                    </div>
+                    {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => { setIsAdding(false); setError(null); }} className="koto-btn koto-btn-ghost h-8 text-xs">
+                            Cancel
+                        </button>
+                        <button onClick={handleAdd} className="koto-btn koto-btn-primary h-8 text-xs">
+                            Add
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <button
+                    onClick={() => setIsAdding(true)}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-ink"
+                >
+                    <Plus size={13} strokeWidth={1.5} />
+                    Add a model ID
+                </button>
+            )}
+        </div>
     );
 };

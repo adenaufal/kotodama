@@ -170,11 +170,52 @@ export const OPENAI_MODELS: ModelOption[] = [
 ];
 
 export const GEMINI_MODELS: ModelOption[] = [
-  // Future: Gemini models will be added in v1.1
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    description: 'Best for complex reasoning',
+    provider: 'gemini',
+    category: 'quality',
+  },
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    description: 'Fast and efficient',
+    provider: 'gemini',
+    category: 'fast',
+  },
+  {
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash Lite',
+    description: 'Fastest and cheapest',
+    provider: 'gemini',
+    category: 'fast',
+  },
 ];
 
+// These ids are COMPLETE as-is - never append a date suffix.
 export const CLAUDE_MODELS: ModelOption[] = [
-  // Future: Claude models will be added in v1.2
+  {
+    id: 'claude-opus-5',
+    name: 'Claude Opus 5',
+    description: 'Flagship, deepest reasoning',
+    provider: 'claude',
+    category: 'quality',
+  },
+  {
+    id: 'claude-sonnet-5',
+    name: 'Claude Sonnet 5',
+    description: 'Balanced speed and quality',
+    provider: 'claude',
+    category: 'quality',
+  },
+  {
+    id: 'claude-haiku-4-5',
+    name: 'Claude Haiku 4.5',
+    description: 'Fastest and cheapest',
+    provider: 'claude',
+    category: 'fast',
+  },
 ];
 
 export const ALL_MODELS: ModelOption[] = [
@@ -191,12 +232,14 @@ export function getModelById(id: string): ModelOption | undefined {
   return ALL_MODELS.find(model => model.id === id);
 }
 
+const DEFAULT_MODELS: Record<'openai' | 'gemini' | 'claude', string> = {
+  openai: 'gpt-5-mini-2025-08-07', // mini by default for free token optimization
+  gemini: 'gemini-2.5-flash',
+  claude: 'claude-sonnet-5',
+};
+
 export function getDefaultModelForProvider(provider: 'openai' | 'gemini' | 'claude'): string {
-  if (provider === 'openai') {
-    return 'gpt-5-mini-2025-08-07'; // Default to mini for free token optimization
-  }
-  // Future defaults for other providers
-  return '';
+  return DEFAULT_MODELS[provider];
 }
 
 export function getModelsByTier(tier: 'premium' | 'mini'): ModelOption[] {

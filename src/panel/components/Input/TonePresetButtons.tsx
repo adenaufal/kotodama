@@ -1,42 +1,43 @@
 import React from 'react';
 import { Briefcase, Coffee, Smile, User } from 'lucide-react';
 import { TonePreset } from '../../utils/toneModifiers';
+import { cn } from '../../utils/cn';
 
 interface TonePresetButtonsProps {
-  activePresets: TonePreset[];
-  onToggle: (preset: TonePreset) => void;
+    activePresets: TonePreset[];
+    onToggle: (preset: TonePreset) => void;
 }
 
 const PRESETS: { id: TonePreset; label: string; icon: React.ReactNode }[] = [
-  { id: 'formal', label: 'Formal', icon: <Briefcase className="w-3.5 h-3.5" /> },
-  { id: 'casual', label: 'Casual', icon: <Coffee className="w-3.5 h-3.5" /> },
-  { id: 'humor', label: 'Humor', icon: <Smile className="w-3.5 h-3.5" /> },
-  { id: 'professional', label: 'Professional', icon: <User className="w-3.5 h-3.5" /> },
+    { id: 'formal', label: 'Formal', icon: <Briefcase className="size-3.5" strokeWidth={1.5} /> },
+    { id: 'casual', label: 'Casual', icon: <Coffee className="size-3.5" strokeWidth={1.5} /> },
+    { id: 'humor', label: 'Humor', icon: <Smile className="size-3.5" strokeWidth={1.5} /> },
+    { id: 'professional', label: 'Pro', icon: <User className="size-3.5" strokeWidth={1.5} /> },
 ];
 
-export const TonePresetButtons: React.FC<TonePresetButtonsProps> = ({
-  activePresets,
-  onToggle,
-}) => {
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {PRESETS.map((preset) => {
-        const isActive = activePresets.includes(preset.id);
-        return (
-          <button
-            key={preset.id}
-            onClick={() => onToggle(preset.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              isActive
-                ? 'bg-blue-500 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
-            }`}
-          >
-            {preset.icon}
-            <span>{preset.label}</span>
-          </button>
-        );
-      })}
+/** Per-reply knobs. Pills, so they never read like the persistent brand-voice chip. */
+export const TonePresetButtons: React.FC<TonePresetButtonsProps> = ({ activePresets, onToggle }) => (
+    <div className="flex flex-wrap items-center gap-1.5">
+        {PRESETS.map((preset) => {
+            const active = activePresets.includes(preset.id);
+            return (
+                <button
+                    key={preset.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onToggle(preset.id)}
+                    className={cn(
+                        'flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs',
+                        'transition-colors duration-150 ease-out active:scale-[0.96]',
+                        active
+                            ? 'border-line-strong bg-raise font-medium text-ink'
+                            : 'border-line text-muted hover:border-line-strong hover:text-ink'
+                    )}
+                >
+                    {preset.icon}
+                    {preset.label}
+                </button>
+            );
+        })}
     </div>
-  );
-};
+);

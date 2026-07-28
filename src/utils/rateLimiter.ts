@@ -19,6 +19,8 @@ const DEFAULT_LIMITS: Record<string, RateLimitConfig> = {
   // Per-minute limits
   generate: { maxRequests: 20, windowMs: 60 * 1000 },
   analyzeProfile: { maxRequests: 10, windowMs: 60 * 1000 },
+  // Vision read of the tweet in view - fires on every panel open, so it needs its own bucket.
+  analyzeContext: { maxRequests: 10, windowMs: 60 * 1000 },
   // Per-hour limits (stored separately)
   generateHourly: { maxRequests: 200, windowMs: 60 * 60 * 1000 },
 };

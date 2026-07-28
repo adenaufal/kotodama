@@ -1,9 +1,52 @@
-import { Message, MessageResponse, GenerateRequest, BrandVoice, UserProfile } from '../types';
+import {
+  Message,
+  MessageResponse,
+  GenerateRequest,
+  AnalyzeContextRequest,
+  AIProvider,
+  BrandVoice,
+  UserProfile,
+} from '../types';
 import { db } from '../storage/db';
 import { getSettings, saveSettings } from '../storage/settings';
 import { generateWithOpenAI, analyzeTwitterProfile } from '../api/openai';
+import { generateWithGemini } from '../api/gemini';
+import { generateWithClaude } from '../api/claude';
+import { analyzeContext } from '../api/vision';
+import { getModelById } from '../constants/models';
 import { tryRequest } from '../utils/rateLimiter';
 import { logger } from '../utils/logger';
+
+const PROVIDER_LABELS: Record<AIProvider, string> = {
+  openai: 'OpenAI',
+  gemini: 'Gemini',
+  claude: 'Claude',
+};
+
+const GENERATORS = {
+  openai: generateWithOpenAI,
+  gemini: generateWithGemini,
+  claude: generateWithClaude,
+};
+
+/**
+ * Resolves the provider + its API key, or throws a message the user can act on.
+ */
+async function resolveProvider(
+  settings: Awaited<ReturnType<typeof getSettings>>,
+  requested?: AIProvider
+): Promise<{ provider: AIProvider; apiKey: string }> {
+  const provider = requested ?? settings.defaultProvider ?? 'openai';
+  const apiKey = settings.apiKeys[provider];
+
+  if (!apiKey) {
+    throw new Error(
+      `${PROVIDER_LABELS[provider]} API key not configured. Please add your API key in the extension settings.`
+    );
+  }
+
+  return { provider, apiKey };
+}
 
 const ONBOARDING_URL = chrome.runtime.getURL('src/onboarding/index.html');
 const SETTINGS_URL = chrome.runtime.getURL('src/settings/index.html');
@@ -53,6 +96,9 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
     case 'generate':
       return handleGenerate(message.payload);
 
+    case 'analyze-context':
+      return handleAnalyzeContext(message.payload);
+
     case 'analyze-profile':
       return handleAnalyzeProfile(message.payload);
 
@@ -82,11 +128,13 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
 }
 
 async function handleGenerate(request: GenerateRequest): Promise<MessageResponse> {
+  let providerLabel = 'The AI provider';
+
   try {
     logger.info('Generation request received:', {
       brandVoiceId: request.brandVoiceId,
-      isThread: request.isThread,
-      hasPrompt: !!request.prompt
+      hasPrompt: !!request.prompt,
+      hasContextSummary: !!request.contextSummary
     });
 
     // Check rate limits first
@@ -100,16 +148,14 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
     }
 
     const settings = await getSettings();
+    const { provider, apiKey } = await resolveProvider(settings, request.provider);
+    providerLabel = PROVIDER_LABELS[provider];
+
     logger.info('Settings retrieved:', {
-      hasOpenAiKey: !!settings.apiKeys.openai,
+      provider,
       defaultModel: settings.defaultModel,
       modelPriority: settings.modelPriority
     });
-
-    if (!settings.apiKeys.openai) {
-      logger.error('OpenAI API key not configured');
-      throw new Error('OpenAI API key not configured. Please add your API key in the extension settings.');
-    }
 
     // Get brand voice
     const brandVoice = await db.brandVoices.get(request.brandVoiceId);
@@ -139,30 +185,36 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
       logger.info('Target profile loaded:', targetProfile?.username);
     }
 
-    // Generate content
-    logger.info('Starting OpenAI generation...');
-    const result = await generateWithOpenAI(
+    // Only pass the saved model when it actually belongs to the chosen provider,
+    // otherwise let each provider fall back to its own default.
+    const model =
+      settings.defaultModel && getModelById(settings.defaultModel)?.provider === provider
+        ? settings.defaultModel
+        : undefined;
+
+    logger.info(`Starting ${provider} generation...`, { model });
+    const result = await GENERATORS[provider](
       request,
-      settings.apiKeys.openai,
+      apiKey,
       brandVoice,
       targetProfile,
-      settings.defaultModel
+      model
     );
 
     logger.info('Generation successful:', {
       provider: result.provider,
       tokenUsage: result.tokenUsage,
-      contentLength: typeof result.content === 'string' ? result.content.length : result.content.length
+      contentLength: result.content.length
     });
 
     // Save generated tweet to history
     const generatedTweet = {
       id: crypto.randomUUID(),
       prompt: request.prompt,
-      generatedContent: Array.isArray(result.content) ? result.content.join('\n\n') : result.content,
+      generatedContent: result.content,
       brandVoiceId: request.brandVoiceId,
       targetProfileId: request.targetProfileId,
-      isThread: request.isThread || false,
+      replyContext: request.replyContext,
       posted: false,
       timestamp: new Date(),
       apiUsed: result.provider,
@@ -184,11 +236,11 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
     let userMessage = error.message || 'Failed to generate tweet';
 
     if (error.message?.includes('API key')) {
-      userMessage = 'OpenAI API key is not configured or invalid. Please check your settings.';
+      userMessage = `${providerLabel} API key is not configured or invalid. Please check your settings.`;
     } else if (error.message?.includes('rate limit') || error.message?.includes('429')) {
-      userMessage = 'OpenAI API rate limit exceeded. Please try again in a few moments.';
+      userMessage = `${providerLabel} API rate limit exceeded. Please try again in a few moments.`;
     } else if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
-      userMessage = 'Invalid OpenAI API key. Please check your API key in settings.';
+      userMessage = `Invalid ${providerLabel} API key. Please check your API key in settings.`;
     } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
       userMessage = 'Network error. Please check your internet connection and try again.';
     }
@@ -196,6 +248,47 @@ async function handleGenerate(request: GenerateRequest): Promise<MessageResponse
     return {
       success: false,
       error: userMessage,
+    };
+  }
+}
+
+/**
+ * Reads the tweet (and its images) with a cheap vision model before generation.
+ */
+async function handleAnalyzeContext(request: AnalyzeContextRequest): Promise<MessageResponse> {
+  try {
+    // Fires on every panel open, before any generate - gate it on its own bucket.
+    const rateLimitCheck = await tryRequest('analyzeContext');
+    if (!rateLimitCheck.allowed) {
+      logger.warn('Context read rate limit exceeded');
+      return {
+        success: false,
+        error: rateLimitCheck.error || 'Too many tweet reads. Please try again in a moment.',
+      };
+    }
+
+    const settings = await getSettings();
+    const { provider, apiKey } = await resolveProvider(settings, request.provider);
+
+    logger.info('Context analysis requested:', {
+      provider,
+      images: request.context.images?.length || 0,
+      threadEntries: request.context.thread?.length || 0,
+    });
+
+    const result = await analyzeContext(request, apiKey, provider);
+
+    logger.info('Context analysis complete:', { visionFailed: !!result.visionFailed });
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error: any) {
+    logger.error('Context analysis failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to read the tweet',
     };
   }
 }

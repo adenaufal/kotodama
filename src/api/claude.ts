@@ -1,236 +1,61 @@
 import { GenerateRequest, GenerateResponse, BrandVoice, UserProfile } from '../types';
+import { buildSystemPrompt, buildUserPrompt } from './openai';
 
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_WEB_URL = 'https://claude.ai/api/organizations';
 const CLAUDE_VERSION = '2023-06-01';
 
-// Claude Model Selection
-// Sonnet models - Best for balanced performance
-const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929'; // Claude Sonnet 4.5 (latest)
+// Current model ids. These are COMPLETE as-is - never append a date suffix.
+const DEFAULT_MODEL = 'claude-sonnet-5'; // balanced
+const FAST_MODEL = 'claude-haiku-4-5'; // fast/cheap, also the fallback
 
-// Opus models - Best for quality and complex reasoning
-const OPUS_4_MODEL = 'claude-opus-4-20250514'; // Claude Opus 4
-const OPUS_41_MODEL = 'claude-opus-4-1-20250805'; // Claude Opus 4.1
-
-// Haiku models - Best for speed and efficiency
-const FAST_MODEL = 'claude-3-5-haiku-20241022'; // Claude Haiku 3.5 (fast)
-const HAIKU_45_MODEL = 'claude-haiku-4-5-20251001'; // Claude Haiku 4.5
-const HAIKU_3_MODEL = 'claude-3-haiku-20240307'; // Claude Haiku 3 (ultra fast)
-
-type ClaudeAuthType = 'api' | 'cookie';
-
-function buildSystemPrompt(brandVoice: BrandVoice, targetProfile?: UserProfile): string {
-  let prompt = `You are a tweet composition assistant. Your task is to write tweets that match the following brand voice:\n\n`;
-
-  if (brandVoice.description) {
-    prompt += `Brand Voice Description: ${brandVoice.description}\n\n`;
-  }
-
-  if (brandVoice.guidelines) {
-    prompt += `Guidelines: ${brandVoice.guidelines}\n\n`;
-  }
-
-  if (brandVoice.exampleTweets.length > 0) {
-    prompt += `Example tweets from this brand voice:\n`;
-    brandVoice.exampleTweets.forEach((tweet, i) => {
-      prompt += `${i + 1}. ${tweet}\n`;
-    });
-    prompt += '\n';
-  }
-
-  // V2 Fields Support
-  if (brandVoice.vocabulary) {
-    if (brandVoice.vocabulary.approved && brandVoice.vocabulary.approved.length > 0) {
-      prompt += `Vocabulary - Approved Terms (Use these):\n${brandVoice.vocabulary.approved.join(', ')}\n\n`;
-    }
-    if (brandVoice.vocabulary.avoid && brandVoice.vocabulary.avoid.length > 0) {
-      prompt += `Vocabulary - Avoid these Terms:\n${brandVoice.vocabulary.avoid.join(', ')}\n\n`;
-    }
-  }
-
-  if (brandVoice.dosList && brandVoice.dosList.length > 0) {
-    prompt += `Do's:\n${brandVoice.dosList.map(item => `- ${item}`).join('\n')}\n\n`;
-  }
-
-  if (brandVoice.dontsList && brandVoice.dontsList.length > 0) {
-    prompt += `Don'ts:\n${brandVoice.dontsList.map(item => `- ${item}`).join('\n')}\n\n`;
-  }
-
-  // Check for Twitter specific guidelines
-  if (brandVoice.platformGuidelines && brandVoice.platformGuidelines.twitter) {
-    const twitterRules = brandVoice.platformGuidelines.twitter;
-    prompt += `Platform Rules (Twitter):\n`;
-    prompt += `- Style: ${twitterRules.style}\n`;
-    prompt += `- Format: ${twitterRules.format}\n`;
-    prompt += `- Emoji Usage: ${twitterRules.emojiUsage}\n`;
-    prompt += `- Length target: ${twitterRules.length}\n\n`;
-  }
-
-  prompt += `Tone Attributes:\n`;
-  prompt += `- Formality: ${brandVoice.toneAttributes.formality}/100\n`;
-  prompt += `- Humor: ${brandVoice.toneAttributes.humor}/100\n`;
-  prompt += `- Technicality: ${brandVoice.toneAttributes.technicality}/100\n\n`;
-
-  if (targetProfile) {
-    prompt += `Additionally, adapt your response to match the communication style of the person you're replying to:\n`;
-    prompt += `Username: @${targetProfile.username}\n`;
-    prompt += `Their typical tweet length: ${targetProfile.styleAttributes.avgLength} characters\n`;
-    if (targetProfile.styleAttributes.commonPhrases.length > 0) {
-      prompt += `Common phrases they use: ${targetProfile.styleAttributes.commonPhrases.join(', ')}\n`;
-    }
-    prompt += '\n';
-  }
-
-  prompt += `Important rules:\n`;
-  prompt += `- Keep tweets under 280 characters\n`;
-  prompt += `- Be authentic and natural\n`;
-  prompt += `- Match the brand voice while being engaging\n`;
-  prompt += `- Do not use hashtags unless specifically requested\n`;
-  prompt += `- Write in a conversational tone\n`;
-
-  if (targetProfile) {
-    prompt += `- Acknowledge and respond to the specific points in the tweet you're replying to\n`;
-  }
-
-  return prompt;
+// Anthropic gates browser-origin calls behind this header. Required from an
+// extension service worker or every request fails.
+function claudeHeaders(apiKey: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': CLAUDE_VERSION,
+    'anthropic-dangerous-direct-browser-access': 'true',
+  };
 }
 
-function buildUserPrompt(request: GenerateRequest, isThread: boolean): string {
-  if (isThread) {
-    return `Create a Twitter thread with ${request.threadLength || 5} tweets based on this topic:\n\n${request.prompt}\n\nReturn each tweet on a new line, numbered 1-${request.threadLength || 5}.`;
+// temperature / top_p / top_k are REMOVED on the 5-series and on opus-4-7/4-8:
+// sending any of them returns HTTP 400. Everything older still accepts them.
+const FIXED_TEMPERATURE_MODEL_PREFIXES = [
+  'claude-opus-5',
+  'claude-sonnet-5',
+  'claude-fable-5',
+  'claude-mythos-5',
+  'claude-opus-4-7',
+  'claude-opus-4-8',
+];
+const modelsRequiringDefaultTemperature = new Set<string>();
+
+function canAdjustTemperature(modelName: string): boolean {
+  if (modelsRequiringDefaultTemperature.has(modelName)) {
+    return false;
   }
 
-  return request.prompt;
+  return !FIXED_TEMPERATURE_MODEL_PREFIXES.some((prefix) => modelName.startsWith(prefix));
 }
 
-// Claude Web (cookie-based) generation
-async function generateWithClaudeWeb(
-  userPrompt: string,
-  systemPrompt: string,
-  cookie: string,
-  model: string,
-  isThread: boolean
-): Promise<GenerateResponse> {
+function isSamplingUnsupportedError(message?: string): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('temperature') ||
+    normalized.includes('top_p') ||
+    normalized.includes('top_k')
+  );
+}
+
+async function extractClaudeErrorMessage(response: Response): Promise<string | undefined> {
+  const raw = await response.text();
   try {
-    // First, get organization ID from cookie
-    const orgResponse = await fetch(CLAUDE_WEB_URL, {
-      headers: {
-        'Cookie': cookie,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!orgResponse.ok) {
-      throw new Error('Failed to fetch organization');
-    }
-
-    const orgData = await orgResponse.json();
-    const orgId = orgData[0]?.uuid;
-
-    if (!orgId) {
-      throw new Error('No organization found');
-    }
-
-    // Create a conversation
-    const conversationResponse = await fetch(
-      `${CLAUDE_WEB_URL}/${orgId}/chat_conversations`,
-      {
-        method: 'POST',
-        headers: {
-          'Cookie': cookie,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uuid: crypto.randomUUID(),
-          name: 'Tweet Generation',
-        }),
-      }
-    );
-
-    if (!conversationResponse.ok) {
-      throw new Error('Failed to create conversation');
-    }
-
-    const conversationData = await conversationResponse.json();
-    const conversationId = conversationData.uuid;
-
-    // Send message with system prompt embedded
-    const fullPrompt = `${systemPrompt}\n\nUser Request:\n${userPrompt}`;
-
-    const messageResponse = await fetch(
-      `${CLAUDE_WEB_URL}/${orgId}/chat_conversations/${conversationId}/completion`,
-      {
-        method: 'POST',
-        headers: {
-          'Cookie': cookie,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: fullPrompt,
-          model: model,
-          timezone: 'UTC',
-        }),
-      }
-    );
-
-    if (!messageResponse.ok) {
-      throw new Error('Failed to generate message');
-    }
-
-    // Stream response
-    const reader = messageResponse.body?.getReader();
-    const decoder = new TextDecoder();
-    let content = '';
-
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.completion) {
-                content = data.completion;
-              }
-            } catch (e) {
-              // Skip invalid JSON
-            }
-          }
-        }
-      }
-    }
-
-    const tokenUsage = Math.ceil(content.length / 4); // Rough estimate
-
-    if (isThread) {
-      // Parse thread into individual tweets
-      // Split on numbered patterns like "1/" or "1." at the start of a line
-      // This preserves line breaks within each tweet
-      const tweets = content
-        .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
-        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
-        .filter((tweet: string) => tweet.length > 0);
-
-      return {
-        content: tweets,
-        tokenUsage,
-        provider: 'claude',
-      };
-    }
-
-    return {
-      content: content.trim(),
-      tokenUsage,
-      provider: 'claude',
-    };
-  } catch (error) {
-    console.error('Claude Web generation failed:', error);
-    throw error;
+    const parsed = JSON.parse(raw);
+    return parsed?.error?.message ?? raw;
+  } catch {
+    return raw;
   }
 }
 
@@ -239,146 +64,73 @@ export async function generateWithClaude(
   apiKey: string,
   brandVoice: BrandVoice,
   targetProfile?: UserProfile,
-  authType: ClaudeAuthType = 'api',
-  cookie?: string
+  preferredModel?: string
 ): Promise<GenerateResponse> {
-  const isThread = request.isThread || false;
-  const systemPrompt = buildSystemPrompt(brandVoice, targetProfile);
-  const userPrompt = buildUserPrompt(request, isThread);
-
-  // Select model based on request parameters
-  let model = DEFAULT_MODEL;
-  if (request.quality === 'opus') {
-    model = OPUS_4_MODEL;
-  } else if (request.quality === 'opus-max') {
-    model = OPUS_41_MODEL;
-  } else if (request.fastMode === true) {
-    model = FAST_MODEL;
-  } else if (request.fastMode === 'ultra') {
-    model = HAIKU_3_MODEL;
-  } else if (request.fastMode === 'haiku-45') {
-    model = HAIKU_45_MODEL;
+  if (!apiKey || !apiKey.trim()) {
+    throw new Error('Claude API key is missing or invalid');
   }
 
-  // Route to appropriate authentication method
-  if (authType === 'cookie' && cookie) {
-    return generateWithClaudeWeb(
-      userPrompt,
-      systemPrompt,
-      cookie,
-      model,
-      isThread
-    );
-  }
+  const systemPrompt = buildSystemPrompt(brandVoice, targetProfile, request.toneAdjustment);
+  const userPrompt = buildUserPrompt(request);
+  const requestedModel = preferredModel || DEFAULT_MODEL;
 
-  // API-based generation
-  try {
+  async function requestWithModel(
+    modelName: string,
+    allowCustomTemperature = true
+  ): Promise<GenerateResponse> {
+    const includeTemperature = allowCustomTemperature && canAdjustTemperature(modelName);
+    const body: Record<string, unknown> = {
+      model: modelName,
+      max_tokens: 300,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    };
+
+    if (includeTemperature) {
+      body.temperature = 0.7;
+    }
+
     const response = await fetch(CLAUDE_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': CLAUDE_VERSION,
-      },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: isThread ? 1500 : 300,
-        temperature: 0.7,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      }),
+      headers: claudeHeaders(apiKey),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Claude API request failed');
+      const message = await extractClaudeErrorMessage(response);
+
+      if (includeTemperature && isSamplingUnsupportedError(message)) {
+        modelsRequiringDefaultTemperature.add(modelName);
+        console.log('[Kotodama] Retrying Claude request without temperature...');
+        return requestWithModel(modelName, false);
+      }
+
+      throw new Error(message || `Claude API request failed with status ${response.status}`);
     }
 
     const data = await response.json();
-    const content = data.content[0].text.trim();
-    const tokenUsage = data.usage.input_tokens + data.usage.output_tokens;
+    const content = String(data?.content?.[0]?.text ?? '').trim();
 
-    if (isThread) {
-      // Parse thread into individual tweets
-      // Split on numbered patterns like "1/" or "1." at the start of a line
-      // This preserves line breaks within each tweet
-      const tweets = content
-        .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
-        .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
-        .filter((tweet: string) => tweet.length > 0);
-
-      return {
-        content: tweets,
-        tokenUsage,
-        provider: 'claude',
-      };
+    if (!content) {
+      throw new Error('Claude API returned empty content. Please try again.');
     }
 
     return {
       content,
-      tokenUsage,
+      tokenUsage: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
       provider: 'claude',
     };
+  }
+
+  try {
+    return await requestWithModel(requestedModel);
   } catch (error) {
     console.error('Claude generation failed:', error);
 
-    // Try fallback to Haiku 3 if primary fails
-    if (model !== HAIKU_3_MODEL && authType === 'api') {
+    if (requestedModel !== FAST_MODEL) {
       try {
-        console.log('Attempting fallback to', HAIKU_3_MODEL);
-        const fallbackResponse = await fetch(CLAUDE_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': CLAUDE_VERSION,
-          },
-          body: JSON.stringify({
-            model: HAIKU_3_MODEL,
-            max_tokens: isThread ? 1500 : 300,
-            temperature: 0.7,
-            system: systemPrompt,
-            messages: [
-              {
-                role: 'user',
-                content: userPrompt,
-              },
-            ],
-          }),
-        });
-
-        if (fallbackResponse.ok) {
-          const data = await fallbackResponse.json();
-          const content = data.content[0].text.trim();
-          const tokenUsage = data.usage.input_tokens + data.usage.output_tokens;
-
-          if (isThread) {
-            // Parse thread into individual tweets
-            // Split on numbered patterns like "1/" or "1." at the start of a line
-            // This preserves line breaks within each tweet
-            const tweets = content
-              .split(/\n(?=\d+[.\/]\s)/) // Split only before numbered patterns
-              .map((tweet: string) => tweet.replace(/^\d+[.\/]\s*/, '').trim()) // Remove the numbering
-              .filter((tweet: string) => tweet.length > 0);
-
-            return {
-              content: tweets,
-              tokenUsage,
-              provider: 'claude',
-            };
-          }
-
-          return {
-            content,
-            tokenUsage,
-            provider: 'claude',
-          };
-        }
+        console.log('Attempting fallback to', FAST_MODEL);
+        return await requestWithModel(FAST_MODEL);
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
       }
@@ -392,32 +144,26 @@ export async function analyzeTwitterProfileWithClaude(
   tweets: string[],
   apiKey: string
 ): Promise<{ avgLength: number; commonPhrases: string[]; tone: any }> {
-  const systemPrompt = 'You are analyzing Twitter profiles. Analyze the writing style, tone, and patterns from the provided tweets. Return ONLY a valid JSON object with avgLength (number), commonPhrases (array of strings), and tone (object with formality, humor, technicality scores 0-100).';
+  const systemPrompt =
+    'You are analyzing Twitter profiles. Analyze the writing style, tone, and patterns from the provided tweets. Return ONLY a valid JSON object with avgLength (number), commonPhrases (array of strings), and tone (object with formality, humor, technicality scores 0-100).';
   const userPrompt = `Analyze these tweets:\n\n${tweets.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
-  // Use fast model for analysis
-  const model = FAST_MODEL;
-
   try {
+    const body: Record<string, unknown> = {
+      model: FAST_MODEL,
+      max_tokens: 500,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    };
+
+    if (canAdjustTemperature(FAST_MODEL)) {
+      body.temperature = 0.3;
+    }
+
     const response = await fetch(CLAUDE_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': CLAUDE_VERSION,
-      },
-      body: JSON.stringify({
-        model: model,
-        max_tokens: 500,
-        temperature: 0.3,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-      }),
+      headers: claudeHeaders(apiKey),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -425,7 +171,7 @@ export async function analyzeTwitterProfileWithClaude(
     }
 
     const data = await response.json();
-    const jsonText = data.content[0].text.trim();
+    const jsonText = String(data?.content?.[0]?.text ?? '').trim();
     // Remove markdown code blocks if present
     const cleanJson = jsonText.replace(/```json\n?|\n?```/g, '');
     return JSON.parse(cleanJson);
