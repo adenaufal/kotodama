@@ -1,42 +1,29 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from '../../utils/cn';
 
 interface SolidContainerProps {
     children: React.ReactNode;
     className?: string;
 }
 
+/**
+ * The panel shell. Follows the extension's theme rather than pinning dark —
+ * the shadow host carries `data-theme`, or nothing at all when the user
+ * left it on System.
+ *
+ * Three fixed zones live inside it; only the middle one scrolls.
+ */
 export const SolidContainer: React.FC<SolidContainerProps> = ({ children, className }) => {
     return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        <div
             className={cn(
-                "relative w-full h-full flex flex-col overflow-hidden",
-                // Solid Background - Always White
-                "bg-white",
-                // Border - Subtle Slate
-                "border border-slate-200",
-                // Shadow - None (Flat)
-                // "shadow-2xl shadow-black/20", // Removed
-                // Rounded Corners
-                // Rounded Corners
-                "rounded-2xl",
+                'relative flex h-full w-full flex-col overflow-hidden',
+                'rounded-koto border border-line bg-canvas text-ink',
+                'shadow-[0_1px_2px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.18)]',
                 className
             )}
         >
-            {/* Content */}
-            <div className="relative z-10 flex flex-col h-full">
-                {children}
-            </div>
-        </motion.div>
+            {children}
+        </div>
     );
 };

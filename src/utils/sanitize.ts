@@ -2,6 +2,8 @@
  * Input sanitization utilities for preventing prompt injection and XSS attacks
  */
 
+import type { TweetContext, TweetImage, ThreadEntry } from '../types';
+
 /**
  * Maximum lengths for different input types
  */
@@ -13,6 +15,10 @@ export const INPUT_LIMITS = {
   brandVoiceGuidelines: 2000,
   exampleTweet: 280,
   username: 15, // Twitter username limit
+  displayName: 50,
+  tweetContextText: 2000, // Long-form posts exist; 280 would truncate the thing we reply to
+  threadEntryText: 500, // Preceding tweets are context, not the subject
+  imageAlt: 500,
 } as const;
 
 /**
@@ -69,15 +75,64 @@ export function sanitizeTweetContent(content: string): string {
 
 /**
  * Sanitizes tweet context extracted from Twitter's DOM.
- * Prevents malicious tweet content from affecting prompt construction.
+ * This is the trust boundary: every field below is page content an attacker
+ * controls and it all ends up inside a model prompt (or, for images, inside a
+ * fetch the service worker makes).
  */
-export function sanitizeTweetContext(context: {
-  text: string;
-  username: string;
-}): { text: string; username: string } {
+export function sanitizeTweetContext(context: TweetContext): TweetContext {
+  const metrics = context.metrics && {
+    replies: sanitizeMetric(context.metrics.replies),
+    retweets: sanitizeMetric(context.metrics.retweets),
+    likes: sanitizeMetric(context.metrics.likes),
+  };
+
   return {
-    text: sanitizePrompt(context.text, INPUT_LIMITS.tweetContent),
+    text: sanitizePrompt(context.text, INPUT_LIMITS.tweetContextText),
     username: sanitizeUsername(context.username),
+    displayName: context.displayName
+      ? sanitizePrompt(context.displayName, INPUT_LIMITS.displayName)
+      : undefined,
+    // Drop anything that isn't a real date rather than passing a string through.
+    timestamp:
+      context.timestamp && !Number.isNaN(Date.parse(context.timestamp))
+        ? new Date(context.timestamp).toISOString()
+        : undefined,
+    images: context.images?.map(sanitizeTweetImage).filter((i): i is TweetImage => i !== null),
+    metrics,
+    thread: context.thread?.map(
+      (entry): ThreadEntry => ({
+        username: sanitizeUsername(entry.username),
+        displayName: entry.displayName
+          ? sanitizePrompt(entry.displayName, INPUT_LIMITS.displayName)
+          : undefined,
+        text: sanitizePrompt(entry.text, INPUT_LIMITS.threadEntryText),
+      })
+    ),
+  };
+}
+
+function sanitizeMetric(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.round(value)
+    : undefined;
+}
+
+/** Only https pbs.twimg.com media URLs — never let the page pick our fetch target. */
+function sanitizeTweetImage(image: TweetImage): TweetImage | null {
+  let url: URL;
+  try {
+    url = new URL(image.url);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' || url.hostname !== 'pbs.twimg.com') return null;
+  // Same rule the extractor applies: real tweet photos live under /media/.
+  // This is the check that guards the privileged fetch, so it must be the strict one.
+  if (!url.pathname.includes('/media/')) return null;
+
+  return {
+    url: url.toString(),
+    alt: image.alt ? sanitizePrompt(image.alt, INPUT_LIMITS.imageAlt) : undefined,
   };
 }
 

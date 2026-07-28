@@ -1,51 +1,42 @@
 import React from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
-import { cn } from '../Layout/GlassContainer';
+import { cn } from '../../utils/cn';
 
-interface ButtonProps extends HTMLMotionProps<"button"> {
-    variant?: 'primary' | 'secondary' | 'ghost' | 'glass';
-    isLoading?: boolean;
-    icon?: React.ReactNode;
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+    variant?: 'primary' | 'ghost';
+    size?: 'sm' | 'md';
 }
+
+const VARIANTS = {
+    // Inverted rather than accent-filled — same rule as the extension pages.
+    primary: 'bg-ink text-canvas hover:opacity-90 disabled:bg-raise disabled:text-faint',
+    ghost: 'text-muted hover:bg-raise hover:text-ink',
+} as const;
+
+const SIZES = {
+    sm: 'h-7 gap-1.5 rounded-md px-2.5 text-xs',
+    md: 'h-10 gap-2 rounded-koto px-4 text-[13px]',
+} as const;
 
 export const Button: React.FC<ButtonProps> = ({
     className,
     variant = 'primary',
-    isLoading,
+    size = 'md',
     children,
-    icon,
-    disabled,
     ...props
-}) => {
-    const variants = {
-        primary: "bg-slate-900 text-white border border-slate-900 hover:bg-slate-800 shadow-none",
-        secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-none",
-        ghost: "bg-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 shadow-none",
-        glass: "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" // Fallback to secondary style
-    };
-
-    return (
-        <motion.button
-            whileHover={!disabled && !isLoading ? { scale: 1.02 } : undefined}
-            whileTap={!disabled && !isLoading ? { scale: 0.98 } : undefined}
-            className={cn(
-                "relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                variants[variant],
-                className
-            )}
-            disabled={disabled || isLoading}
-            {...props}
-        >
-            {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-                <>
-                    {icon}
-                    {children}
-                </>
-            )}
-        </motion.button>
-    );
-};
+}) => (
+    <button
+        type="button"
+        className={cn(
+            'inline-flex items-center justify-center font-medium',
+            'transition-[background-color,border-color,color,opacity,transform] duration-150 ease-out',
+            'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+            'active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60',
+            SIZES[size],
+            VARIANTS[variant],
+            className
+        )}
+        {...props}
+    >
+        {children}
+    </button>
+);

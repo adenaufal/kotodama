@@ -1,49 +1,21 @@
-import React, { useRef, useEffect } from 'react';
-import { cn } from '../Layout/GlassContainer';
+import React from 'react';
+import { cn } from '../../utils/cn';
 
-interface AutoTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-    containerClassName?: string;
-    contextType?: 'compose' | 'reply' | null;
-}
+type AutoTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
-export const AutoTextarea: React.FC<AutoTextareaProps> = ({
-    className,
-    value,
-    containerClassName,
-    contextType,
-    ...props
-}) => {
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-        }
-    }, [value]);
-
-    const placeholder = contextType === 'reply'
-        ? "Draft a reply (e.g., 'Agree and ask about pricing')..."
-        : "What would you like to post? (e.g., 'Thread about AI trends')...";
-
-    return (
-        <div className={cn("relative w-full group", containerClassName)}>
-            <textarea
-                ref={textareaRef}
-                value={value}
-                rows={1}
-                placeholder={placeholder}
-                className={cn(
-                    "w-full bg-transparent text-lg text-slate-900 placeholder-slate-400 resize-none outline-none",
-                    "max-h-[200px] overflow-y-auto no-scrollbar",
-                    className
-                )}
-                style={{ minHeight: '60px' }}
-                {...props}
-            />
-
-            {/* Active line indicator - Minimalist Black */}
-            <div className="absolute bottom-0 left-0 w-0 h-[2px] bg-slate-900 transition-all duration-200 group-focus-within:w-full rounded-full" />
-        </div>
-    );
-};
+/**
+ * Starts at 2 rows, grows to 5, then scrolls internally.
+ * `field-sizing: content` does the growing natively - no measurement effect.
+ */
+export const AutoTextarea: React.FC<AutoTextareaProps> = ({ className, ...props }) => (
+    <textarea
+        rows={2}
+        placeholder="e.g. agree but add a caveat about cost"
+        className={cn(
+            'field-sizing-content max-h-[100px] w-full resize-none overflow-y-auto bg-transparent',
+            'text-[13px] leading-5 text-ink outline-none placeholder:text-faint',
+            className
+        )}
+        {...props}
+    />
+);

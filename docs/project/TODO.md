@@ -1,32 +1,39 @@
-# TODO – Post v1.3.0
+# TODO – Post reply-only pivot
 
-_Prioritised backlog of work remaining after the v1.3.0 release._
+_Prioritised backlog for the reply-only build._
 
 ## Release Blockers
-- [ ] **Convert icons to PNG** – Chrome Web Store requires 16/32/48/128px PNG variants (replace SVG placeholders in `public/icons/`).
-- [ ] **Provider selection workflow** – expose OpenAI/Gemini/Claude choice in settings and panel; route requests accordingly in the service worker.
-- [ ] **Credential storage extensions** – encrypt and persist Gemini API keys plus Claude API key/cookie once the provider workflow is surfaced.
-- [ ] **Robust error messaging** – friendly handling for network failures, OpenAI rate limits, and missing credentials across panel + onboarding.
+- [ ] **Manual browser test pass** – the reply-only build has never been exercised in Chrome. Work through [../testing/TESTING.md](../testing/TESTING.md) and record the result in a new dated checklist.
+- [ ] **Robust error messaging** – verify network failures, provider rate limits, and missing credentials all surface usefully across panel + onboarding.
 
 ## Near-Term Improvements
-- [ ] **Tone controls in panel** – surface formality/humor/technicality sliders with real-time preview before generation.
-- [ ] **Multi-suggestion generation** – offer 2–3 variants per prompt with quick compare + insert.
 - [ ] **Reply template management** – allow editing/reordering of the built-in templates or adding custom ones.
-- [ ] **History & analytics UI** – expose saved generations (when `rememberHistory` is enabled) and provide simple performance insights.
-- [ ] **Profile analysis** – replace `fetchUserTweets` stub with actual scraping or API integration to enrich target profiles.
+- [ ] **History & analytics UI** – expose saved drafts (when `rememberHistory` is enabled).
+- [ ] **Profile analysis** – `analyze-profile`, `analyzeTwitterProfile`, and the `userProfiles` table still exist but nothing in the UI reaches them; either wire a real path or delete the dead surface.
+- [ ] **Thread context depth** – capture is capped at the 10 most recent preceding tweets; revisit if replies to long threads lose the point the conversation started from.
 
 ## Quality & Testing
-- [ ] **Automated tests** – add Vitest coverage for API helpers, storage utilities, and UI pieces; consider Playwright for end-to-end flows.
-- [ ] **Error boundaries** – wrap major React shells (panel, settings, onboarding) to catch rendering failures gracefully.
-- [ ] **Telemetry hooks (optional)** – structured logging (without sending data off device) to ease debugging during development.
+- [ ] **Test target-tweet selection** – `findTargetTweetArticle` / `extractThread` against fixture markup for timeline-modal, permalink, and mid-thread surfaces. Highest-value test in the repo; a regression silently replies to the wrong tweet.
+- [ ] **Test the vision fallback** – an image-fetch failure must degrade to a text-only summary, not throw.
+- [ ] **Test Claude sampling-parameter omission** – a wrong prefix list 400s every request on the default model.
+- [ ] **Test the sanitizer** – length caps and injection stripping on `TweetContext` and prompts.
+- [ ] **Error boundary for the panel** – onboarding and settings are wrapped; the injected panel is not.
 - [ ] **Content script resilience** – review selectors and add fallbacks for future Twitter DOM churn.
 
 ## Documentation & DevX
 - [ ] **Contributor guide** – document coding standards, PR expectations, and release workflow.
-- [ ] **Architecture diagram** – visual map of runtime communication (content script ↔ panel ↔ service worker).
-- [ ] **User tips** – expand docs with best practices for writing effective prompts and curating brand voices.
+- [ ] **User tips** – best practices for writing effective reply intents and curating brand voices.
 
 ## Distribution Readiness
-- [ ] **Chrome Web Store collateral** – prep screenshots, promo copy, and privacy highlights once feature set stabilises.
+- [ ] **Chrome Web Store collateral** – prep screenshots, promo copy, and privacy highlights once the reply flow is verified.
 - [ ] **Edge Add-ons submission** – evaluate manifest compatibility and packaging requirements.
-- [ ] **Privacy policy** – draft a short statement clarifying local-only data handling and API usage.
+- [ ] **Privacy policy** – draft a short statement covering local-only data handling, provider API usage, and the `pbs.twimg.com` image fetches made by the vision pass.
+
+## Done
+- [x] **Provider selection workflow** – OpenAI, Gemini, and Claude all route through the service worker, with a default-provider setting.
+- [x] **Onboarding provider choice** – step 1 lets you pick OpenAI, Gemini, or Claude and stores that key; the rest can be added later in Settings.
+- [x] **Credential storage** – one encrypted key per provider.
+- [x] **Tone controls in panel** – shipped as stackable tone presets.
+- [x] **Multi-suggestion generation** – drafts accumulate in a carousel with per-draft retry.
+- [x] **Convert icons to PNG** – shipped in v1.7.0.
+- [x] **Error boundaries** – onboarding and settings shells (`src/components/ErrorBoundary.tsx`).

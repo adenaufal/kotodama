@@ -16,27 +16,34 @@ npm run build
 npm run type-check
 ```
 
+`npm run build` runs Vite twice: the main config builds the service worker, onboarding, and
+settings, then `vite.content.config.ts` rebuilds the content script alone and overwrites
+`dist/content.js` with a single self-contained IIFE. Content scripts cannot use ES module
+imports, so that second pass is the bundle the manifest actually loads.
+
 ## Project Architecture
 
 ### Extension Components
 
-1. **Content Script** ([src/content/content-script.ts](src/content/content-script.ts))
+1. **Content Script** ([src/content/content-script.tsx](src/content/content-script.tsx))
    - Runs on Twitter/X pages
-   - Injects floating AI button into compose boxes
-   - Manages panel iframe
-   - Handles content insertion
+   - Mounts a React app into a shadow root on a single injected host element (no iframe)
+   - Renders the draggable floating sparkle button
+   - Captures the tweet being replied to and sanitizes it
+   - Handles content insertion into the compose box
 
 2. **Background Service Worker** ([src/background/service-worker.ts](src/background/service-worker.ts))
-   - Processes messages from content script and panel
-   - Makes API calls to OpenAI (Gemini/Claude clients exist but are not yet wired in)
+   - Processes messages from the panel and content script
+   - Makes API calls to OpenAI, Gemini, and Claude (all three are wired)
+   - Runs the vision context-reading pass ([src/api/vision.ts](src/api/vision.ts))
    - Manages data storage (IndexedDB)
    - Handles encryption/decryption
 
-3. **Panel UI** ([src/panel/](src/panel/))
-   - React-based side panel
-   - Tweet and thread composition interface with reply templates
-   - Shows generated content and context cards
-   - Includes theme toggle, quick actions, and insertion controls
+3. **Panel** ([src/panel/Panel.tsx](src/panel/Panel.tsx))
+   - React reply composer, mounted by the content script into its shadow root
+   - Shows the captured tweet plus the AI reading of it (context card)
+   - Reply templates, tone presets, and a length control feed the prompt
+   - Drafts appear in a carousel; Insert calls back through the `onInsert` prop
 
 4. **Onboarding** ([src/onboarding/](src/onboarding/))
    - First-time setup wizard
@@ -56,21 +63,22 @@ npm run type-check
 ### Message Flow
 
 ```
-┌─────────────┐                ┌──────────────────┐
-│   Content   │◄──────────────►│  Background SW   │
-│   Script    │   chrome.      │                  │
-│             │   runtime.     │                  │
-│             │   sendMessage  │                  │
-└──────┬──────┘                └────────┬─────────┘
-       │                                │
-       │ window.postMessage             │
-       │                                │
-       ▼                                ▼
-┌─────────────┐                ┌──────────────────┐
-│  Panel UI   │                │   OpenAI API     │
-│  (iframe)   │                │                  │
-└─────────────┘                └──────────────────┘
+┌──────────────────────────────┐          ┌──────────────────┐
+│ Content script (shadow root) │          │  Background SW   │
+│                              │          │                  │
+│   ┌──────────────────────┐   │ chrome.  │                  │
+│   │  Panel (React)       │───┼─runtime.─►                  │
+│   └──────────▲───────────┘   │ sendMsg  └────────┬─────────┘
+│              │ React props   │                   │
+│   onInsert / onClose         │                   ▼
+└──────────────────────────────┘          ┌──────────────────┐
+                                          │ OpenAI / Gemini  │
+                                          │ / Claude APIs    │
+                                          └──────────────────┘
 ```
+
+The panel is a component inside the content script's shadow root, so it talks to
+the page through React props — there is no `window.postMessage` channel.
 
 ## Key Technologies
 
@@ -110,10 +118,10 @@ npm run type-check
 - Click "Service worker" link under Kotodama
 - Opens DevTools for background context
 
-#### Panel UI
-- Right-click in panel area
-- Select "Inspect" (or "Inspect frame")
-- Opens DevTools for iframe context
+#### Panel
+- The panel runs inside the page, in the content script's shadow root
+- Use the same Twitter/X DevTools window — panel logs and errors land in the page console
+- Expand `#kotodama-host` → `#shadow-root` in the Elements tab to inspect its DOM
 
 ## Agent Workflows
 
@@ -157,19 +165,17 @@ npm run build
 
 ## Adding New Features
 
-### Wiring Additional Providers (Gemini / Claude)
+### Adding a Provider
 
-Gemini (`src/api/gemini.ts`) and Claude (`src/api/claude.ts`) clients already exist. To surface them in the product:
-
-1. Extend `GenerateRequest` usage in the panel to pass the selected `provider`.
-2. Update `src/background/service-worker.ts` to route requests to the appropriate client and manage API keys/cookies.
-3. Persist provider choice in settings (`src/settings/Settings.tsx`) and expose UI controls.
-4. Handle provider-specific options (fast/quality modes) in both UI and request building.
-5. Add storage migrations if additional credentials are needed.
+1. Add a client in `src/api/` exporting `generate*(request, apiKey, brandVoice, targetProfile?, model?)`. Reuse `buildSystemPrompt` / `buildUserPrompt` from `src/api/openai.ts` — one prompt, three transports.
+2. Register it in the `GENERATORS` map and `PROVIDER_LABELS` in `src/background/service-worker.ts`.
+3. Add the provider to `AIProvider` and `UserSettings.apiKeys` in `src/types/index.ts`.
+4. Add its models to `src/constants/models.ts` and a vision model to `VISION_MODELS` in `src/api/vision.ts`.
+5. Add the API host to `host_permissions` in `public/manifest.json`.
 
 ### Adding New UI Component
 
-1. Create component in `src/panel/components/`
+1. Create component in `src/panel/components/` (grouped by zone: `Context/`, `Input/`, `Output/`, `Layout/`, `Shared/`)
 2. Import and use in `Panel.tsx`
 3. Add necessary types
 4. Style with Tailwind classes
@@ -225,6 +231,6 @@ Gemini (`src/api/gemini.ts`) and Claude (`src/api/claude.ts`) clients already ex
 
 ## Need Help?
 
-- Check [README.md](README.md) for basic setup
-- Review [prd.md](prd.md) for feature specifications
+- Check [README.md](../../README.md) for basic setup
+- Review [PROJECT_MAP.md](../project/PROJECT_MAP.md) for the architecture overview
 - Open an issue on GitHub

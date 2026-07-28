@@ -1,121 +1,150 @@
-# Model Reference (v1.6.0)
+# Model Reference
 
-Updated 2026-02-08 — aligns with the shipping Kotodama codebase.
+Aligned with the shipping reply-only codebase.
 
-Kotodama currently routes all AI generation through OpenAI’s GPT-4o family. Gemini and Claude clients exist in `src/api/`, but the service worker still targets OpenAI exclusively. This reference documents what is live today and what’s ready for the next integration step.
+All three providers are wired through the service worker. The user picks a default provider and
+model in Settings; a saved model is only used when it belongs to the active provider, otherwise
+each client falls back to its own default.
 
----
+Two separate model choices exist per request:
 
-## 1. OpenAI Models in Use
-
-| ID | Friendly Name | Typical Use | Notes |
-|----|---------------|-------------|-------|
-| `gpt-5-2025-08-07` | GPT-5 (Latest) | Default path for tweets, threads, replies | Configurable as the default model in settings |
-| `gpt-4o-2024-11-20` | GPT-4o Quality | High-quality alternative | Preferred model for non-reasoning tasks |
-| `gpt-5-mini-2025-08-07` | GPT-5 Mini | Fast mode (`fastMode = true`) | High speed, 10M free tokens/day |
-| `gpt-5-nano-2025-08-07` | GPT-5 Nano | Ultra fast mode (`fastMode = 'ultra'`) | Direct ultra-low-latency generation |
-| `gpt-4o-mini-2024-07-18` | GPT-4o Mini | Fallback | Auto-retry when the latest models fail |
-| `o1-2024-12-17` | OpenAI o1 | Reasoning (`reasoning = true`) | Temperature removed automatically |
-
-All OpenAI requests hit `https://api.openai.com/v1/chat/completions`. Thread requests cap `max_completion_tokens` at 1500; single tweets use 300.
-
-### Token & Cost Reference (check [OpenAI pricing](https://openai.com/pricing) for updates)
-
-| Model | Context Window | Approx. Input / Output Cost (per 1M tokens) |
-|-------|----------------|---------------------------------------------|
-| `gpt-4o-2024-11-20` | 128K tokens | $5.00 / $15.00 |
-| `gpt-4o-mini` | 128K tokens | $0.15 / $0.60 |
-| `o1-2024-12-17` | 128K tokens | $15.00 / $60.00 |
-
-> Costs are indicative; always confirm the latest pricing before budgeting usage.
+1. **The writing model** — the user's selection, used to draft the reply.
+2. **The reading model** — a fixed cheap vision-capable model per provider, used by
+   [src/api/vision.ts](../../src/api/vision.ts) to read the tweet and its images. The writing model
+   may have no vision at all, so this one is not user-configurable.
 
 ---
 
-## 2. Request Flags & Behaviour
+## 1. Defaults and Fallbacks
+
+| Provider | Client default | Client fallback | Vision (reading) model |
+|----------|----------------|-----------------|------------------------|
+| OpenAI | `gpt-4o-2024-11-20` | `gpt-4o-mini-2024-07-18` | `gpt-4o-mini` |
+| Gemini | `gemini-2.5-flash` | `gemini-2.5-flash-lite` | `gemini-2.5-flash-lite` |
+| Claude | `claude-sonnet-5` | `claude-haiku-4-5` | `claude-haiku-4-5` |
+
+`getDefaultModelForProvider()` in [src/constants/models.ts](../../src/constants/models.ts) supplies
+the *settings UI* default when a saved model doesn't match the selected provider
+(`gpt-5-mini-2025-08-07`, `gemini-2.5-flash`, `claude-sonnet-5`). The per-client constants above are
+what run when no model is passed down at all.
+
+**Token budgets:** replies cap at 300 output tokens; context summaries at 200.
+
+---
+
+## 2. Selectable Models
+
+The full list shown in Settings lives in `OPENAI_MODELS`, `GEMINI_MODELS`, and `CLAUDE_MODELS` in
+[src/constants/models.ts](../../src/constants/models.ts). Users can also add custom model ids, which
+stay available across providers.
+
+### Claude
+
+> ⚠️ **These ids are complete as-is — never append a date suffix.**
+
+| ID | Friendly name | Category |
+|----|---------------|----------|
+| `claude-opus-5` | Claude Opus 5 | Flagship, deepest reasoning |
+| `claude-sonnet-5` | Claude Sonnet 5 | Balanced speed and quality (default) |
+| `claude-haiku-4-5` | Claude Haiku 4.5 | Fastest and cheapest |
+
+**Retired — these return 404:** `claude-opus-4-20250514`, `claude-3-5-sonnet-20241022`,
+`claude-3-5-haiku-20241022`, `claude-3-haiku-20240307`. `claude-opus-4-1-20250805` retires
+2026-08-05.
+
+**`temperature`, `top_p`, and `top_k` are rejected with HTTP 400** on `claude-opus-5`,
+`claude-sonnet-5`, and `claude-opus-4-7` / `claude-opus-4-8`. [src/api/claude.ts](../../src/api/claude.ts)
+omits them for those prefixes and, for anything not on the list, retries once without them when the
+API complains. Older Claude models still accept them.
+
+### Gemini
+
+| ID | Notes |
+|----|-------|
+| `gemini-2.5-pro` | 2M context. Gets `maxOutputTokens: 1024` and `thinkingBudget: 128` (Pro has a hard floor) |
+| `gemini-2.5-flash` | Default. `thinkingBudget: 0`, 300 output tokens |
+| `gemini-2.5-flash-lite` | Fallback + vision pass |
+
+Leaving thinking enabled on a 300-token budget makes Gemini 2.5 spend the whole budget reasoning and
+return `MAX_TOKENS` with empty text — that's why the budget is pinned to 0 for non-Pro models.
+
+### OpenAI
+
+Selectable ids span the GPT-5 and GPT-4.1/4o families plus dated snapshots. Two behaviours matter:
+
+- `o1*` and `gpt-5*` prefixes only accept the default temperature, so the client omits `temperature` for them.
+- If any other model reports a fixed-temperature error, the client remembers it for the session and retries without the parameter.
+
+---
+
+## 3. Request Shape
 
 ```typescript
 interface GenerateRequest {
-  prompt: string;
+  prompt: string;                            // user intent (+ length hint)
   brandVoiceId: string;
   targetProfileId?: string;
-  isThread?: boolean;
-  threadLength?: number;
-  fastMode?: boolean | 'ultra';
-  reasoning?: boolean;
-  coding?: boolean;
+  replyContext: TweetContext;                // always present — reply-only
+  contextSummary?: string;                   // vision reading, when available
+  toneAdjustment?: Partial<ToneAttributes>;
+  provider?: AIProvider;
 }
 ```
 
-- **`fastMode = true`** → `gpt-5-mini-2025-08-07`
-- **`fastMode = 'ultra'`** → `gpt-5-nano-2025-08-07`
-- **`reasoning = true`** → `o1-2024-12-17`
-- **`coding = true`** → stays on GPT-4o but frames prompts for structured/code output
-- **Threads**: `isThread = true` transforms the UI response into an array of tweets after stripping numbering
-- **Fallback logic**:
-  - Mini requests retry with `gpt-4o-mini-2024-07-18`
-  - Reasoning requests remove the `temperature` parameter when the API raises an error about fixed-temperature models
+There are no `isThread`, `threadLength`, `fastMode`, `reasoning`, or `coding` flags — those belonged
+to the pre-pivot compose product and were removed with it. Speed/quality is expressed by choosing a
+model in Settings.
 
 ---
 
-## 3. Brand Voice Influence
+## 4. Brand Voice Influence
 
 Every request builds a system prompt that includes:
 
 - Brand voice description and guidelines
 - Example tweets (numbered)
-- Tone sliders (formality, humor, technicality)
+- V2 fields when present: approved/avoided vocabulary, do's and don'ts, Twitter platform rules
+- Six tone sliders (formality, humor, technicality, empathy, energy, authenticity) with the panel's
+  tone presets applied as a delta and clamped to 0-100
 - Optional target profile data (average length, common phrases)
 
-For replies, the user prompt is prefixed with the original tweet text and username to ensure context-aware responses.
-
----
-
-## 4. Preparing for Gemini & Claude
-
-The following pieces are already in the repository and can be activated once multi-provider selection is introduced:
-
-| Provider | File | Status |
-|----------|------|--------|
-| Google Gemini | `src/api/gemini.ts` | Generates content, supports Pro/Flash/Flash-Lite, auto-fallback |
-| Anthropic Claude | `src/api/claude.ts` | Supports API-key and cookie auth; handles Sonnet, Opus, Haiku variants |
-| Model metadata | `src/constants/models.ts` | Currently OpenAI-only; extend with Gemini/Claude entries |
-
-To complete the integration:
-1. Add provider selection UI in the panel and settings.
-2. Teach the service worker to branch on `request.provider` and pull the right credentials.
-3. Persist any new secret types (Gemini key, Claude key/cookie) with encryption.
-4. Update documentation, tests, and telemetry once real usage is confirmed.
+The user prompt then carries the thread, the tweet being replied to, the vision summary, and the
+user's intent as separately labelled blocks.
 
 ---
 
 ## 5. Testing Tips
 
-- **OpenAI requests**: Inspect the service worker console for `[Kotodama Performance]` logs to confirm model selection and timing.
-- **Thread parsing**: For debugging, log the raw string returned before the newline split to verify numbering.
-- **Reasoning mode**: Expect longer response times; keep prompts concise to stay within token limits.
-- **Fallback verification**: Temporarily force an invalid temperature on `o1` to watch the retry logic remove it.
+- **Provider routing:** the service worker logs the resolved provider and model on every generation. Check the service worker console.
+- **Vision pass:** look for `Context analysis complete: { visionFailed: ... }`. `true` means images could not be read and the summary is text-only — generation still works.
+- **Claude 400s:** if a request fails with a `temperature` complaint, the model is missing from `FIXED_TEMPERATURE_MODEL_PREFIXES`; the retry path covers it, but add the prefix so the first attempt succeeds.
+- **Empty Gemini responses:** almost always the thinking budget. Verify `thinkingConfig` for the model you're testing.
 
 ---
 
 ## 6. Quick Reference Snippets
 
 ```typescript
-// Standard tweet
-await generateWithOpenAI({ prompt, brandVoiceId }, openaiKey, voice);
-
-// Fast mode from devtools
+// Draft a reply through the service worker
 await chrome.runtime.sendMessage({
   type: 'generate',
-  payload: { prompt, brandVoiceId, fastMode: true }
+  payload: {
+    prompt: 'Agree, then add one concrete example.',
+    brandVoiceId,
+    replyContext,          // captured by the content script
+    contextSummary,        // optional
+    provider: 'claude',    // optional; falls back to settings.defaultProvider
+  },
 });
 
-// Thread (5 tweets)
+// Read the tweet in view (text + images)
 await chrome.runtime.sendMessage({
-  type: 'generate',
-  payload: { prompt, brandVoiceId, isThread: true, threadLength: 5 }
+  type: 'analyze-context',
+  payload: { context: replyContext },
 });
 ```
 
 ---
 
-Need more detail? Pair this document with `docs/reference/API_REFERENCE.md` for function signatures and `docs/guides/QUICK_REFERENCE.md` for UI-centric shortcuts.
+Need more detail? Pair this document with `docs/reference/API_REFERENCE.md` for function signatures
+and `docs/guides/QUICK_REFERENCE.md` for UI-centric shortcuts.

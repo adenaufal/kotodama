@@ -2,16 +2,70 @@
 
 Complete reference for all AI provider integrations in Kotodama.
 
+Kotodama is reply-only. Every generation call carries the tweet being replied to; there is no
+compose-a-new-tweet or thread-generation path.
+
 ---
 
 ## Table of Contents
 
-1. [OpenAI Integration](#openai-integration)
-2. [Google Gemini Integration](#google-gemini-integration)
-3. [Anthropic Claude Integration](#anthropic-claude-integration)
-4. [Common Interfaces](#common-interfaces)
-5. [Error Handling](#error-handling)
-6. [Best Practices](#best-practices)
+1. [Shared Prompt Builders](#shared-prompt-builders)
+2. [Context Reading (Vision)](#context-reading-vision)
+3. [OpenAI Integration](#openai-integration)
+4. [Google Gemini Integration](#google-gemini-integration)
+5. [Anthropic Claude Integration](#anthropic-claude-integration)
+6. [Common Interfaces](#common-interfaces)
+7. [Provider Dispatch](#provider-dispatch)
+8. [Error Handling](#error-handling)
+9. [Best Practices](#best-practices)
+
+---
+
+## Shared Prompt Builders
+
+Both live in [src/api/openai.ts](../../src/api/openai.ts) and are reused by all three clients — one prompt, three transports.
+
+#### `buildSystemPrompt(brandVoice, targetProfile?, toneAdjustment?)`
+
+Builds the reply-assistant system prompt from the brand voice: description, guidelines, example
+tweets, V2 fields (vocabulary, do's/don'ts, Twitter platform rules), the six tone attributes with
+`toneAdjustment` applied and clamped to 0-100, and optional target-profile adaptation.
+
+#### `buildUserPrompt(request)`
+
+Renders the reply context into labelled blocks: `[EARLIER IN THE THREAD]`, `[CONTEXT - THE TWEET WE
+ARE REPLYING TO]` (author, time, content, image alt text, metrics), `[WHAT THIS TWEET IS SAYING]`
+(the vision summary, when present), and `[YOUR TASK]` (the user's intent).
+
+---
+
+## Context Reading (Vision)
+
+[src/api/vision.ts](../../src/api/vision.ts) — a separate pass that runs before generation.
+
+The model the user picked for *writing* may have no vision at all, so the reading is always done by
+a fixed cheap vision-capable model per provider and handed downstream as plain text.
+
+| Provider | Vision model |
+|----------|--------------|
+| OpenAI | `gpt-4o-mini` |
+| Gemini | `gemini-2.5-flash-lite` |
+| Claude | `claude-haiku-4-5` |
+
+#### `analyzeContext(request, apiKey, provider)`
+
+**Parameters:**
+- `request: AnalyzeContextRequest` - the captured `TweetContext`
+- `apiKey: string`
+- `provider: AIProvider`
+
+**Returns:** `Promise<AnalyzeContextResponse>`
+
+**Behaviour highlights:**
+- Fetches up to **4** images from `pbs.twimg.com` (normalized to the `small` variant) and inlines them as base64.
+- Caps the summary at 200 tokens and asks for 1-3 plain sentences.
+- **Never throws for image problems.** Any fetch or vision failure retries text-only and returns `visionFailed: true`; the caller still gets a usable summary.
+- Claude requests put image blocks before the text block, per Anthropic's guidance.
 
 ---
 
@@ -22,56 +76,55 @@ Complete reference for all AI provider integrations in Kotodama.
 ```typescript
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_MODEL = 'gpt-4o-2024-11-20';
-const FAST_MODEL = 'gpt-4o-mini';
 const FALLBACK_MODEL = 'gpt-4o-mini-2024-07-18';
-const REASONING_MODEL = 'o1-2024-12-17';
+const FAST_MODEL = 'gpt-4o-mini-2024-07-18'; // profile analysis
 ```
 
 ### Models
 
-| Model | Use Case | Context | Notes |
-|-------|----------|---------|-------|
-| `gpt-4o-2024-11-20` | Default generation | 128K tokens | Primary path |
-| `gpt-4o-2024-08-06` | Alternate quality | 128K tokens | Selectable as default model |
-| `gpt-4o-mini` | Fast mode | 128K tokens | Used when `fastMode = true` |
-| `gpt-4o-mini-2024-07-18` | Fast fallback | 128K tokens | Auto retry if the latest mini fails |
-| `o1-2024-12-17` | Complex reasoning | 128K tokens | Triggered when `reasoning = true`; temperature omitted |
+| Model | Use Case | Notes |
+|-------|----------|-------|
+| `gpt-4o-2024-11-20` | Default generation | Used when no provider-matching `defaultModel` is set |
+| `gpt-4o-mini-2024-07-18` | Fallback + profile analysis | Retried automatically when the requested model fails |
+
+The full selectable list lives in `OPENAI_MODELS` in [src/constants/models.ts](../../src/constants/models.ts).
 
 ### Functions
 
-#### `generateWithOpenAI(request, apiKey, brandVoice, targetProfile?)`
+#### `generateWithOpenAI(request, apiKey, brandVoice, targetProfile?, preferredModel?)`
 
-Generates tweets or threads using OpenAI's GPT models.
+Drafts a reply using OpenAI chat completions.
 
 **Parameters:**
-- `request: GenerateRequest` - Generation request parameters
+- `request: GenerateRequest` - generation request parameters
 - `apiKey: string` - OpenAI API key
-- `brandVoice: BrandVoice` - Brand voice configuration
-- `targetProfile?: UserProfile` - Optional target user profile
+- `brandVoice: BrandVoice` - brand voice configuration
+- `targetProfile?: UserProfile` - optional target user profile
+- `preferredModel?: string` - model id, when the saved default belongs to this provider
 
 **Returns:** `Promise<GenerateResponse>`
 
 **Behaviour highlights:**
-- Automatically falls back to `gpt-4o-mini-2024-07-18` if the preferred fast model rejects the request.
-- Removes the `temperature` parameter when OpenAI returns a fixed-temperature error (typically for `o1`).
-- Persists generation history to IndexedDB only when `features.rememberHistory` is enabled.
+- `max_completion_tokens: 300`.
+- Omits `temperature` for `o1*` and `gpt-5*` prefixes, and retries without it when the API reports a fixed-temperature error (the model is then remembered for the session).
+- On failure, retries `gpt-4o-2024-11-20` then `gpt-4o-mini-2024-07-18`, skipping whichever was already tried.
 
 **Example:**
 ```typescript
 const response = await generateWithOpenAI(
   {
-    prompt: "Tweet about AI in 2025",
+    prompt: "Agree with them and add one concrete example.",
     brandVoiceId: "voice-123",
-    isThread: false,
-    fastMode: false
+    replyContext: tweetContext,
+    contextSummary: "The author is celebrating passing 1,100 followers.",
   },
   apiKey,
   brandVoice
 );
 
-console.log(response.content); // Generated tweet
+console.log(response.content);    // Generated reply
 console.log(response.tokenUsage); // Tokens used
-console.log(response.provider); // "openai"
+console.log(response.provider);   // "openai"
 ```
 
 #### `analyzeTwitterProfile(tweets, apiKey)`
@@ -79,185 +132,144 @@ console.log(response.provider); // "openai"
 Analyzes a Twitter profile's writing style.
 
 **Parameters:**
-- `tweets: string[]` - Array of tweets to analyze
+- `tweets: string[]` - array of tweets to analyze
 - `apiKey: string` - OpenAI API key
 
 **Returns:** `Promise<{ avgLength: number; commonPhrases: string[]; tone: ToneAttributes }>`
 
-**Example:**
-```typescript
-const analysis = await analyzeTwitterProfile(
-  ["Tweet 1", "Tweet 2", "Tweet 3"],
-  apiKey
-);
-
-console.log(analysis.avgLength); // Average tweet length
-console.log(analysis.commonPhrases); // Common phrases used
-console.log(analysis.tone); // Tone attributes
-```
+> No UI currently sends `analyze-profile`, so this path is reachable only by hand. It swallows errors and returns neutral defaults rather than throwing.
 
 ---
 
 ## Google Gemini Integration
 
-> **Status:** The Gemini client is implemented but not yet wired into the service worker. Use these helpers when adding full multi-provider support.
-
 ### Configuration
 
 ```typescript
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const DEFAULT_MODEL = 'gemini-2.5-pro';
-const FAST_MODEL = 'gemini-2.5-flash';
-const ULTRA_FAST_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
 ```
 
 ### Models
 
 | Model | Use Case | Context | Notes |
 |-------|----------|---------|-------|
-| `gemini-2.5-pro` | Complex reasoning, large context | 2M tokens | Default model |
-| `gemini-2.5-flash` | Speed and efficiency | 1M tokens | Used when `fastMode = true` |
-| `gemini-2.5-flash-lite` | Ultra fast | 1M tokens | Explicit fallback and `fastMode = 'ultra'` |
+| `gemini-2.5-flash` | Default generation | 1M tokens | |
+| `gemini-2.5-flash-lite` | Fallback + vision pass | 1M tokens | Fastest and cheapest |
+| `gemini-2.5-pro` | Selectable in settings | 2M tokens | Gets a larger output budget (see below) |
 
 ### Functions
 
-#### `generateWithGemini(request, apiKey, brandVoice, targetProfile?)`
+#### `generateWithGemini(request, apiKey, brandVoice, targetProfile?, preferredModel?)`
 
-Generates tweets or threads using Google's Gemini models.
-
-**Parameters:**
-- `request: GenerateRequest` - Generation request parameters
-- `apiKey: string` - Gemini API key
-- `brandVoice: BrandVoice` - Brand voice configuration
-- `targetProfile?: UserProfile` - Optional target user profile
+Drafts a reply using Google's Gemini models.
 
 **Returns:** `Promise<GenerateResponse>`
 
-**Notes:**
-- Automatically falls back to `gemini-2.5-flash-lite` if the preferred model fails.
-- Thread responses are parsed into string arrays by stripping numbering.
-
-**Example:**
-```typescript
-const response = await generateWithGemini(
-  {
-    prompt: "Create a thread about ML engineering",
-    brandVoiceId: "voice-123",
-    isThread: true,
-    threadLength: 5,
-    fastMode: true // Uses gemini-2.5-flash
-  },
-  apiKey,
-  brandVoice
-);
-
-console.log(response.content); // Array of tweets
-console.log(response.tokenUsage); // Tokens used
-console.log(response.provider); // "gemini"
-```
+**Behaviour highlights:**
+- `generateContent` has no separate system role, so the system prompt is prepended to the user prompt.
+- **Thinking budget matters.** Gemini 2.5 pays for thinking out of `maxOutputTokens`; an untuned 300-token budget gets spent reasoning and returns `MAX_TOKENS` with no text. Non-Pro models run with `thinkingBudget: 0` and 300 output tokens; Pro has a hard floor of 128, so it gets 1024 output tokens instead.
+- Falls back to `gemini-2.5-flash-lite` when the requested model fails.
 
 #### `analyzeTwitterProfileWithGemini(tweets, apiKey)`
 
-Analyzes a Twitter profile's writing style using Gemini.
-
-**Parameters:**
-- `tweets: string[]` - Array of tweets to analyze
-- `apiKey: string` - Gemini API key
-
-**Returns:** `Promise<{ avgLength: number; commonPhrases: string[]; tone: ToneAttributes }>`
-
-**Note:** Not yet wired into production flows; uses `gemini-2.5-flash` when invoked.
+Analyzes a Twitter profile's writing style using `gemini-2.5-flash-lite`. Returns neutral defaults on failure.
 
 ---
 
 ## Anthropic Claude Integration
 
-> **Status:** The Claude client supports both API-key and cookie-based auth, but is not yet exposed in the shipping UI or service worker.
-
 ### Configuration
 
 ```typescript
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_WEB_URL = 'https://claude.ai/api/organizations';
-const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
 const CLAUDE_VERSION = '2023-06-01';
+const DEFAULT_MODEL = 'claude-sonnet-5';
+const FAST_MODEL = 'claude-haiku-4-5'; // fallback + profile analysis
 ```
+
+Requests from an extension service worker are browser-origin, so every call must send
+`anthropic-dangerous-direct-browser-access: true` alongside `x-api-key` and `anthropic-version`.
 
 ### Models
 
+> ⚠️ **Current Claude model ids are bare — never append a date suffix.** Dated ids such as
+> `claude-opus-4-20250514`, `claude-3-5-sonnet-20241022`, `claude-3-5-haiku-20241022`, and
+> `claude-3-haiku-20240307` are retired and return **404**. `claude-opus-4-1-20250805` retires
+> 2026-08-05.
+
 | Model | Use Case | Context | Notes |
 |-------|----------|---------|-------|
-| `claude-sonnet-4-5-20250929` | Default balanced model | 200K tokens | `DEFAULT_MODEL` |
-| `claude-opus-4-20250514` | High quality (`quality = 'opus'`) | 200K tokens | Slower, richer responses |
-| `claude-opus-4-1-20250805` | Maximum quality (`quality = 'opus-max'`) | 200K tokens | Highest-quality path |
-| `claude-3-5-haiku-20241022` | Fast mode (`fastMode = true`) | 200K tokens | Lower latency |
-| `claude-3-haiku-20240307` | Ultra fast (`fastMode = 'ultra'`) | 200K tokens | Fallback option |
-| `claude-haiku-4-5-20251001` | Custom fast (`fastMode = 'haiku-45'`) | 200K tokens | Balanced speed/quality |
+| `claude-opus-5` | Highest quality | 1M tokens | Selectable in settings |
+| `claude-sonnet-5` | Default balanced model | 1M tokens | `DEFAULT_MODEL` |
+| `claude-haiku-4-5` | Fast + cheap | 200K tokens | Fallback, profile analysis, and the vision pass |
+
+### Sampling parameters return HTTP 400 on the 5-series
+
+`temperature`, `top_p`, and `top_k` were **removed** on `claude-opus-5`, `claude-sonnet-5`, and
+`claude-opus-4-7` / `claude-opus-4-8`. Sending any of them returns `400 invalid_request_error`.
+This is a live footgun: code that sets `temperature: 0.7` unconditionally will fail every request
+on the default model.
+
+[src/api/claude.ts](../../src/api/claude.ts) handles it two ways:
+
+1. A prefix allowlist (`FIXED_TEMPERATURE_MODEL_PREFIXES`) omits the parameter up front for known models.
+2. If an unlisted model rejects the request with an error mentioning `temperature` / `top_p` / `top_k`, the model is remembered for the session and the request is retried without it.
+
+Older models (Sonnet 4.5 and earlier) still accept sampling parameters.
 
 ### Functions
 
-#### `generateWithClaude(request, apiKey, brandVoice, targetProfile?)`
+#### `generateWithClaude(request, apiKey, brandVoice, targetProfile?, preferredModel?)`
 
-Generates tweets or threads using Anthropic's Claude models.
-
-**Parameters:**
-- `request: GenerateRequest` - Generation request parameters
-- `apiKey: string` - Claude API key
-- `brandVoice: BrandVoice` - Brand voice configuration
-- `targetProfile?: UserProfile` - Optional target user profile
+Drafts a reply using Anthropic's Messages API.
 
 **Returns:** `Promise<GenerateResponse>`
 
-**Parameters of note:**
-- `authType`: `'api'` (default) uses direct Anthropic API with `apiKey`; `'cookie'` tunnels through claude.ai web endpoints.
-- `cookie`: required when `authType = 'cookie'`.
-- `fastMode`/`quality`: map to the models listed above.
+**Behaviour highlights:**
+- `max_tokens: 300`; the system prompt goes in the top-level `system` field.
+- `tokenUsage` is `usage.input_tokens + usage.output_tokens`.
+- Falls back to `claude-haiku-4-5` when the requested model fails.
 
 **Example:**
 ```typescript
 const response = await generateWithClaude(
   {
-    prompt: "Reply to a tweet about React 19",
+    prompt: "Push back politely and ask for their benchmark.",
     brandVoiceId: "voice-123",
-    targetProfileId: "profile-456",
-    isThread: false
+    replyContext: tweetContext,
   },
   apiKey,
-  brandVoice,
-  targetProfile
+  brandVoice
 );
 
-console.log(response.content); // Generated reply
+console.log(response.content);    // Generated reply
 console.log(response.tokenUsage); // Input + output tokens
-console.log(response.provider); // "claude"
+console.log(response.provider);   // "claude"
 ```
 
 #### `analyzeTwitterProfileWithClaude(tweets, apiKey)`
 
-Analyzes a Twitter profile's writing style using Claude.
-
-**Parameters:**
-- `tweets: string[]` - Array of tweets to analyze
-- `apiKey: string` - Claude API key
-
-**Returns:** `Promise<{ avgLength: number; commonPhrases: string[]; tone: ToneAttributes }>`
+Analyzes a Twitter profile's writing style using `claude-haiku-4-5`. Returns neutral defaults on failure.
 
 ---
 
 ## Common Interfaces
 
+Authoritative definitions live in [src/types/index.ts](../../src/types/index.ts).
+
 ### GenerateRequest
 
 ```typescript
 interface GenerateRequest {
-  prompt: string;              // User's generation prompt
-  brandVoiceId: string;        // ID of brand voice to use
-  targetProfileId?: string;    // Optional target user profile
-  isThread?: boolean;          // Generate thread vs. single tweet
-  threadLength?: number;       // Number of tweets (2-10)
-  toneAdjustment?: Partial<ToneAttributes>; // Fine-tune tone
-  provider?: AIProvider;       // 'openai' | 'gemini' | 'claude'
-  fastMode?: boolean;          // Use faster/cheaper models
+  prompt: string;                            // What the user wants to say back
+  brandVoiceId: string;
+  targetProfileId?: string;
+  replyContext: TweetContext;                // Reply-only: always present
+  contextSummary?: string;                   // Plain-language reading from the vision pass
+  toneAdjustment?: Partial<ToneAttributes>;
+  provider?: AIProvider;                     // 'openai' | 'gemini' | 'claude'
 }
 ```
 
@@ -265,9 +277,38 @@ interface GenerateRequest {
 
 ```typescript
 interface GenerateResponse {
-  content: string | string[];  // Single tweet or array for threads
-  tokenUsage: number;          // Total tokens consumed
-  provider: AIProvider;        // Which provider was used
+  content: string;             // A single reply — never an array
+  tokenUsage: number;
+  provider: AIProvider;
+}
+```
+
+### TweetContext
+
+```typescript
+interface TweetContext {
+  text: string;
+  username: string;            // @handle
+  displayName?: string;
+  timestamp?: string;
+  images?: { url: string; alt?: string }[];
+  metrics?: { replies?: number; retweets?: number; likes?: number };
+  thread?: { username: string; displayName?: string; text: string }[]; // oldest first
+}
+```
+
+### AnalyzeContextRequest / AnalyzeContextResponse
+
+```typescript
+interface AnalyzeContextRequest {
+  context: TweetContext;
+  provider?: AIProvider;
+}
+
+interface AnalyzeContextResponse {
+  summary: string;
+  provider: AIProvider;
+  visionFailed?: boolean;      // Images were present but unreadable; summary is text-only
 }
 ```
 
@@ -284,9 +325,17 @@ interface BrandVoice {
     formality: number;      // 0-100
     humor: number;          // 0-100
     technicality: number;   // 0-100
+    empathy: number;        // 0-100
+    energy: number;         // 0-100
+    authenticity: number;   // 0-100
   };
+  category?: 'professional' | 'casual' | 'technical' | 'creative' | 'educational' | 'personal' | 'custom';
+  tags?: string[];
+  isTemplate?: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Optional V2 fields: vocabulary, platformGuidelines, characterVoices,
+  // coreValues, messagingFramework, dosList, dontsList, version
 }
 ```
 
@@ -312,44 +361,56 @@ interface UserProfile {
 
 ---
 
+## Provider Dispatch
+
+[src/background/service-worker.ts](../../src/background/service-worker.ts) owns provider selection:
+
+```typescript
+const provider = request.provider ?? settings.defaultProvider ?? 'openai';
+const apiKey = settings.apiKeys[provider];   // missing → user-facing error, no cross-provider retry
+```
+
+- A saved `defaultModel` is only forwarded when `getModelById(defaultModel)?.provider === provider`; otherwise each client uses its own default.
+- Generation is rate limited before anything else runs — 20 requests/minute (see [src/utils/rateLimiter.ts](../../src/utils/rateLimiter.ts)).
+- Drafts are written to IndexedDB only when `features.rememberHistory` is enabled.
+- **There is no automatic failover to a different provider.** Each client falls back to its own cheaper model, and that's it.
+
+---
+
 ## Error Handling
 
-All API functions throw errors that should be caught and handled:
+All provider functions throw; the service worker catches and rewrites the message for the user:
 
 ```typescript
 try {
   const response = await generateWithOpenAI(request, apiKey, brandVoice);
-  // Success
 } catch (error) {
-  console.error('Generation failed:', error);
-  // Handle error:
-  // - Show user-friendly message
-  // - Try fallback provider
-  // - Log for debugging
+  // service-worker.ts maps 'API key' / 'rate limit' / '401' / 'network'
+  // onto provider-labelled, actionable messages before returning
+  // { success: false, error } to the panel.
 }
 ```
 
 ### Common Error Types
 
 1. **API Key Invalid/Missing**
-   - Message: "Invalid API key" or "API key required"
-   - Solution: Verify API key is correct and active
+   - Message: "…API key not configured" or "Invalid …API key"
+   - Solution: add or fix the key for the selected provider in Settings
 
 2. **Rate Limit Exceeded**
-   - Message: "Rate limit exceeded"
-   - Solution: Implement exponential backoff, use different provider
+   - Message: "Rate limit exceeded" (Kotodama's own limiter) or the provider's 429
+   - Solution: wait for the window to clear, or reduce request volume
 
-3. **Model Not Available**
-   - Message: "Model not found"
-   - Solution: Update model name or use fallback model
+3. **Model Not Available / 404**
+   - Usually a stale model id — for Claude, a date-suffixed id
+   - Solution: use the ids in `src/constants/models.ts`
 
-4. **Content Policy Violation**
-   - Message: "Content violates policy"
-   - Solution: Modify prompt or system instructions
+4. **Rejected Parameter (400)**
+   - `temperature` / `top_p` / `top_k` on a Claude 5-series model
+   - Solution: omit the parameter (the client already does for known prefixes)
 
 5. **Network Error**
-   - Message: "Network request failed"
-   - Solution: Check internet connection, retry with backoff
+   - Message: "Network error. Please check your internet connection…"
 
 ---
 
@@ -357,135 +418,92 @@ try {
 
 ### 1. Provider Selection
 
+The user picks a default provider in Settings. When adding logic that chooses on their behalf,
+remember the practical differences:
+
 ```typescript
-// Choose based on requirements:
-
-// For best quality and complex tasks:
-provider: 'openai'  // gpt-4o
-
-// For large context (long threads, analysis):
-provider: 'gemini'  // gemini-2.5-pro (2M context)
-
-// For balanced performance:
-provider: 'claude'  // claude-3-5-sonnet
-
-// For speed and cost:
-fastMode: true  // Uses cheaper models
+provider: 'openai'  // widest model list in the settings UI
+provider: 'gemini'  // largest context, cheapest flash-lite tier
+provider: 'claude'  // strongest instruction-following for voice matching
 ```
 
 ### 2. Token Management
 
 ```typescript
-// Track token usage
 const response = await generateWithOpenAI(request, apiKey, brandVoice);
 console.log(`Tokens used: ${response.tokenUsage}`);
-
-// Estimate costs:
-// OpenAI gpt-4o: ~$2.50/1M input, ~$10/1M output
-// OpenAI gpt-4o-mini: ~$0.15/1M input, ~$0.60/1M output
-// Gemini 2.5 Pro: ~$1.25/1M input, ~$5/1M output
-// Gemini 2.5 Flash: ~$0.075/1M input, ~$0.30/1M output
-// Claude 3.5 Sonnet: ~$3/1M input, ~$15/1M output
 ```
 
-### 3. Error Handling & Fallback
+Replies are capped at 300 output tokens and context summaries at 200, so per-request cost is
+dominated by the system prompt (brand voice) and any inlined images.
 
-```typescript
-async function generateWithFallback(
-  request: GenerateRequest,
-  settings: UserSettings,
-  brandVoice: BrandVoice
-): Promise<GenerateResponse> {
-  const providers: AIProvider[] = ['openai', 'gemini', 'claude'];
+### 3. Keep the Vision Pass Optional
 
-  for (const provider of providers) {
-    const apiKey = settings.apiKeys[provider];
-    if (!apiKey) continue;
-
-    try {
-      switch (provider) {
-        case 'openai':
-          return await generateWithOpenAI(request, apiKey, brandVoice);
-        case 'gemini':
-          return await generateWithGemini(request, apiKey, brandVoice);
-        case 'claude':
-          return await generateWithClaude(request, apiKey, brandVoice);
-      }
-    } catch (error) {
-      console.warn(`${provider} failed, trying next provider:`, error);
-      continue;
-    }
-  }
-
-  throw new Error('All providers failed');
-}
-```
+`contextSummary` is an enhancement, never a gate. Code that awaits it before allowing generation
+turns a soft failure into a hard one — the panel deliberately lets the user generate while the
+summary is still loading or after it errored.
 
 ### 4. System Prompt Optimization
 
-The system prompt structure is consistent across providers:
+The system prompt structure is identical across providers:
 
 ```typescript
-// Includes:
-1. Brand voice description
+1. Brand voice description and guidelines
 2. Example tweets
-3. Tone attributes (formality, humor, technicality)
-4. Target profile adaptation (if replying)
-5. Important rules (280 char limit, natural tone, etc.)
+3. Vocabulary / do's / don'ts / platform rules (V2 fields, when present)
+4. Six tone attributes, with the panel's tone presets applied
+5. Target profile adaptation (when a profile exists)
+6. Reply rules (280 char limit, respond to the specific points, no preamble)
 ```
 
-### 5. Thread Generation
+### 5. Sanitize Before Prompting
 
-```typescript
-// Best practices for threads:
-const request: GenerateRequest = {
-  prompt: "Explain React 19 features",
-  brandVoiceId: "tech-voice",
-  isThread: true,
-  threadLength: 5,  // 2-10 tweets
-  provider: 'gemini',  // Best for threads (2M context)
-};
-
-// Response will be array of tweets:
-const response = await generateWithGemini(request, apiKey, brandVoice);
-response.content.forEach((tweet, i) => {
-  console.log(`Tweet ${i + 1}:`, tweet);
-});
-```
+Everything in `TweetContext` came off an attacker-controlled page. `sanitizeTweetContext` runs in
+the content script before the context leaves the page, and `sanitizePrompt` runs on the user's
+intent. Any new field added to the context must go through
+[src/utils/sanitize.ts](../../src/utils/sanitize.ts).
 
 ---
 
-## Rate Limits (Approximate)
+## Rate Limits
 
-| Provider | Tier | Requests/Min | Tokens/Min |
-|----------|------|--------------|------------|
-| OpenAI (Free) | - | 3 | 200,000 |
-| OpenAI (Tier 1) | $5+ spent | 500 | 10M |
-| Gemini (Free) | - | 15 | - |
-| Gemini (Paid) | - | 1,000 | - |
-| Claude (Free) | - | 5 | 20,000 |
-| Claude (Tier 1) | $5+ spent | 50 | 40,000 |
+### Kotodama's own limiter ([src/utils/rateLimiter.ts](../../src/utils/rateLimiter.ts))
 
-**Note:** Rates vary by plan and may change. Check official documentation.
+| Key | Limit | Enforced? |
+|-----|-------|-----------|
+| `generate` | 20 / minute | ✅ `tryRequest('generate')` checks this **and** the hourly bucket |
+| `generateHourly` | 200 / hour | ✅ via the `generate` check |
+| `analyzeProfile` | 10 / minute | ❌ configured but never checked — nothing calls it |
+| `analyzeContext` | 10 / minute | ❌ configured but never checked — the vision pass rides the same user gesture as `generate` |
+
+### Provider limits (approximate)
+
+| Provider | Tier | Requests/Min |
+|----------|------|--------------|
+| OpenAI (Free) | - | 3 |
+| OpenAI (Tier 1) | $5+ spent | 500 |
+| Gemini (Free) | - | 15 |
+| Gemini (Paid) | - | 1,000 |
+| Claude (Free) | - | 5 |
+| Claude (Tier 1) | $5+ spent | 50 |
+
+**Note:** Provider rates vary by plan and change often. Check official documentation.
 
 ---
 
 ## Security Considerations
 
 1. **API Key Storage**
-   - Always encrypt API keys before storing
-   - Use Web Crypto API for encryption
-   - Never log or expose keys in UI
+   - Keys are encrypted with the Web Crypto API before being written to `chrome.storage`
+   - Decrypted only inside the service worker; never logged or shown in the UI
 
-2. **API Key Validation**
-   - Validate keys on first use
-   - Handle invalid key errors gracefully
-   - Prompt user to update keys
+2. **Prompt Injection**
+   - Page-scraped text is sanitized and length-capped before it reaches a prompt
+   - Tweet content is delivered in labelled context blocks, not as instructions
 
 3. **Content Security**
-   - Never send sensitive information in prompts
-   - Sanitize user inputs
-   - Follow each provider's content policies
+   - Outbound requests are limited to the provider APIs and `pbs.twimg.com` image fetches
+   - Host permissions in the manifest are the enforcement point
 
 ---
 
@@ -513,8 +531,7 @@ response.content.forEach((tweet, i) => {
 
 ---
 
-**Last Updated:** October 17, 2025
 **API Versions:**
-- OpenAI: Latest (gpt-4o, gpt-4o-mini)
-- Gemini: v1beta (gemini-2.5-pro, gemini-2.5-flash)
-- Claude: 2023-06-01 (claude-3-5-sonnet-20241022)
+- OpenAI: `/v1/chat/completions`
+- Gemini: `v1beta` `generateContent`
+- Claude: `anthropic-version: 2023-06-01`

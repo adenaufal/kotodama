@@ -1,12 +1,12 @@
 # Quick Start Guide
 
-Kotodama v1.6.0 in a nutshell — install, load, and start composing on Twitter/X in minutes.
+Kotodama in a nutshell — install, load, and start replying on Twitter/X in minutes.
 
 ## Prerequisites
 
 - Node.js 20+ (ships with npm 10+)
 - Google Chrome or Microsoft Edge (latest stable release)
-- OpenAI API key with access to the GPT-4o family ([create one](https://platform.openai.com/api-keys))
+- An API key for one provider — [OpenAI](https://platform.openai.com/api-keys), [Gemini](https://aistudio.google.com/app/apikey), or [Claude](https://console.anthropic.com/settings/keys). Onboarding lets you pick which; the other two can be added later in Settings.
 
 > Kotodama stores everything locally. No additional services or credentials are required.
 
@@ -40,8 +40,8 @@ Kotodama v1.6.0 in a nutshell — install, load, and start composing on Twitter/
 
 Click the Kotodama toolbar icon to launch the onboarding flow.
 
-1. **Connect OpenAI**
-   - Paste your API key.
+1. **Connect an AI**
+   - Pick a provider (OpenAI, Gemini, or Claude) and paste that provider's API key. One key is enough.
    - Keys are encrypted locally using the Web Crypto API before they touch disk.
 
 2. **Teach Your Voice**
@@ -49,18 +49,22 @@ Click the Kotodama toolbar icon to launch the onboarding flow.
    - Paste tweet URLs to auto-fetch text, or import a Markdown file with `Name`, `Description`, and `Example Tweets` sections.
    - Tone sliders default to 50/50/50 and can be fine-tuned later.
 
-Finishing the wizard saves your settings, creates a default brand voice, and opens Twitter/X so you can start composing.
+Finishing the wizard saves your settings, creates a default brand voice, and opens Twitter/X so you can start replying.
 
 ## Everyday Usage
 
-### Compose or Reply
+Kotodama is reply-only: it drafts replies to a tweet you have open. There is no compose-a-new-tweet mode.
 
-1. Focus any compose box or reply on Twitter/X — a sparkle button (✨) appears.
-2. Click the button to open the panel.
-3. Pick (or keep) the default brand voice, write a prompt, and generate.
-4. Threads: toggle **Create thread** and set the desired length (2–10 tweets).
-5. Replies: the original tweet appears in a context card. You can drop in a reply template to jump-start the tone.
-6. Click **Insert to X** to paste the draft back into Twitter.
+### Reply to a Tweet
+
+1. Open a tweet (or its reply composer) on Twitter/X. A draggable sparkle button (✨) floats on the page.
+2. Click the button to open the panel. It reads the tweet you're replying to — including its images and the tweets above it — and shows a short plain-language summary of what it found.
+3. Type what you want to say back. A reply template can fill that in for you.
+4. Optionally add tone presets (formal / casual / humor / professional) and pick a length (S / M / L).
+5. Pick (or keep) the default brand voice and click **Generate reply**.
+6. Every draft lands in a carousel — retry one in place, or click **Insert** to paste it into the reply box.
+
+If the panel says "No tweet in view", it could not read a tweet to reply to — open a tweet first.
 
 ### Manage Voices & Preferences
 
@@ -81,7 +85,8 @@ Always reload the unpacked extension after a successful build to exercise the la
 ## Troubleshooting
 
 - **Sparkle button missing:** Refresh Twitter/X. Confirm the extension is enabled and watch DevTools for selector warnings.
-- **“Generation failed”:** Ensure your OpenAI key is valid, has credit, and that you are under the rate limit.
+- **“No tweet in view”:** Kotodama could not read a tweet to reply to. Open a tweet or its reply composer and try again; if it persists, Twitter's markup has likely changed.
+- **“Generation failed”:** Ensure the key for your selected provider is valid, has credit, and that you are under the rate limit.
 - **Service worker listed as “inactive”:** Normal Manifest V3 behaviour — it wakes automatically when needed.
 - **Tweet text not fetched from URL:** Twitter’s syndication endpoint occasionally throttles requests. Try again or paste the text manually.
 - **Panel styling looks off:** Reload after running `npm run build`; the settings theme toggle also resets cached styles.

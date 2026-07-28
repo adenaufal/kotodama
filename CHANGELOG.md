@@ -1,5 +1,40 @@
 # Changelog
 
+## [1.8.0] - 2026-07-28
+
+Kotodama menyempit dari "compose tweet dan reply" menjadi **reply-only**. Ekstensi sekarang membaca
+tweet yang sedang kamu balas — teks, thread di atasnya, dan gambar lewat model vision — menampilkan
+hasil bacaan itu, lalu menyusun balasan dengan brand voice kamu.
+
+### 💥 Removed
+- **Compose-a-new-tweet**: Alur menulis tweet baru dihapus sepenuhnya.
+- **Thread generation & sequential posting**: Pembuatan thread, penyisipan berurutan, toast progres, dan kontrol thread (toggle + jumlah tweet) dihapus.
+- **Iframe panel**: Panel tidak lagi berjalan di dalam iframe; kanal `window.postMessage` antara panel dan halaman ikut dihapus.
+- **Tweet templates**: 31 template tweet dihapus; hanya 27 reply template yang tersisa.
+
+### 🚀 Added
+- **Vision context pass**: Message `analyze-context` baru dan `src/api/vision.ts` membaca tweet beserta gambarnya (maks 4) dengan model vision murah per provider, lalu menampilkan ringkasan bahasa awam di ContextCard. Kegagalan turun otomatis ke ringkasan teks-saja dan tidak pernah memblokir generasi.
+- **Shadow-root panel**: Content script (`content-script.tsx`) me-mount panel React ke dalam shadow root di halaman; komunikasi ke halaman lewat props (`onInsert`, `onClose`), bukan message passing.
+- **Richer context capture**: Tweet target diambil dari article tepat sebelum composer (di-scope ke `[role="dialog"]` saat composer berupa modal), lengkap dengan gambar, metrik, dan maksimal 10 thread entry sebelumnya — semuanya disanitasi sebelum meninggalkan halaman.
+- **Gemini & Claude wired end-to-end**: Ketiga provider kini rute lewat service worker dengan pemilihan provider dan model di Settings. Sebelumnya hanya OpenAI yang tersambung.
+- **Result carousel**: Draft menumpuk di carousel dengan retry per-draft yang mengganti satu draft di tempat.
+- **Tone presets & length control**: Preset tone yang bisa ditumpuk plus panjang S/M/L menggantikan slider lama.
+- **Theme system**: `src/utils/theme.ts` dan token `light-dark()` tunggal di `design-system.css`; mode `auto` mengikuti OS tanpa JavaScript, dan mengganti tema langsung mengecat ulang tab X yang sedang terbuka.
+
+### 🔧 Changed
+- **Claude model ids**: Beralih ke id tanpa suffix tanggal (`claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`). Id bertanggal sudah pensiun dan mengembalikan 404.
+- **Claude sampling params**: `temperature`/`top_p`/`top_k` diomit untuk model yang menolaknya dengan HTTP 400, dengan retry otomatis bila model tak terduga ikut menolak.
+- **Gemini thinking budget**: `thinkingConfig.thinkingBudget: 0` di model non-Pro — tanpa ini budget 300 token output habis dipakai berpikir dan respons kembali kosong.
+- **Visual style**: Permukaan flat, border setipis rambut, satu radius, tanpa shadow/glass/blur/gradient. Sakura pink jadi penanda saja (nav aktif, focus ring, draft terpilih), bukan isian tombol.
+- **Build**: Versi `manifest.json` sekarang diturunkan dari `package.json` saat build, jadi tidak bisa lagi drift dari versi rilis.
+
+### 🛠️ Refactor
+- **Shared component library dihapus**: `Alert`, `Button`, `Card`, `Input`, `Modal`, `Switch`, `Tabs`, `Textarea`, `Toast`, `PageLayout`, `SettingsLayout`, dan `GlassContainer` dihapus — dua halaman dengan dua bentuk tidak sepadan dengan satu abstraksi bersama. Layout ditulis inline di masing-masing halaman.
+- **Token CSS konsolidasi**: `tokens.css` dan `kotodama-tokens.css` dihapus; `design-system.css` jadi satu-satunya sumber token.
+
+### 🔒 Security
+- **Trust boundary**: `sanitizeTweetContext`/`sanitizePrompt` mengawal semua teks yang diambil dari halaman sebelum masuk prompt, dengan test injeksi prompt (`src/api/__tests__/prompt-injection.test.ts`).
+
 ## [1.7.2] - 2026-02-08
 
 ### 🚀 Added

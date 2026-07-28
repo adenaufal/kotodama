@@ -1,7 +1,9 @@
-import { UserSettings } from '../types';
+import { AIProvider, UserSettings } from '../types';
 import { encryptApiKey, decryptApiKey } from './encryption';
 
 const SETTINGS_KEY = 'user_settings';
+
+const API_KEY_PROVIDERS: AIProvider[] = ['openai', 'gemini', 'claude'];
 
 const DEFAULT_SETTINGS: UserSettings = {
   apiKeys: {},
@@ -27,22 +29,24 @@ export async function getSettings(): Promise<UserSettings> {
 
   const settings = result[SETTINGS_KEY] as UserSettings;
 
-  // Decrypt API keys if they exist
-  if (settings.apiKeys.openai) {
+  // Decrypt every provider key, not just the ones that shipped first.
+  for (const provider of API_KEY_PROVIDERS) {
+    const stored = settings.apiKeys?.[provider];
+    if (!stored) continue;
     try {
-      settings.apiKeys.openai = await decryptApiKey(settings.apiKeys.openai);
+      settings.apiKeys[provider] = await decryptApiKey(stored);
     } catch (error) {
-      console.error('Failed to decrypt OpenAI key');
-      settings.apiKeys.openai = undefined;
+      console.error(`Failed to decrypt ${provider} key`);
+      settings.apiKeys[provider] = undefined;
     }
   }
 
-  if (settings.apiKeys.gemini) {
+  if (settings.claudeCookie) {
     try {
-      settings.apiKeys.gemini = await decryptApiKey(settings.apiKeys.gemini);
+      settings.claudeCookie = await decryptApiKey(settings.claudeCookie);
     } catch (error) {
-      console.error('Failed to decrypt Gemini key');
-      settings.apiKeys.gemini = undefined;
+      console.error('Failed to decrypt Claude cookie');
+      settings.claudeCookie = undefined;
     }
   }
 
@@ -57,19 +61,22 @@ export async function saveSettings(settings: UserSettings): Promise<void> {
     features: { ...settings.features },
   };
 
-  // Encrypt API keys before saving without mutating the original object
-  if (settingsToSave.apiKeys.openai) {
-    settingsToSave.apiKeys.openai = await encryptApiKey(settingsToSave.apiKeys.openai);
+  // Encrypt every provider key before saving, without mutating the original object
+  for (const provider of API_KEY_PROVIDERS) {
+    const plain = settingsToSave.apiKeys[provider];
+    if (plain) {
+      settingsToSave.apiKeys[provider] = await encryptApiKey(plain);
+    }
   }
 
-  if (settingsToSave.apiKeys.gemini) {
-    settingsToSave.apiKeys.gemini = await encryptApiKey(settingsToSave.apiKeys.gemini);
+  if (settingsToSave.claudeCookie) {
+    settingsToSave.claudeCookie = await encryptApiKey(settingsToSave.claudeCookie);
   }
 
   await chrome.storage.local.set({ [SETTINGS_KEY]: settingsToSave });
 }
 
-export async function updateApiKey(provider: 'openai' | 'gemini', apiKey: string): Promise<void> {
+export async function updateApiKey(provider: AIProvider, apiKey: string): Promise<void> {
   const settings = await getSettings();
   settings.apiKeys[provider] = apiKey;
   await saveSettings(settings);

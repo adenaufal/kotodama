@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../styles/pages.css';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { PageLayout } from '../components/Layout/PageLayout';
+import { BrandLogo } from '../components/BrandLogo';
 import { Settings as SettingsIcon, Mic2 as VoiceIcon, Info as AboutIcon, RefreshCw } from 'lucide-react';
 
 // Components
@@ -13,10 +13,20 @@ import About from './About';
 // Hooks & Types
 import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
 import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
-import { UserSettings, BrandVoice } from '../types';
+import { UserSettings, BrandVoice, AIProvider } from '../types';
+import { applyTheme, Theme } from '../utils/theme';
 
 export type PageType = 'general' | 'voices' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+
+const PROVIDERS: AIProvider[] = ['openai', 'gemini', 'claude'];
+const EMPTY_KEYS: Record<AIProvider, string> = { openai: '', gemini: '', claude: '' };
+
+const PAGES: { id: PageType; label: string; subtitle: string }[] = [
+  { id: 'general', label: 'General', subtitle: 'API keys, model, and appearance.' },
+  { id: 'voices', label: 'Brand voices', subtitle: 'The personalities Kotodama writes as.' },
+  { id: 'about', label: 'About', subtitle: 'Version and links.' },
+];
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageType>('general');
@@ -29,10 +39,12 @@ const App: React.FC = () => {
   const [saveState, setSaveState] = useState<SaveState>('idle');
 
   // Form State
-  const [openaiKey, setOpenaiKey] = useState('');
+  const [apiKeys, setApiKeys] = useState<Record<AIProvider, string>>(EMPTY_KEYS);
+  const [provider, setProvider] = useState<AIProvider>('openai');
   const [defaultVoiceId, setDefaultVoiceId] = useState('');
   const [defaultModel, setDefaultModel] = useState('');
   const [customModels, setCustomModels] = useState<{ id: string; name: string }[]>([]);
+  const [theme, setTheme] = useState<Theme>('auto');
 
   const loadData = async () => {
     try {
@@ -42,10 +54,16 @@ const App: React.FC = () => {
         sendMessage<BrandVoice[]>({ type: 'list-brand-voices' }),
       ]);
       setSettings(settingsData);
-      setOpenaiKey(settingsData.apiKeys?.openai || '');
+      setApiKeys({
+        openai: settingsData.apiKeys?.openai || '',
+        gemini: settingsData.apiKeys?.gemini || '',
+        claude: settingsData.apiKeys?.claude || '',
+      });
+      setProvider(settingsData.defaultProvider || 'openai');
       setDefaultVoiceId(settingsData.defaultBrandVoiceId || '');
       setDefaultModel(settingsData.defaultModel || '');
       setCustomModels(settingsData.customModels || []);
+      setTheme(settingsData.ui?.theme || 'auto');
       setBrandVoices(voicesData);
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -56,6 +74,10 @@ const App: React.FC = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  // Repaint the moment the radio flips — waiting on the debounced save would
+  // make the control feel broken.
+  useEffect(() => { applyTheme(theme); }, [theme]);
+
   const handleSave = async () => {
     try {
       setSaveState('saving');
@@ -63,10 +85,16 @@ const App: React.FC = () => {
       const baseSettings = settings || defaultSettings;
       const updatedSettings: UserSettings = {
         ...baseSettings,
-        apiKeys: { ...baseSettings.apiKeys, openai: openaiKey },
+        apiKeys: {
+          openai: apiKeys.openai.trim(),
+          gemini: apiKeys.gemini.trim(),
+          claude: apiKeys.claude.trim(),
+        },
+        defaultProvider: provider,
         defaultBrandVoiceId: defaultVoiceId,
         defaultModel: defaultModel,
-        customModels: customModels
+        customModels: customModels,
+        ui: { ...baseSettings.ui, theme },
       };
       await sendMessage({ type: 'save-settings', payload: updatedSettings });
       setSettings(updatedSettings);
@@ -82,9 +110,11 @@ const App: React.FC = () => {
     if (!loading && settings) {
       const timeoutId = setTimeout(() => {
         if (
-          openaiKey !== (settings.apiKeys?.openai || '') ||
+          PROVIDERS.some((p) => apiKeys[p].trim() !== (settings.apiKeys?.[p] || '')) ||
+          provider !== (settings.defaultProvider || 'openai') ||
           defaultVoiceId !== (settings.defaultBrandVoiceId || '') ||
           defaultModel !== (settings.defaultModel || '') ||
+          theme !== (settings.ui?.theme || 'auto') ||
           JSON.stringify(customModels) !== JSON.stringify(settings.customModels || [])
         ) {
           handleSave();
@@ -92,121 +122,100 @@ const App: React.FC = () => {
       }, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [openaiKey, defaultVoiceId, defaultModel, customModels, settings, loading]);
+  }, [apiKeys, provider, defaultVoiceId, defaultModel, customModels, theme, settings, loading]);
 
   const handleRestartOnboarding = () => { chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html?skipRedirect=1') }); };
 
-  // Navigation Items
-  const mainNavItems = [
-    { id: 'general', label: 'General', icon: <SettingsIcon size={18} /> },
-    { id: 'voices', label: 'Brand Voices', icon: <VoiceIcon size={18} /> },
-  ];
-
-  const getPageTitle = () => {
-    if (currentPage === 'general') return 'General Settings';
-    if (currentPage === 'voices') return 'Brand Voices';
-    return 'About';
-  };
-  const getPageSubtitle = () => {
-    if (currentPage === 'general') return 'Manage your API keys and AI model preferences.';
-    if (currentPage === 'voices') return 'Create and manage your AI writing personalities.';
-    return 'Version information and credits.';
-  };
-
-  const Sidebar = (
-    <div className="flex flex-col h-full">
-      {/* Main Navigation */}
-      <nav className="space-y-1 flex-1">
-        {mainNavItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentPage(item.id as PageType)}
-            className={`
-              w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
-              ${currentPage === item.id
-                ? 'bg-[var(--koto-bg-elevated)] text-[var(--koto-text-primary)] shadow-sm font-semibold'
-                : 'text-[var(--koto-text-secondary)] hover:bg-[var(--koto-bg-tertiary)] hover:text-[var(--koto-text-primary)]'
-              }
-            `}
-          >
-            <span className={`${currentPage === item.id ? 'text-[var(--koto-accent)]' : 'text-[var(--koto-text-tertiary)]'}`}>
-              {item.icon}
-            </span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Footer Actions */}
-      <div className="pt-4 mt-4 border-t border-[var(--koto-border-light)] space-y-2">
-        <button
-          onClick={handleRestartOnboarding}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium text-[var(--koto-text-tertiary)] hover:bg-[var(--koto-bg-tertiary)] hover:text-[var(--koto-text-secondary)] transition-all"
-        >
-          <RefreshCw size={14} />
-          Restart Onboarding
-        </button>
-        <button
-          onClick={() => setCurrentPage('about')}
-          className={`
-            w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium transition-all
-            ${currentPage === 'about'
-              ? 'bg-[var(--koto-bg-elevated)] text-[var(--koto-text-primary)] font-semibold'
-              : 'text-[var(--koto-text-tertiary)] hover:bg-[var(--koto-bg-tertiary)] hover:text-[var(--koto-text-secondary)]'
-            }
-          `}
-        >
-          <AboutIcon size={14} />
-          About Kotodama
-        </button>
-      </div>
-    </div>
-  );
+  const activePage = PAGES.find((p) => p.id === currentPage)!;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--koto-bg-secondary)]">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--koto-accent)] border-t-transparent"></div>
+      <div className="grid min-h-screen place-items-center bg-canvas">
+        <p className="text-sm text-faint">Loading…</p>
       </div>
     );
   }
 
   return (
     <>
-      <PageLayout
-        variant="dashboard"
-        sidebar={Sidebar}
-        title={getPageTitle()}
-        subtitle={getPageSubtitle()}
-      >
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* General Settings Page */}
-          {currentPage === 'general' && (
-            <GeneralSettings
-              openaiKey={openaiKey}
-              setOpenaiKey={setOpenaiKey}
-              selectedModelId={defaultModel}
-              setSelectedModelId={setDefaultModel}
-              customModels={customModels}
-              setCustomModels={setCustomModels}
-              saveState={saveState}
-            />
-          )}
+      <div className="flex h-screen overflow-hidden bg-canvas text-ink">
+        <aside className="flex w-56 shrink-0 flex-col border-r border-line px-3 py-5">
+          <div className="flex items-center gap-2.5 px-3 pb-6">
+            <BrandLogo size={20} />
+            <span className="text-sm font-medium tracking-tight">Kotodama</span>
+          </div>
 
-          {/* Brand Voices Page - Fully Inline */}
-          {currentPage === 'voices' && (
-            <BrandVoicePage
-              voices={brandVoices}
-              defaultVoiceId={defaultVoiceId}
-              setDefaultVoiceId={setDefaultVoiceId}
-              onRefresh={loadData}
-            />
-          )}
+          <nav className="flex-1 space-y-0.5">
+            {PAGES.map((item) => {
+              const active = currentPage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentPage(item.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative flex w-full items-center gap-2.5 rounded-koto px-3 py-2 text-sm transition-colors duration-150 ${active ? 'bg-raise font-medium text-ink' : 'text-muted hover:text-ink'
+                    }`}
+                >
+                  {/* The only accent on this page: where you are. */}
+                  {active && (
+                    <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" />
+                  )}
+                  {item.id === 'general' && <SettingsIcon size={15} strokeWidth={1.5} />}
+                  {item.id === 'voices' && <VoiceIcon size={15} strokeWidth={1.5} />}
+                  {item.id === 'about' && <AboutIcon size={15} strokeWidth={1.5} />}
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
 
-          {/* About Page */}
-          {currentPage === 'about' && <About />}
-        </div>
-      </PageLayout>
+          <button
+            onClick={handleRestartOnboarding}
+            className="flex w-full items-center gap-2.5 rounded-koto px-3 py-2 text-xs text-faint transition-colors duration-150 hover:text-ink"
+          >
+            <RefreshCw size={13} strokeWidth={1.5} />
+            Restart onboarding
+          </button>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto">
+          {/* Left-aligned against the sidebar rather than centred in the remaining
+              space — centring drifts the whole page right on wide monitors. */}
+          <div className="max-w-2xl px-10 py-14">
+            <header className="pb-10">
+              <h1 className="text-xl font-semibold tracking-tight">{activePage.label}</h1>
+              <p className="mt-1 text-sm text-muted">{activePage.subtitle}</p>
+            </header>
+
+            {currentPage === 'general' && (
+              <GeneralSettings
+                apiKeys={apiKeys}
+                setApiKeys={setApiKeys}
+                provider={provider}
+                setProvider={setProvider}
+                selectedModelId={defaultModel}
+                setSelectedModelId={setDefaultModel}
+                customModels={customModels}
+                setCustomModels={setCustomModels}
+                theme={theme}
+                setTheme={setTheme}
+                saveState={saveState}
+              />
+            )}
+
+            {currentPage === 'voices' && (
+              <BrandVoicePage
+                voices={brandVoices}
+                defaultVoiceId={defaultVoiceId}
+                setDefaultVoiceId={setDefaultVoiceId}
+                onRefresh={loadData}
+              />
+            )}
+
+            {currentPage === 'about' && <About />}
+          </div>
+        </main>
+      </div>
 
       <RuntimeInvalidatedModal isOpen={isInvalidated} />
     </>

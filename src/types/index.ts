@@ -67,29 +67,39 @@ export interface UserProfile {
   lastAnalyzed: Date;
 }
 
+export interface TweetImage {
+  url: string; // pbs.twimg.com media URL, normalized to ?name=small
+  alt?: string; // Author-provided alt text, when present
+}
+
+/** A preceding tweet in the same thread. Flat on purpose - no nesting. */
+export interface ThreadEntry {
+  username: string;
+  displayName?: string;
+  text: string;
+}
+
 export interface TweetContext {
   text: string;
   username: string; // @handle
   displayName?: string; // Display Name
   timestamp?: string; // ISO string or relative time
-  images?: string[]; // Alt text of attached images
+  images?: TweetImage[];
   metrics?: {
     replies?: number;
     retweets?: number;
     likes?: number;
   };
-  isThread?: boolean;
+  /** Tweets above this one in the thread, oldest first. */
+  thread?: ThreadEntry[];
 }
 
 export interface GeneratedTweet {
   id: string;
   prompt: string;
   generatedContent: string;
-  finalContent?: string;
   brandVoiceId: string;
   targetProfileId?: string;
-  isThread: boolean;
-  threadPosition?: number;
   posted: boolean;
   timestamp: Date;
   apiUsed: 'openai' | 'gemini' | 'claude';
@@ -127,29 +137,39 @@ export interface UserSettings {
 export type AIProvider = 'openai' | 'gemini' | 'claude';
 
 export interface GenerateRequest {
-  prompt: string;
+  prompt: string; // What the user wants to say back
   brandVoiceId: string;
   targetProfileId?: string;
-  isThread?: boolean;
-  threadLength?: number;
-  replyContext?: TweetContext; // New field for structured context
+  replyContext: TweetContext; // Reply-only: always present
+  /** Plain-language reading of the tweet from the context pass, incl. any images. */
+  contextSummary?: string;
   toneAdjustment?: Partial<ToneAttributes>;
   provider?: AIProvider;
-  fastMode?: boolean | 'ultra' | 'haiku-45'; // true=fast, 'ultra'=ultra fast, 'haiku-45'=Haiku 4.5
-  quality?: 'opus' | 'opus-max'; // Claude: opus=Opus 4, opus-max=Opus 4.1
-  reasoning?: boolean; // OpenAI: Use o1 reasoning model
-  coding?: boolean; // OpenAI: Use codex for code generation
 }
 
 export interface GenerateResponse {
-  content: string | string[]; // single tweet or thread
+  content: string;
   tokenUsage: number;
   provider: AIProvider;
+}
+
+/** Reads the tweet (and its images) with a vision-capable model. */
+export interface AnalyzeContextRequest {
+  context: TweetContext;
+  provider?: AIProvider;
+}
+
+export interface AnalyzeContextResponse {
+  summary: string;
+  provider: AIProvider;
+  /** True when images were present but could not be read; summary is text-only. */
+  visionFailed?: boolean;
 }
 
 export interface Message {
   type:
   | 'generate'
+  | 'analyze-context'
   | 'analyze-profile'
   | 'save-settings'
   | 'get-settings'

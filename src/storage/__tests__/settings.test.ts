@@ -118,7 +118,7 @@ describe('getSettings', () => {
 
     expect(settings.apiKeys.openai).toBe('stored-openai-key');
     expect(settings.apiKeys.gemini).toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to decrypt Gemini key');
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to decrypt gemini key');
 
     consoleSpy.mockRestore();
   });
@@ -188,17 +188,21 @@ describe('saveSettings', () => {
 });
 
 describe('updateApiKey', () => {
-  it('updates and persists the requested API key', async () => {
-    const openaiKey = 'fresh-openai-key';
+  it.each(['openai', 'gemini', 'claude'] as const)(
+    'encrypts and persists the %s API key',
+    async (provider) => {
+      const key = `fresh-${provider}-key`;
 
-    await updateApiKey('openai', openaiKey);
+      await updateApiKey(provider, key);
 
-    const stored = storedValues[SETTINGS_KEY] as UserSettings;
-    expect(stored.apiKeys.openai).not.toBe(openaiKey);
+      const stored = storedValues[SETTINGS_KEY] as UserSettings;
+      expect(stored.apiKeys[provider]).toBeDefined();
+      expect(stored.apiKeys[provider]).not.toBe(key);
 
-    const settings = await getSettings();
-    expect(settings.apiKeys.openai).toBe(openaiKey);
-  });
+      const settings = await getSettings();
+      expect(settings.apiKeys[provider]).toBe(key);
+    }
+  );
 });
 
 describe('clearAllData', () => {

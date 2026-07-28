@@ -1,68 +1,43 @@
 import React from 'react';
-import { Settings, X, MessageCircle } from 'lucide-react';
-import { BrandLogo } from '../../../components/BrandLogo';
+import { Settings, X } from 'lucide-react';
 
 interface PanelHeaderProps {
     onClose: () => void;
     onOpenSettings: () => void;
-    context?: {
-        type: 'compose' | 'reply' | null;
-        tweetContext?: {
-            text: string;
-            username: string;
-        };
-    };
+    username?: string;
 }
 
-export const PanelHeader: React.FC<PanelHeaderProps> = ({
-    onClose,
-    onOpenSettings,
-    context
-}) => {
-    const isReply = context?.type === 'reply';
-    const username = context?.tweetContext?.username;
+/**
+ * Zone 1: 44px, never scrolls. Title left, icon-only actions right, hairline under.
+ */
+export const PanelHeader: React.FC<PanelHeaderProps> = ({ onClose, onOpenSettings, username }) => (
+    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-line pl-4 pr-2">
+        <h1 className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
+            {username ? (
+                <>
+                    Reply to <span className="font-normal text-muted">@{username}</span>
+                </>
+            ) : (
+                'Kotodama'
+            )}
+        </h1>
 
-    return (
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/50 bg-[#000000] text-white">
-            {/* Left: Context Indicator */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-                {/* Logo */}
-                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-zinc-900 rounded-lg border border-zinc-800">
-                    <BrandLogo size={20} />
-                </div>
+        <button
+            type="button"
+            onClick={onOpenSettings}
+            aria-label="Open settings"
+            className="grid size-7 place-items-center rounded-md text-faint transition-colors duration-150 ease-out hover:bg-raise hover:text-ink active:scale-[0.96]"
+        >
+            <Settings className="size-4" strokeWidth={1.5} />
+        </button>
 
-                <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-1.5">
-                        {isReply && <MessageCircle className="w-3 h-3 text-blue-400 flex-shrink-0" />}
-                        <span className="text-sm font-medium text-zinc-200">
-                            {isReply ? 'Reply to' : 'New Post'}
-                        </span>
-                        {isReply && username && (
-                            <span className="text-sm text-zinc-500">@{username}</span>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Right: Actions */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                    onClick={onOpenSettings}
-                    className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-all"
-                    title="Settings"
-                >
-                    <Settings className="w-4 h-4" />
-                </button>
-
-                <button
-                    onClick={onClose}
-                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                    title="Close"
-                >
-                    <X className="w-4 h-4" />
-                </button>
-            </div>
-        </div>
-    );
-};
-
+        <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close panel"
+            className="grid size-7 place-items-center rounded-md text-faint transition-colors duration-150 ease-out hover:bg-raise hover:text-ink active:scale-[0.96]"
+        >
+            <X className="size-4" strokeWidth={1.5} />
+        </button>
+    </header>
+);

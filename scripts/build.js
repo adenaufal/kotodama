@@ -1,13 +1,16 @@
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
+// package.json is the only version release-please bumps, so the manifest takes
+// its version from there at build time instead of being hand-synced.
+const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+
 // Copy manifest and icons to dist
 const filesToCopy = [
-  { from: 'public/manifest.json', to: 'dist/manifest.json' },
   { from: 'public/browserconfig.xml', to: 'dist/browserconfig.xml' },
   { from: 'public/site.webmanifest', to: 'dist/site.webmanifest' },
   { from: 'public/icons/icon16.png', to: 'dist/icons/icon16.png' },
@@ -25,6 +28,12 @@ const filesToCopy = [
 ];
 
 console.log('Copying static files to dist...');
+
+const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'));
+manifest.version = version;
+mkdirSync(join(root, 'dist'), { recursive: true });
+writeFileSync(join(root, 'dist/manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+console.log(`  public/manifest.json -> dist/manifest.json (version ${version})`);
 
 filesToCopy.forEach(({ from, to }) => {
   const fromPath = join(root, from);

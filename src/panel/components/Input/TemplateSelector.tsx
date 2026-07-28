@@ -1,42 +1,47 @@
-import { Select, SelectOption } from '../Shared/Select';
-import { ReplyTemplate, TweetTemplate } from '../../../constants/templates';
+import React from 'react';
+import { ChevronDown } from 'lucide-react';
+import { ReplyTemplate } from '../../../constants/templates';
 
 interface TemplateSelectorProps {
-    templates: (ReplyTemplate | TweetTemplate)[];
-    onSelect: (template: ReplyTemplate | TweetTemplate) => void;
+    templates: ReplyTemplate[];
+    onSelect: (template: ReplyTemplate) => void;
 }
 
-export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
-    templates,
-    onSelect,
-}) => {
-    // Map templates to SelectOptions
-    const options: SelectOption[] = templates.map(t => ({
-        id: t.id,
-        label: t.label,
-        icon: <span>{t.icon}</span>,
-        group: 'group' in t ? (t as any).category : undefined // Optional
-    }));
-
-    const handleSelect = (id: string) => {
-        const template = templates.find(t => t.id === id);
-        if (template) {
-            onSelect(template);
-        }
-    };
+/**
+ * Starter intents. Native <select> with optgroups: real keyboard/type-ahead
+ * behaviour, no hand-rolled listbox.
+ */
+export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ templates, onSelect }) => {
+    const groups = templates.reduce<Record<string, ReplyTemplate[]>>((acc, t) => {
+        (acc[t.category] ||= []).push(t);
+        return acc;
+    }, {});
 
     return (
-        <div className="w-full px-5 py-2">
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
-                Quick Template
-            </label>
-            <Select
-                options={options}
-                value="" // Always reset selection for templates as they are actions
-                onChange={handleSelect}
-                placeholder="Choose a template..."
-                className="w-full"
-                searchable={true}
+        <div className="relative">
+            <select
+                aria-label="Start from a template"
+                value=""
+                onChange={(e) => {
+                    const t = templates.find((x) => x.id === e.target.value);
+                    if (t) onSelect(t);
+                }}
+                className="h-9 w-full appearance-none rounded-koto border border-line bg-surface pl-3 pr-8 text-[13px] text-ink outline-none transition-colors duration-150 ease-out hover:border-line-strong focus:border-accent"
+            >
+                <option value="">Start from a template…</option>
+                {Object.entries(groups).map(([category, items]) => (
+                    <optgroup key={category} label={category}>
+                        {items.map((t) => (
+                            <option key={t.id} value={t.id}>
+                                {t.icon} {t.label}
+                            </option>
+                        ))}
+                    </optgroup>
+                ))}
+            </select>
+            <ChevronDown
+                className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-faint"
+                strokeWidth={1.5}
             />
         </div>
     );
