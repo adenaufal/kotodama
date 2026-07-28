@@ -1,6 +1,10 @@
 # Testing Guide - Kotodama Extension
 
-Complete guide for testing the Twitter DOM integration and overall functionality of the Kotodama AI Tweet Composer extension.
+Manual test plan for the reply-only extension: shadow-root panel, tweet capture, vision reading,
+reply generation, and insertion.
+
+Kotodama does not compose new tweets and does not generate or post threads. If you find a test here
+for those, it is a leftover — delete it.
 
 ## Table of Contents
 
@@ -8,7 +12,7 @@ Complete guide for testing the Twitter DOM integration and overall functionality
 - [Phase 2: Twitter DOM Integration Tests](#phase-2-twitter-dom-integration-tests)
 - [Phase 3: Functional Testing](#phase-3-functional-testing)
 - [Phase 4: Common Issues & Debugging](#phase-4-common-issues--debugging)
-- [Phase 5: Advanced Testing Scenarios](#phase-5-advanced-testing-scenarios)
+- [Phase 5: Edge Cases](#phase-5-edge-cases)
 - [Testing Checklist](#testing-checklist)
 
 ---
@@ -23,27 +27,22 @@ npm run build
 ```
 
 **Expected Output:**
-- `dist/` folder created with the following structure:
+- `dist/` folder created with roughly this shape:
   ```
   dist/
   ├── manifest.json
   ├── background.js
-  ├── commonjsHelpers.js
-  ├── content.js
-  ├── models.js
-  ├── panel.js
+  ├── content.js          # content script + panel, single IIFE
   ├── onboarding.js
   ├── settings.js
-  ├── index.js
   ├── index.css
   ├── icons/
   └── src/
-      ├── panel/index.html
       ├── onboarding/index.html
       └── settings/index.html
   ```
 - No TypeScript compilation errors
-- Total bundle size ~320KB
+- **No `panel.js` and no `dist/src/panel/`** — the panel ships inside `content.js`
 
 ### Step 2: Load in Chrome/Edge
 
@@ -57,11 +56,10 @@ npm run build
 - ✅ Extension loads without errors
 - ✅ Extension icon appears in browser toolbar
 - ✅ No console errors in extension details page
-- ✅ Service worker shows "active" status (click "service worker" link to inspect)
+- ✅ Service worker link is present (it may read "inactive" — that is normal MV3 behaviour)
 
 **Troubleshooting:**
-- If icons show as broken: Expected for now (SVG placeholders, needs PNG conversion)
-- If manifest errors: Check [public/manifest.json](public/manifest.json) syntax
+- If manifest errors: Check [public/manifest.json](../../public/manifest.json) syntax
 - If build fails: Run `npm install` and retry
 
 ---
@@ -70,206 +68,117 @@ npm run build
 
 ### Test 1: Content Script Injection
 
-**Goal:** Verify content script loads on Twitter/X pages
+**Goal:** Verify the content script mounts its shadow root on Twitter/X pages
 
 **Steps:**
 1. Open a new tab and navigate to https://twitter.com or https://x.com
 2. Open Chrome DevTools (F12 or Right-click → Inspect)
 3. Go to the Console tab
-4. Look for the message: `"Kotodama content script loaded"`
+4. Look for: `[Kotodama] Shadow DOM injected`
 
 **Expected Results:**
 - Console message appears within 1-2 seconds of page load
+- A floating sparkle button is visible (top-right by default)
 - No JavaScript errors in console
 - Page loads and functions normally
 
 **Debug Commands:**
 ```javascript
-// Check if content script loaded
-console.log('Kotodama loaded:', !!window.kotodamaLoaded)
+// Host element + shadow root
+const host = document.getElementById('kotodama-host')
+console.log('Host:', host, 'Shadow root:', host?.shadowRoot)
 
-// Check for observer
-console.log('Observer active:', !!document.querySelector('.kotodama-ai-button'))
+// Button lives inside the shadow root, not the page DOM
+console.log('Button:', host?.shadowRoot?.querySelector('.kotodama-floating-button'))
 ```
 
 **If Test Fails:**
-- Verify `content.js` exists in `dist/` folder
-- Check [manifest.json:18-24](public/manifest.json) content_scripts configuration
+- Verify `content.js` exists in `dist/`
+- Check the `content_scripts` block in `public/manifest.json`
 - Ensure host_permissions include twitter.com and x.com
-- Reload extension and refresh Twitter page
+- Reload extension and refresh the Twitter page
 
 ---
 
-### Test 2: Compose Box Detection
+### Test 2: Floating Button
 
-**Goal:** Verify MutationObserver detects compose boxes and injects button
+**Goal:** Verify the button renders, drags, and persists its position
 
 **Steps:**
-1. On Twitter home page, click the "What is happening?!" compose box
-2. Look for the Kotodama button appearing in or near the compose area
-3. Try different compose box entry points:
-   - Home page main composer
-   - "Tweet" button in navigation (opens modal)
-   - Profile page "Tweet" button
-   - Quote tweet composer
+1. Confirm the sparkle button is visible on any Twitter/X page (it is page-level, not attached to a compose box)
+2. Drag it somewhere else and release
+3. Refresh the page
 
-**Current DOM Selectors** ([content-script.ts](src/content/content-script.ts)):
-```typescript
-'[data-testid="tweetTextarea_0"]'           // Primary selector
-'[role="textbox"][contenteditable="true"]'   // Fallback selector
-```
+**Expected:**
+- Dragging past ~5px moves the button instead of triggering a click
+- A short click (no drag) opens the panel
+- After refresh the button reappears at the dragged position
 
-**Expected Button Appearance:**
-- **Location:**
-  - Inside toolbar if `[data-testid="toolBar"]` exists
-  - Otherwise: Absolute positioned at bottom-right of compose area
-- **Styling:**
-  - Gradient background (blue to purple)
-  - Sparkle icon + "Kotodama" text
-  - Rounded pill shape
-  - Hover effect (slight scale and shadow)
-
-**Debug Commands** (run in DevTools Console):
+**Debug:**
 ```javascript
-// Check if compose boxes are detected
-const composeBoxes = document.querySelectorAll('[data-testid="tweetTextarea_0"]')
-console.log(`Found ${composeBoxes.length} compose box(es)`, composeBoxes)
-
-// Check if button was injected
-const buttons = document.querySelectorAll('.kotodama-ai-button')
-console.log(`Found ${buttons.length} Kotodama button(s)`, buttons)
-
-// Check if toolbar exists (for button placement)
-const toolbars = document.querySelectorAll('[data-testid="toolBar"]')
-console.log(`Found ${toolbars.length} toolbar(s)`, toolbars)
-
-// List all contenteditable elements (for debugging)
-const editables = document.querySelectorAll('[contenteditable="true"]')
-console.log(`Found ${editables.length} contenteditable element(s)`, editables)
+chrome.storage.local.get(['buttonPosition'], r => console.log(r))
 ```
-
-**If Button Doesn't Appear:**
-1. **Twitter changed their DOM structure:**
-   - Inspect the compose box element
-   - Copy the actual `data-testid` or attributes
-   - Update selectors in [content-script.ts](src/content/content-script.ts)
-
-2. **Button injection failed:**
-   - Check browser console for JavaScript errors
-   - Verify MutationObserver is running
-   - Try clicking compose box multiple times
-
-3. **CSS conflicts:**
-   - Button might be hidden behind Twitter elements
-   - Check z-index in [content-script.ts](src/content/content-script.ts)
 
 ---
 
-### Test 3: Reply Box Detection
+### Test 3: Reply Context Capture
 
-**Goal:** Verify button appears when replying to tweets
+**Goal:** Verify the correct tweet is captured
 
 **Steps:**
-1. Find any tweet in your timeline
-2. Click the "Reply" button/icon
-3. Reply compose box should open
-4. Kotodama button should appear in the reply box
+1. Open a tweet permalink (`/status/...`) with at least one image and a few replies above it
+2. Click the reply box, then click the Kotodama button
+3. Check the context card at the top of the panel
 
-**Reply-Specific Detection** ([content-script.ts](src/content/content-script.ts)):
+**Expected Behaviour:**
+- Header reads `Reply to @handle` for the tweet you are actually replying to
+- Context card shows author, relative time, tweet text, image thumbnails
+- Preceding tweets in the thread are collapsible under the card (capped at 10)
+- Metrics are captured when present
+
+**Selectors involved** ([content-script.tsx](../../src/content/content-script.tsx)):
 ```typescript
-const isReply = !!composeBox.closest('[data-testid="reply"]')
+'article[data-testid="tweet"]'      // tweet cards
+'[data-testid="tweetText"]'         // body
+'[data-testid="User-Name"]'         // author
+'[data-testid="tweetPhoto"] img'    // photos
 ```
 
-**Expected Behavior:**
-- Button appears in reply composer
-- Clicking button captures tweet context:
-  - Original tweet text
-  - Author's username
-  - Timestamp
-- Panel shows "Replying to @username" card with context
+**Cases that must all pick the right tweet:**
+- Reply from the timeline (modal composer) — background timeline tweets must NOT leak in
+- Reply from a `/status/` permalink page
+- Reply deep inside a thread — the target is the tweet immediately above the composer, not the first tweet on the page
 
-**Debug Commands:**
-```javascript
-// Check if reply container detected
-const replyContainers = document.querySelectorAll('[data-testid="reply"]')
-console.log(`Found ${replyContainers.length} reply container(s)`, replyContainers)
-
-// Check tweet text extraction
-const tweetTexts = document.querySelectorAll('[data-testid="tweetText"]')
-console.log(`Found ${tweetTexts.length} tweet text element(s)`, tweetTexts)
-
-// Check username extraction
-const usernames = document.querySelectorAll('[data-testid="User-Name"] a[role="link"]')
-console.log(`Found ${usernames.length} username element(s)`, usernames)
-```
-
-**If Reply Detection Fails:**
-- Twitter may have renamed the `[data-testid="reply"]` attribute
-- Update selector in [content-script.ts](src/content/content-script.ts)
-- Check extractTweetContext() function for selector changes
+**If capture fails:**
+- Panel shows the "No tweet in view" empty state instead of a context card
+- Inspect a tweet article and compare against the selectors above
 
 ---
 
-### Test 4: Panel Opening & Animation
+### Test 4: Panel Rendering
 
-**Goal:** Verify side panel opens with smooth animations
+**Goal:** Verify the panel opens inside the shadow root
 
 **Steps:**
-1. Click the Kotodama button in any compose box
-2. Side panel should slide in from the right
-3. Panel should load the React UI
-4. Click the × button to close
-5. Panel should slide out
-
-**Expected Panel Behavior** ([content-script.ts](src/content/content-script.ts)):
-- **Position:** Fixed, right side, 24px from edge
-- **Dimensions:** 420px wide × 720px tall (responsive on small screens)
-- **Animation:** 300ms ease, opacity + translateY transform
-- **URL:** `chrome-extension://[extension-id]/src/panel/index.html`
+1. Click the Kotodama button
+2. Panel appears anchored to the right
+3. Click the × to close
 
 **Visual Checklist:**
-- ✅ Panel slides in smoothly
-- ✅ Rounded corners (20px border-radius)
-- ✅ Gradient header (blue → indigo → fuchsia)
-- ✅ "Kotodama AI Tweet Composer" title visible
-- ✅ Close button (×) in top-right corner
-- ✅ Form fields: prompt textarea, brand voice dropdown
-- ✅ "Generate with AI" button
-- ✅ Panel doesn't block Twitter UI
+- ✅ Dark (zinc) panel, unaffected by Twitter's own theme
+- ✅ Three zones: header, scrolling middle, pinned composer at the bottom
+- ✅ Only the middle zone scrolls
+- ✅ Panel doesn't block Twitter UI interactions outside its own box
+- ✅ Panel is responsive (`min(450px, 100vw - 40px)`)
 
-**Debug Commands:**
+**Debug:**
 ```javascript
-// Check if panel iframe was created
-const panel = document.querySelector('#kotodama-panel')
-console.log('Panel element:', panel)
-
-// Check panel visibility state
-if (panel) {
-  console.log('Opacity:', panel.style.opacity)
-  console.log('Transform:', panel.style.transform)
-  console.log('Pointer events:', panel.style.pointerEvents)
-}
-
-// Check panel source URL
-if (panel) {
-  console.log('Panel URL:', panel.src)
-}
+const shadow = document.getElementById('kotodama-host')?.shadowRoot
+console.log('Panel mounted:', !!shadow?.querySelector('header'))
 ```
 
-**If Panel Doesn't Open:**
-1. **CSP (Content Security Policy) errors:**
-   - Check browser console for CSP violations
-   - Verify [manifest.json:40-45](public/manifest.json) web_accessible_resources
-
-2. **Panel HTML not loading:**
-   - Open DevTools → Network tab
-   - Look for 404 errors on `src/panel/index.html`
-   - Verify file exists in `dist/src/panel/`
-
-3. **React app not initializing:**
-   - Inspect panel iframe context (right-click panel → Inspect Frame)
-   - Check console in iframe context for errors
-   - Verify `index.js` loaded successfully
+Page styles cannot reach into the shadow root — if the panel looks unstyled, the inlined CSS in
+`content.js` failed to build, not Twitter's CSS interfering.
 
 ---
 
@@ -281,7 +190,7 @@ if (panel) {
 
 **Steps:**
 1. Click the Kotodama extension icon in browser toolbar
-2. Onboarding wizard should open in a new tab or popup
+2. Onboarding opens in a new tab
 
 #### Step 1: API Key Entry
 1. Enter your OpenAI API key (format: `sk-...`)
@@ -289,158 +198,111 @@ if (panel) {
 
 **Expected:**
 - Input field accepts text
-- "Continue" button disabled until key entered
-- No validation on key format (validated on first API call)
-- Smooth transition to Step 2
+- "Continue" disabled until a key is entered
+- No format validation (validated on first API call)
 
 #### Step 2: Brand Voice Setup
-1. Enter brand voice name: `"Test Voice"`
-2. Enter description: `"Professional but friendly tech communicator"`
-3. Add example tweets (at least 2 recommended):
-   ```
-   Example 1: "Just shipped a new feature! 🚀 User feedback has been incredible."
-   Example 2: "Quick tip: Always test in production... just kidding! Test locally first."
-   Example 3: "The best code is code you don't have to write. Automate everything."
-   ```
-4. Click "Complete setup"
+1. Enter a name and description
+2. Add at least one example tweet (text or a tweet URL)
+3. Complete setup
 
 **Expected:**
-- Alert appears: "Setup complete! Visit Twitter/X and click the sparkle button in any compose box."
-- Tab/window closes automatically
 - Settings saved to Chrome Storage (encrypted)
 - Brand voice saved to IndexedDB
 
-**Verify Settings Saved:**
+**Verify:**
 ```javascript
-// Run in browser console (any page)
-chrome.storage.local.get(['settings'], (result) => {
-  console.log('Settings:', result)
-})
+chrome.storage.local.get(null, (r) => console.log(r))   // key must be an encrypted blob
+chrome.runtime.sendMessage({ type: 'list-brand-voices' }, r => console.log(r))
 ```
 
-**Verify Brand Voice Saved:**
-```javascript
-// Run in background service worker console
-// (chrome://extensions → Kotodama → Service worker "inspect")
-chrome.runtime.sendMessage({
-  type: 'list-brand-voices'
-}, response => {
-  console.log('Brand voices:', response)
-})
-```
-
-**If Onboarding Fails:**
-- Check [onboarding/Onboarding.tsx](src/onboarding/Onboarding.tsx) for errors
-- Verify storage permissions in manifest
-- Check service worker console for message handling errors
+Gemini and Anthropic keys are added afterwards in Settings, which is also where the default
+provider is chosen.
 
 ---
 
-### Test 6: Tweet Generation (Full Flow)
+### Test 6: Context Reading (Vision Pass)
 
-**Goal:** Test end-to-end AI generation
-
-**Prerequisites:**
-- Onboarding completed with valid OpenAI API key
-- At least one brand voice created
+**Goal:** Verify the tweet is read before generation
 
 **Steps:**
-1. Go to Twitter/X and open a compose box
-2. Click the Kotodama button
-3. Panel opens on the right side
-4. In the panel:
-   - **Brand voice dropdown:** Select your created voice
-   - **Prompt field:** Enter `"Share a quick tip about code reviews"`
-   - Click **"Generate with AI"** button
+1. Open a tweet **with images** and click the Kotodama button
+2. Watch the context card
 
-**Expected Flow:**
+**Expected:**
+- A loading state, then 1-3 plain sentences describing what the tweet is about, including its images
+- The summary is not a restatement of the tweet text — it should mention what the images show
+- If it fails, the card shows an error state with a retry, and **Generate reply stays enabled**
 
-**During Generation:**
-- Button text changes to "Crafting magic…"
-- Button becomes disabled
-- Loading state visible (2-5 seconds typically)
-
-**After Generation:**
-- Generated tweet appears in a card below
-- Card shows:
-  - "Suggested copy" label
-  - Character count (e.g., "156 characters")
-  - Generated tweet text
-- "Insert to X" button appears (green, emerald color)
-- "Regenerate" link appears top-right
-
-**Background Process** ([service-worker.ts](src/background/service-worker.ts)):
-1. Panel sends `generate` message to background worker
-2. Background retrieves brand voice from IndexedDB
-3. Background decrypts OpenAI API key
-4. Background calls OpenAI API with:
-   - System prompt (built from brand voice)
-   - User prompt
-   - Model: `gpt-4o-2024-11-20` (fallback: `gpt-4o-mini`)
-5. Background returns generated content to panel
-6. Panel displays result
-
-**Debug Background Service Worker:**
-```javascript
-// In service worker console (chrome://extensions → inspect service worker)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('📨 Message received:', message)
-  return true
-})
+**Service worker console:**
 ```
+Context analysis requested: { provider, images: N, threadEntries: N }
+Context analysis complete: { visionFailed: false }
+```
+
+**Force the degraded path:** block `pbs.twimg.com` in DevTools → Network request blocking, then
+reopen the panel. Expect `visionFailed: true`, a text-only summary, and generation still working.
+
+---
+
+### Test 7: Reply Generation
+
+**Goal:** Test end-to-end drafting
+
+**Prerequisites:** onboarding completed with a valid key, at least one brand voice.
+
+**Steps:**
+1. Open a tweet and the panel
+2. Type an intent in the composer, e.g. `Agree and add one concrete example`
+3. Optionally pick a reply template, tone presets, and a length (S/M/L)
+4. Click **Generate reply**
+
+**Expected:**
+- Button reads "Writing…" and is disabled while in flight
+- Draft appears in the result carousel with a character count
+- Generating again prepends a new draft rather than replacing the list
+- Retry on a single draft replaces just that one in place
+
+**Background process** ([service-worker.ts](../../src/background/service-worker.ts)):
+1. Rate limit check
+2. Resolve provider + decrypt its API key
+3. Load brand voice from IndexedDB
+4. Call the provider client
+5. Persist to history when `rememberHistory` is enabled
+
+**Also verify:**
+- With no brand voices, an "Add a brand voice" link appears and Generate stays disabled
+- With an empty intent, Generate stays disabled
 
 **If Generation Fails:**
-
-1. **Invalid API Key:**
-   ```
-   Error: Incorrect API key provided
-   ```
-   → Re-run onboarding to enter correct key
-
-2. **Rate Limit:**
-   ```
-   Error: Rate limit exceeded
-   ```
-   → Wait 60 seconds, try again, or upgrade API plan
-
-3. **Network Error:**
-   ```
-   Error: Failed to fetch
-   ```
-   → Check internet connection
-   → Check firewall/proxy settings
-   → Verify OpenAI API is not blocked
-
-4. **Model Fallback Logic** ([openai.ts:17-26](src/api/openai.ts)):
-   - Tries primary model first
-   - Falls back to mini model on error
-   - Returns error if both fail
-
-5. **Check Service Worker Console:**
-   - Go to `chrome://extensions/`
-   - Find Kotodama extension
-   - Click "service worker" link
-   - Check for API call logs and errors
+| Error | Meaning | Fix |
+|-------|---------|-----|
+| "…API key not configured" | No key for the selected provider | Add it in Settings |
+| "Invalid …API key" | 401 from the provider | Replace the key |
+| "Rate limit exceeded" | Kotodama's own limiter (20/min) | Wait for the window |
+| 400 mentioning `temperature` | Sampling param sent to a Claude 5-series model | See `FIXED_TEMPERATURE_MODEL_PREFIXES` in `src/api/claude.ts` |
+| 404 on a Claude model | Date-suffixed / retired model id | Use bare ids (`claude-sonnet-5`) |
+| "Network error…" | Connectivity or blocked host | Check the network and `host_permissions` |
 
 ---
 
-### Test 7: Content Insertion
+### Test 8: Insertion
 
-**Goal:** Insert generated tweet into Twitter compose box
+**Goal:** Insert a draft into the reply box
 
 **Steps:**
-1. After generating a tweet (Test 6), click **"Insert to X"** button
-2. Watch the panel and compose box
+1. After generating, click **Insert** on a draft
+2. Watch the Twitter compose box
 
-**Expected Behavior:**
-- Panel closes after 500ms delay ([content-script.ts](src/content/content-script.ts))
-- Tweet text appears in Twitter compose box
+**Expected Behaviour:**
+- Text appears in the reply box
 - Twitter's character counter updates
-- Tweet button becomes enabled
-- Cursor positioned at end of text
+- The Reply/Post button becomes enabled
+- Cursor is positioned at the end
+- **The panel stays open** — insertion does not close it
 
-**Insertion Logic** ([content-script.ts](src/content/content-script.ts)):
-1. `findComposeEditable()` searches for active compose box using selectors:
+**Insertion Logic** ([content-script.tsx](../../src/content/content-script.tsx)):
+1. `findComposeEditable()` locates the box, preferring `document.activeElement`:
    ```typescript
    '[data-testid="tweetTextarea_0"][contenteditable="true"]'
    '[data-testid="tweetTextarea_0"] [contenteditable="true"]'
@@ -448,101 +310,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
    '[aria-label="Tweet text"][contenteditable="true"]'
    '[aria-label="Post text"][contenteditable="true"]'
    ```
-2. Focus the contenteditable div
-3. Attempt `document.execCommand('insertText', false, content)`
-4. Fallback: Set `textContent` directly
-5. Dispatch `InputEvent` to trigger Twitter's UI updates
-6. Position cursor at end
+2. Select all existing content, then dispatch a synthetic `paste` with a `DataTransfer` payload
+3. If the paste wasn't handled, fall back to `beforeinput` → `execCommand('insertText')` → `textContent`
+4. Dispatch `input` + `change`, collapse the selection to the end, blur/refocus
 
-**Debug Insertion:**
+**Debug:**
 ```javascript
-// Check which compose box selector matches
-const selectors = [
+[
   '[data-testid="tweetTextarea_0"][contenteditable="true"]',
   '[data-testid="tweetTextarea_0"] [contenteditable="true"]',
   '[role="textbox"][contenteditable="true"]',
-  '[aria-label="Tweet text"][contenteditable="true"]',
-  '[aria-label="Post text"][contenteditable="true"]'
-]
-
-selectors.forEach(selector => {
-  const el = document.querySelector(selector)
-  console.log(selector, el ? '✅ Found' : '❌ Not found')
-})
-
-// Test manual insertion
-const box = document.querySelector('[data-testid="tweetTextarea_0"]')
-if (box) {
-  box.textContent = 'Test insertion'
-  box.dispatchEvent(new InputEvent('input', { bubbles: true }))
-  console.log('✅ Manual insertion successful')
-}
+].forEach(s => console.log(s, document.querySelector(s) ? '✅' : '❌'))
 ```
 
 **If Insertion Fails:**
-
-1. **Compose box not found:**
-   - Twitter changed their DOM structure
-   - Inspect the compose box element
-   - Update selectors in `findComposeEditable()` ([content-script.ts](src/content/content-script.ts))
-
-2. **Text appears but counter doesn't update:**
-   - InputEvent not dispatching correctly
-   - Try different event types: `input`, `change`, `keyup`
-
-3. **Text doesn't appear at all:**
-   - `execCommand` and `textContent` both failed
-   - Check browser console for permission errors
-   - Twitter might have ContentEditable protections
-
----
-
-### Test 8: Thread Generation
-
-**Goal:** Multi-tweet thread creation
-
-**Steps:**
-1. Open Twitter compose box
-2. Click Kotodama button to open panel
-3. Toggle **"Turn this into a thread"** checkbox
-4. Set **number of posts**: `3`
-5. Enter prompt: `"Explain the benefits of TypeScript in a thread"`
-6. Click **"Generate with AI"**
-
-**Expected Results:**
-- Loading state for 5-10 seconds (longer than single tweet)
-- Three separate tweet boxes appear, each labeled:
-  - "Suggestion 1" (with character count)
-  - "Suggestion 2" (with character count)
-  - "Suggestion 3" (with character count)
-- Each tweet under 280 characters
-- Tweets logically connected (thread flow)
-- Single **"Insert to X"** button at bottom
-
-**Thread Insertion Format:**
-When inserted, tweets are combined with double newlines:
-```
-First tweet content here
-
-Second tweet content here
-
-Third tweet content here
-```
-
-**Verify in Panel UI** ([Panel.tsx:209-236](src/panel/Panel.tsx)):
-- Thread checkbox toggles properly
-- Number input constraints: min=2, max=10
-- Thread length controls enabled/disabled based on checkbox
-
-**API Thread Generation** ([openai.ts](src/api/openai.ts)):
-- System prompt instructs: "Generate exactly {threadLength} tweets"
-- Responses split by double newlines
-- Each tweet validated for length
-
-**If Thread Generation Fails:**
-- Check service worker console for API errors
-- Verify threadLength passed correctly in request
-- Try reducing thread length (simpler request)
+- Text appears but the counter doesn't update → the `input` event isn't reaching Twitter's handler
+- Nothing appears → every fallback failed; check the console for `Could not find tweet compose box`
 
 ---
 
@@ -550,590 +333,101 @@ Third tweet content here
 
 ### Issue 1: Button Not Appearing
 
-**Symptoms:**
-- Content script loads (`console.log` appears)
-- But Kotodama button never shows up
-- Compose box is visible and functional
+**Symptoms:** page loads, no sparkle button.
 
-**Possible Causes:**
-1. Twitter changed their DOM structure
-2. CSS conflicts hiding the button
-3. MutationObserver not detecting changes
-4. Button injection code throwing silent errors
-
-**Diagnosis Steps:**
-
-1. **Check if compose boxes are detected:**
-   ```javascript
-   // Run in console
-   const boxes = document.querySelectorAll('[data-testid="tweetTextarea_0"]')
-   console.log('Compose boxes found:', boxes.length)
-   ```
-
-2. **Manually inspect Twitter's current structure:**
-   - Right-click compose box → Inspect Element
-   - Look at data attributes: `data-testid`, `aria-label`, `role`
-   - Copy actual attribute values
-
-3. **Check for JavaScript errors:**
-   - Open Console tab
-   - Look for errors related to content script
-   - Common errors: "Cannot read property of null", "querySelector returned null"
-
-4. **Verify button injection code executed:**
-   ```javascript
-   // In content script, add debug logs
-   function injectAIButton(composeBox) {
-     console.log('🔧 Injecting button for:', composeBox)
-     // ... rest of function
-   }
-   ```
-
-**Solutions:**
-
-**Solution 1: Update Selectors**
-
-Edit [content-script.ts](src/content/content-script.ts):
-```typescript
-const composeSelectors = [
-  '[data-testid="tweetTextarea_0"]',           // Old selector
-  '[data-testid="NEW_SELECTOR_HERE"]',         // Add new selector
-  '[role="textbox"][contenteditable="true"]',
-]
-```
-
-**Solution 2: Add More Fallback Selectors**
-```typescript
-const composeSelectors = [
-  '[data-testid="tweetTextarea_0"]',
-  '[data-testid="tweetTextarea_1"]',
-  'div[contenteditable="true"][role="textbox"]',
-  'div[aria-label*="Tweet"]',
-  'div[aria-label*="Post"]',
-]
-```
-
-**Solution 3: Increase MutationObserver Sensitivity**
-If compose boxes appear dynamically after page load:
-```typescript
-// In content-script.ts
-const observer = new MutationObserver(() => {
-  console.log('🔍 DOM mutation detected, checking for compose boxes...')
-  injectButtonsIfNeeded()
-})
-
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-  attributes: true,  // Also watch attribute changes
-  attributeFilter: ['data-testid', 'aria-label']
-})
-```
-
----
-
-### Issue 2: Panel Shows Blank Page
-
-**Symptoms:**
-- Kotodama button appears and is clickable
-- Panel iframe opens but content is blank/white
-- No React UI visible
-
-**Possible Causes:**
-1. React build failed or incomplete
-2. Content Security Policy (CSP) blocking scripts
-3. Missing dependencies in bundle
-4. Incorrect iframe src URL
-
-**Diagnosis Steps:**
-
-1. **Inspect panel iframe:**
-   - Right-click on the blank panel
-   - Select "Inspect Frame" or "Inspect Element"
-   - This opens DevTools scoped to iframe context
-
-2. **Check Console in iframe context:**
-   - Look for React errors
-   - Look for CSP violations
-   - Look for 404 errors (missing files)
-
-3. **Check Network tab:**
-   - Switch to Network tab in DevTools
-   - Reload panel (close and reopen)
-   - Look for failed requests (red items)
-
-4. **Verify iframe src:**
-   ```javascript
-   const panel = document.querySelector('#kotodama-panel')
-   console.log('Panel src:', panel?.src)
-   // Should be: chrome-extension://[id]/src/panel/index.html
-   ```
-
-**Solutions:**
-
-**Solution 1: Rebuild Extension**
-```bash
-# Clean and rebuild
-rm -rf dist/
-npm run build
-
-# Reload extension in chrome://extensions
-```
-
-**Solution 2: Check web_accessible_resources**
-
-Verify [manifest.json:40-45](public/manifest.json):
-```json
-"web_accessible_resources": [
-  {
-    "resources": [
-      "src/panel/index.html",
-      "panel.js",
-      "index.js",
-      "index.css"
-    ],
-    "matches": ["https://twitter.com/*", "https://x.com/*"]
-  }
-]
-```
-
-**Solution 3: Check Vite Build Output**
-
-Verify [vite.config.ts](vite.config.ts) includes panel build:
-```typescript
-build: {
-  rollupOptions: {
-    input: {
-      panel: resolve(__dirname, 'src/panel/index.html'),
-      // ... other entries
-    }
-  }
-}
-```
-
-**Solution 4: Test Panel Directly**
-
-Open panel URL directly in browser:
-```
-chrome-extension://[your-extension-id]/src/panel/index.html
-```
-Replace `[your-extension-id]` with actual ID from `chrome://extensions`
-
-If it works directly but not in iframe:
-- CSP issue with iframe embedding
-- postMessage communication failure
-
----
-
-### Issue 3: Generation Fails / API Errors
-
-**Common Error Messages:**
-
-#### Error 1: "Incorrect API key provided"
-```
-Error: Incorrect API key provided: sk-...
-You can find your API key at https://platform.openai.com/account/api-keys
-```
-
-**Cause:** Invalid or expired OpenAI API key
-
-**Solution:**
-1. Go to https://platform.openai.com/api-keys
-2. Create a new API key
-3. Re-run onboarding (click extension icon)
-4. Enter new key in Step 1
-
----
-
-#### Error 2: "Rate limit exceeded"
-```
-Error: Rate limit reached for requests
-```
-
-**Cause:** Too many API requests in short time
-
-**Solutions:**
-- Wait 60 seconds and try again
-- Upgrade OpenAI API plan for higher limits
-- Check for runaway loops making multiple requests
-
-**Debug rate limit usage:**
+**Diagnosis:**
 ```javascript
-// In service worker console
-chrome.runtime.sendMessage({
-  type: 'get-settings'
-}, response => {
-  console.log('API calls made:', response.data.apiCallCount)
-})
-```
-
----
-
-#### Error 3: "Network request failed"
-```
-TypeError: Failed to fetch
+console.log(document.getElementById('kotodama-host'))          // host present?
+console.log(document.getElementById('kotodama-host')?.shadowRoot) // shadow attached?
 ```
 
 **Causes:**
-- No internet connection
-- Firewall blocking OpenAI API
-- CORS issues (shouldn't happen in service worker)
-- OpenAI API outage
-
-**Solutions:**
-1. Check internet: `ping 8.8.8.8`
-2. Test API directly:
-   ```bash
-   curl https://api.openai.com/v1/models \
-     -H "Authorization: Bearer YOUR_API_KEY"
-   ```
-3. Check OpenAI status: https://status.openai.com/
-4. Check corporate firewall settings
-
----
-
-#### Error 4: "Model not found"
-```
-Error: The model 'gpt-4o' does not exist
-```
-
-**Cause:** API key doesn't have access to model
-
-**Solution:**
-Update [openai.ts:17-26](src/api/openai.ts) to use accessible model:
-```typescript
-const MODEL = 'gpt-3.5-turbo'  // Free tier model
-```
-
----
-
-#### Error 5: "Insufficient quota"
-```
-Error: You exceeded your current quota
-```
-
-**Cause:** OpenAI account has no credits
-
-**Solutions:**
-- Add payment method: https://platform.openai.com/account/billing/overview
-- Wait for free tier reset (monthly)
-- Switch to different API key with credits
-
----
-
-### Issue 4: Text Not Inserting Into Compose Box
-
-**Symptoms:**
-- Tweet generates successfully
-- Click "Insert to X" button
-- Panel closes, but text doesn't appear in Twitter compose box
-
-**Possible Causes:**
-1. Compose box selector changed
-2. Focus lost (user clicked elsewhere)
-3. ContentEditable protections
-4. InputEvent not triggering Twitter's handlers
-
-**Diagnosis Steps:**
-
-1. **Check if compose box is findable:**
+1. `content.js` missing or stale in `dist/` — rebuild and reload the extension
+2. The script threw during mount — check the page console
+3. The button was dragged off-screen — clear it:
    ```javascript
-   const selectors = [
-     '[data-testid="tweetTextarea_0"]',
-     '[role="textbox"][contenteditable="true"]'
-   ]
-
-   selectors.forEach(sel => {
-     const found = document.querySelector(sel)
-     console.log(sel, found ? '✅' : '❌')
-   })
+   chrome.storage.local.remove('buttonPosition')
    ```
 
-2. **Test manual insertion:**
-   ```javascript
-   const box = document.querySelector('[data-testid="tweetTextarea_0"]')
+---
 
-   if (box) {
-     box.focus()
-     box.textContent = '🧪 Test insertion'
-     box.dispatchEvent(new InputEvent('input', {
-       bubbles: true,
-       inputType: 'insertText'
-     }))
-     console.log('Character counter:', document.querySelector('[data-testid="tweetTextarea_0CharacterCounter"]')?.textContent)
-   }
-   ```
+### Issue 2: Panel Opens With "No tweet in view"
 
-3. **Check for focus issues:**
-   ```javascript
-   console.log('Active element:', document.activeElement)
-   console.log('Is compose box?', document.activeElement?.matches('[data-testid="tweetTextarea_0"]'))
-   ```
+**Cause:** `detectContext()` returned `null` — either the page isn't a reply surface, or the
+selectors no longer match.
 
-**Solutions:**
-
-**Solution 1: Update findComposeEditable() Selectors**
-
-Edit [content-script.ts](src/content/content-script.ts):
-```typescript
-function findComposeEditable(): HTMLElement | null {
-  const selectors = [
-    '[data-testid="tweetTextarea_0"][contenteditable="true"]',
-    '[data-testid="tweetTextarea_0"] [contenteditable="true"]',
-    '[role="textbox"][contenteditable="true"]',
-    '[aria-label="Tweet text"][contenteditable="true"]',
-    '[aria-label="Post text"][contenteditable="true"]',
-    // Add new selectors discovered from inspection
-    'div[contenteditable="true"][data-testid*="tweet"]',
-  ]
-
-  // ... rest of function
-}
+**Diagnosis:**
+```javascript
+console.log('articles:', document.querySelectorAll('article[data-testid="tweet"]').length)
+console.log('composer:', document.querySelector('[data-testid="tweetTextarea_0"]'))
+console.log('replying-to:', document.querySelector('[data-testid="inlineReplyingTo"], [aria-label*="Replying to"]'))
 ```
 
-**Solution 2: Use Different Event Types**
-
-Try multiple event types to trigger Twitter's UI:
-```typescript
-function insertTweetContent(content: string) {
-  // ... existing code ...
-
-  // Dispatch multiple event types
-  const events = [
-    new InputEvent('input', { bubbles: true, inputType: 'insertText' }),
-    new Event('change', { bubbles: true }),
-    new KeyboardEvent('keyup', { bubbles: true })
-  ]
-
-  events.forEach(event => composeEditable.dispatchEvent(event))
-}
-```
-
-**Solution 3: Use execCommand with Fallbacks**
-
-Improve insertion robustness:
-```typescript
-function insertTweetContent(content: string) {
-  const box = findComposeEditable()
-  if (!box) return
-
-  box.focus()
-
-  // Method 1: execCommand (older, more reliable)
-  let success = false
-  try {
-    success = document.execCommand('insertText', false, content)
-  } catch (e) {
-    console.warn('execCommand failed:', e)
-  }
-
-  // Method 2: Set textContent (direct)
-  if (!success) {
-    box.textContent = content
-  }
-
-  // Method 3: Set innerText (alternative)
-  if (!box.textContent) {
-    box.innerText = content
-  }
-
-  // Dispatch events
-  box.dispatchEvent(new InputEvent('input', {
-    bubbles: true,
-    data: content,
-    inputType: 'insertText'
-  }))
-}
-```
+**Fix:** inspect the live markup and update the selectors in `src/content/content-script.tsx`. Keep
+the "article immediately preceding the composer" rule and the `[role="dialog"]` scoping — both exist
+to stop the wrong tweet being captured.
 
 ---
 
-## Phase 5: Advanced Testing Scenarios
+### Issue 3: Panel Renders Unstyled
 
-### Edge Case 1: Multiple Compose Boxes
+**Cause:** the inlined stylesheet (`src/panel/index.css?inline`) didn't make it into `content.js`.
 
-**Scenario:** Multiple compose areas active simultaneously
-
-**Steps:**
-1. Open main tweet composer (modal)
-2. While modal is open, scroll timeline
-3. Click reply on a tweet (opens reply box)
-4. Both composers are now active
-
-**Expected:**
-- Kotodama button appears in BOTH composers
-- Each button is independent
-- Panel state is shared (opens for most recent click)
-
-**Test:**
-1. Click button in main composer → Panel opens for "compose" context
-2. Close panel
-3. Click button in reply box → Panel opens for "reply" context with tweet details
+**Fix:** rebuild. Remember `npm run build` runs Vite twice; the second pass
+(`vite.content.config.ts`) is the one that produces the loaded `content.js`.
 
 ---
 
-### Edge Case 2: Panel State Persistence
+### Issue 4: Generation Fails / API Errors
 
-**Scenario:** Generate tweet but close panel without inserting
-
-**Steps:**
-1. Open panel, generate a tweet
-2. Close panel (× button)
-3. Re-open panel
-
-**Expected:**
-- ❓ **Current behavior:** Content may be lost (React state resets)
-- ✅ **Desired behavior:** Generated content persists
-
-**Improvement Needed:**
-- Store generated content in `chrome.storage.session`
-- Restore on panel re-open
-- Clear after successful insertion
+See the error table in [Test 7](#test-7-reply-generation). Check the **service worker** console
+(`chrome://extensions/` → Kotodama → "service worker") for the full provider response — the panel
+only shows the rewritten user-facing message.
 
 ---
 
-### Edge Case 3: Very Long Tweets (Over 280 Chars)
+### Issue 5: "Extension was reloaded" Overlay
 
-**Scenario:** AI generates tweet exceeding Twitter's limit
+**Cause:** the extension was rebuilt/reloaded while the page still had the old content script.
 
-**Steps:**
-1. Prompt: "Write a very detailed explanation of React hooks in a tweet"
-2. Generate
-
-**Expected Handling:**
-- ✅ AI should be instructed to stay under 280 chars (in system prompt)
-- ⚠️ If over limit: Show warning in panel
-- 🔧 Provide "Shorten" button to regenerate
-
-**Current Implementation:**
-- No explicit character limit enforcement
-- No warning shown
-
-**Enhancement Needed:**
-```typescript
-// In Panel.tsx after generation
-if (typeof generatedContent === 'string' && generatedContent.length > 280) {
-  setError('Tweet exceeds 280 characters. Try regenerating with "make it shorter".')
-}
-```
+**Expected:** the panel detects the invalidated runtime and shows a refresh prompt rather than
+failing silently. Refreshing the page clears it.
 
 ---
 
-### Edge Case 4: Empty or Invalid Prompts
+## Phase 5: Edge Cases
 
-**Scenarios:**
+### Edge Case 1: Tweet With No Text (Image Only)
 
-**Test 1: Empty Prompt**
-- Steps: Leave prompt field blank, click Generate
-- Expected: Error "Please enter a prompt"
-- Status: ✅ Implemented ([Panel.tsx:87-90](src/panel/Panel.tsx))
+Context extraction requires a username plus either text or at least one image. An image-only tweet
+must still be captured, and the vision summary should describe the image.
 
-**Test 2: Very Short Prompt**
-- Steps: Enter just "hi", generate
-- Expected: AI generates something (may not be useful)
-- Enhancement: Require minimum 10 characters
+### Edge Case 2: Very Long Tweet
 
-**Test 3: No Brand Voice Selected**
-- Steps: Deselect brand voice, try to generate
-- Expected: Error "Please select a brand voice"
-- Status: ✅ Implemented ([Panel.tsx:92-95](src/panel/Panel.tsx))
+`tweetContextText` is capped at 2000 characters by the sanitizer (long-form posts exist; 280 would
+truncate the thing being replied to). Preceding thread entries are capped at 500 each.
 
----
+### Edge Case 3: Draft Over 280 Characters
 
-### Edge Case 5: Network Interruption Mid-Request
+The system prompt asks for under 280 characters, but nothing enforces it. Verify the character count
+is displayed so the user can see the overflow before inserting.
 
-**Scenario:** Internet disconnects during API call
+### Edge Case 4: Panel State Persistence
 
-**Steps:**
-1. Start generation
-2. Quickly disconnect WiFi (or pause network in DevTools)
-3. Wait for timeout
+Closing and reopening the panel resets React state — drafts are lost. Current behaviour; note it if
+it becomes a complaint.
 
-**Expected:**
-- Loading state continues (waiting for response)
-- After ~30 seconds: Timeout error
-- Error message: "Network request failed. Check your connection."
+### Edge Case 5: Rapid Clicking
 
-**Current Implementation:**
-- Fetch API timeout: Not explicitly set
-- Error handling: Generic catch block
+Generate is disabled while `generating` is true, so double-submission should be impossible. Verify
+by clicking rapidly.
 
-**Enhancement Needed:**
-```typescript
-// In openai.ts
-const controller = new AbortController()
-const timeoutId = setTimeout(() => controller.abort(), 30000)
+### Edge Case 6: Twitter UI Redesign
 
-const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  signal: controller.signal,
-  // ... other options
-})
-```
+**Impact:** critical — capture and insertion both break.
 
----
-
-### Edge Case 6: Rapid Clicking / Double Submissions
-
-**Scenario:** User clicks Generate button multiple times rapidly
-
-**Steps:**
-1. Enter prompt
-2. Click "Generate with AI" 5 times rapidly
-
-**Expected:**
-- Button should disable after first click
-- Subsequent clicks ignored
-- Only one API call made
-
-**Current Implementation:**
-- ✅ Button disabled during loading ([Panel.tsx:262](src/panel/Panel.tsx))
-- ✅ isLoading state prevents double submission
-
----
-
-### Edge Case 7: Extension Update While Panel Open
-
-**Scenario:** Extension updates automatically while user has panel open
-
-**Steps:**
-1. Open panel
-2. Update extension (manually via chrome://extensions or auto-update)
-3. Try to generate
-
-**Expected:**
-- Service worker may restart
-- Panel connection lost
-- Error: "Extension context invalidated"
-
-**User Impact:** Medium (rare occurrence)
-
-**Mitigation:**
-- Detect disconnection
-- Show message: "Extension updated. Please refresh the page."
-
----
-
-### Edge Case 8: Twitter UI Update / Redesign
-
-**Scenario:** Twitter deploys a UI change that breaks selectors
-
-**Impact:** Critical (extension stops working)
-
-**Detection:**
-- Button stops appearing
-- Insertion fails
-- High user complaints
-
-**Recovery Plan:**
-1. Identify new selectors (inspect live Twitter)
-2. Update content-script.ts selectors
-3. Deploy hotfix update
-4. Document new selectors in CLAUDE.md
-
-**Preventive Measures:**
-- Add multiple fallback selectors
-- Use most generic selectors (role, aria-label) as fallbacks
-- Monitor Twitter developer community for UI change announcements
+**Recovery:** inspect the live markup, update the selectors in `src/content/content-script.tsx`,
+update the selector list in `CLAUDE.md`, ship a patch.
 
 ---
 
@@ -1143,174 +437,125 @@ Use this checklist for systematic testing before each release:
 
 ### Build & Load
 - [ ] `npm run build` succeeds without errors
+- [ ] `dist/content.js` exists and there is no `dist/panel.js`
 - [ ] Extension loads in `chrome://extensions/` without warnings
 - [ ] No console errors on extension load
-- [ ] Service worker shows "active" status
-- [ ] All files present in `dist/` folder
 
 ### Content Script
-- [ ] Console log "Kotodama content script loaded" appears on Twitter
-- [ ] MutationObserver initializes successfully
-- [ ] No JavaScript errors in browser console
-- [ ] Content script survives page navigation (SPA routing)
+- [ ] `[Kotodama] Shadow DOM injected` appears on Twitter
+- [ ] Floating button visible and draggable; position persists across reloads
+- [ ] No JavaScript errors in the page console
+- [ ] Survives SPA navigation between pages
 
-### Button Injection
-- [ ] Button appears in main tweet composer (home page)
-- [ ] Button appears in modal tweet composer ("Tweet" button)
-- [ ] Button appears in reply boxes
-- [ ] Button appears in quote tweet boxes
-- [ ] Button styled correctly (gradient, icon, text)
-- [ ] Button hover effects work
-- [ ] Multiple buttons can coexist (main + reply)
+### Context Capture
+- [ ] Correct tweet captured from a timeline reply (modal composer)
+- [ ] Correct tweet captured on a `/status/` permalink
+- [ ] Correct tweet captured mid-thread (not the first article on the page)
+- [ ] Background timeline tweets do not leak into a modal capture
+- [ ] Images captured with alt text when present
+- [ ] Preceding thread entries captured, oldest first, capped at 10
+- [ ] Non-reply pages fall back to the "No tweet in view" empty state
+
+### Vision / Context Card
+- [ ] Summary loads and describes the tweet, including images
+- [ ] Retry works after a failed summary
+- [ ] Blocking `pbs.twimg.com` degrades to a text-only summary (`visionFailed: true`)
+- [ ] Generation remains possible while the summary is loading or errored
 
 ### Panel UI
-- [ ] Panel opens on button click with smooth animation
-- [ ] Panel positioned correctly (right side, no overflow)
-- [ ] Header displays with gradient background
-- [ ] Close button (×) works
-- [ ] Panel content scrollable if needed
-- [ ] Panel responsive on smaller screens
-- [ ] Panel doesn't block Twitter UI interactions
+- [ ] Opens and closes cleanly
+- [ ] Only the middle zone scrolls; header and composer stay pinned
+- [ ] Responsive at narrow viewport widths
+- [ ] Doesn't block Twitter UI outside its own box
+- [ ] Reply templates fill the intent box
+- [ ] Tone presets toggle on/off and stack
+- [ ] Length control changes the hint appended to the prompt
 
 ### Onboarding
 - [ ] Opens on first install (extension icon click)
-- [ ] Step 1: API key input accepts text
-- [ ] Step 1: "Continue" button validation works
-- [ ] Step 2: Brand voice fields functional
-- [ ] Step 2: Example tweets accept text or URLs
-- [ ] Step 2: Tweet URL fetching works (syndication API)
-- [ ] "Complete setup" saves settings successfully
-- [ ] Redirect to settings works (returning users)
+- [ ] API key input and "Continue" validation work
+- [ ] Brand voice fields validate
+- [ ] Example tweets accept text or URLs (syndication fetch)
+- [ ] "Complete setup" saves settings and the default voice
+- [ ] Returning users are redirected to settings
 
 ### Generation
-- [ ] Prompt input field works (typing, pasting)
-- [ ] Brand voice dropdown populated with saved voices
+- [ ] Intent box accepts typing and pasting
+- [ ] Brand voice selector populated
+- [ ] Generate disabled with no intent, no voice, or no captured tweet
 - [ ] Loading state shows during generation
-- [ ] Generated content appears in card
-- [ ] Character count accurate
-- [ ] Regenerate button works
-- [ ] Multiple generations don't interfere
-- [ ] Error messages display correctly
+- [ ] Draft appears in the carousel with an accurate character count
+- [ ] New generations prepend; retry replaces one draft in place
+- [ ] Copy button on a draft puts the text on the clipboard
+- [ ] Error messages display in the composer area
+- [ ] Each of OpenAI / Gemini / Claude works when selected in Settings
 
 ### Insertion
-- [ ] "Insert to X" button appears after generation
-- [ ] Clicking button inserts text into Twitter compose box
-- [ ] Twitter's character counter updates correctly
-- [ ] Twitter's "Tweet" button becomes enabled
-- [ ] Panel closes after insertion
-- [ ] Cursor positioned correctly after insertion
-- [ ] Original formatting preserved (line breaks, emojis)
-
-### Thread Generation
-- [ ] "Turn this into a thread" toggle works
-- [ ] Thread length input (2-10) constrained correctly
-- [ ] Thread generation produces multiple tweets
-- [ ] Each tweet shown in separate card
-- [ ] Thread tweets labeled ("Suggestion 1", "Suggestion 2", etc.)
-- [ ] Each tweet under 280 characters
-- [ ] Combined insertion includes proper spacing
-
-### Reply Context
-- [ ] Reply box detected (vs. main composer)
-- [ ] Tweet context extracted (username, text)
-- [ ] "Replying to @username" shown in panel header
-- [ ] Context card displays original tweet excerpt
-- [ ] Generated reply references context appropriately
+- [ ] Insert writes the draft into the reply box
+- [ ] Twitter's character counter updates
+- [ ] Twitter's Reply/Post button becomes enabled
+- [ ] Cursor positioned at the end
+- [ ] Panel stays open after insertion
+- [ ] Line breaks and emoji preserved
 
 ### Error Handling
-- [ ] Empty prompt shows error
-- [ ] No brand voice selected shows error
-- [ ] Invalid API key shows clear error message
-- [ ] Rate limit error displays with helpful message
+- [ ] Missing key for the selected provider shows a provider-labelled message
+- [ ] Invalid API key shows a clear error
+- [ ] Rate limit (20/min) shows a helpful message
 - [ ] Network errors caught and displayed
-- [ ] Service worker errors logged
-- [ ] Panel errors don't crash entire extension
-
-### Performance
-- [ ] Button injection latency < 500ms
-  - **How to test:** Open DevTools Console, refresh Twitter, look for timestamp logs or add: `console.time('button-inject')` at start of `injectAIButton()` and `console.timeEnd('button-inject')` at end
-- [ ] Panel opens within 300ms
-  - **How to test:** Click button and visually observe - should feel instant. Or add timing logs in content script `openPanel()` function
-- [ ] Generation completes within 10 seconds (typical)
-  - **How to test:** Time from clicking "Generate with AI" to seeing results. Should be 2-5 seconds for normal requests
-- [ ] No memory leaks (test with 50+ generations)
-  - **How to test:** Open DevTools → Performance tab → Memory → Take heap snapshot, generate 50 tweets, take another snapshot, compare memory growth (should be minimal)
-- [ ] Extension doesn't slow down Twitter page
-  - **How to test:** Use Twitter normally (scroll, click, interact) - should feel the same with/without extension loaded
+- [ ] Extension-reload overlay appears after a rebuild and the page recovers on refresh
 
 ### Security & Privacy
-- [ ] API keys encrypted in storage (inspect chrome.storage.local)
-  - **How to test:** Open DevTools Console (any page), run:
-    ```javascript
-    chrome.storage.local.get(['settings'], (result) => {
-      console.log('Settings:', result);
-      // Look for 'apiKey' - should be encrypted blob, not plain 'sk-...'
-    });
-    ```
-- [ ] No API keys in console logs
-  - **How to test:** Open Console on Twitter, generate tweets, search console for "sk-" - should find nothing
+- [ ] API keys encrypted in storage
+  ```javascript
+  chrome.storage.local.get(null, r => console.log(r)) // no plain 'sk-...'
+  ```
+- [ ] No API keys in console logs (search the console for `sk-`)
 - [ ] No telemetry or tracking
-  - **How to test:** DevTools → Network tab → Generate tweet → Verify only requests to api.openai.com (or configured AI provider)
-- [ ] No external requests except to AI APIs
-  - **How to test:** Network tab filtering - should only see requests to AI APIs (OpenAI/Gemini/Claude)
-- [ ] Extension isolated from Twitter's context
-  - **How to test:** Check manifest.json has minimal permissions, content script doesn't modify Twitter's global objects
+- [ ] Network tab shows only provider APIs plus `pbs.twimg.com` image fetches
+- [ ] Prompt-injection text inside a tweet (e.g. "ignore previous instructions") does not change the assistant's behaviour
 
 ### Cross-Browser Testing
-- [ ] Chrome (latest version)
-  - **How to test:** Check version at `chrome://version/`, should work on Chrome 120+
-- [ ] Chrome (one version behind)
-  - **How to test:** Optional - install Chrome Beta/Dev channel or use older version
-- [ ] Edge (latest version)
-  - **How to test:** Load extension at `edge://extensions/`, test same as Chrome
+- [ ] Chrome (latest)
+- [ ] Edge (latest, `edge://extensions/`)
 - [ ] Chromium-based browsers (Brave, Vivaldi, Opera)
-  - **How to test:** Load unpacked extension in each browser's extension page (same as Chrome)
 
 ### Multi-Language Testing
-- [ ] Works on Twitter with non-English UI
-  - **How to test:** Change Twitter language in Settings → Display → Language → Save
-  - **Expected:** Extension button still appears, panel still works (UI may be English-only for now)
-- [ ] Generates content in requested language
-  - **How to test:** In prompt field, write: "Generate a tweet in [Spanish/French/Japanese] about coding"
-  - **Expected:** AI should respond in requested language
-  - **Note:** Quality depends on AI model's multilingual capabilities
-- [ ] Emoji handling correct
-  - **How to test:** Generate tweets with emoji, insert to Twitter, verify they appear correctly
-- [ ] Right-to-left text (Arabic, Hebrew)
-  - **How to test:** Prompt: "Generate a tweet in Arabic about technology"
-  - **Expected:** Text direction should be RTL when inserted into Twitter
+- [ ] Works on Twitter with a non-English UI
+- [ ] Replies in a requested language when the intent says so
+- [ ] Emoji handled correctly through insertion
+- [ ] Right-to-left text inserts with correct direction
 
 ---
 
 ## Test Data Sets
 
-### Sample Prompts for Testing
+### Sample Intents
 
-**Short Prompts:**
-- "Announce a new feature"
-- "Thank my followers"
-- "Share a quote"
+**Short:**
+- "Agree and add one example"
+- "Congratulate them"
+- "Ask a follow-up question"
 
-**Medium Prompts:**
-- "Write about the importance of user testing in product development"
-- "Explain why TypeScript is valuable for large teams"
-- "Share thoughts on work-life balance for developers"
+**Medium:**
+- "Push back politely and ask for their benchmark"
+- "Share a similar experience without making it about me"
+- "Explain why this trade-off matters for small teams"
 
-**Complex Prompts:**
-- "Create a thread explaining the React component lifecycle in 5 tweets"
-- "Write a reply to someone asking about career advice, be encouraging but realistic"
-- "Announce our new product launch, emphasize the AI features and user-friendly design"
+**Tricky (context-dependent — these are where the vision pass earns its keep):**
+- "React to what's in the screenshot"
+- "Answer the question in the chart"
+- "Reply to the point they made earlier in the thread, not the last tweet"
 
 ### Sample Brand Voices
 
 **Professional Tech Voice:**
 ```
 Name: Professional Tech
-Description: Clear, authoritative, educational. Uses technical terms but explains them. Occasional emoji for emphasis.
+Description: Clear, authoritative, educational. Uses technical terms but explains them.
 Examples:
-- "TypeScript isn't just about catching bugs—it's about scaling your team's confidence in the codebase. 🚀"
+- "TypeScript isn't just about catching bugs—it's about scaling your team's confidence in the codebase."
 - "Quick reminder: Performance optimization is premature until you've measured. Profile first, optimize second."
-- "The best architecture is the one your team can understand and maintain."
 ```
 
 **Casual Friendly Voice:**
@@ -1318,77 +563,27 @@ Examples:
 Name: Friendly Casual
 Description: Conversational, enthusiastic, uses emojis liberally. Feels like talking to a friend.
 Examples:
-- "omg just shipped the new feature!! 🎉 been working on this for weeks and it's finally live!"
+- "omg just shipped the new feature!! been working on this for weeks and it's finally live!"
 - "anyone else procrastinate by over-engineering their side projects? just me? 😅"
-- "friday night coding hits different ✨ time to build something fun"
-```
-
-**Thought Leader Voice:**
-```
-Name: Thought Leader
-Description: Strategic, visionary, speaks to trends and big-picture thinking.
-Examples:
-- "The future of development isn't about writing more code—it's about orchestrating AI to write code for us."
-- "We're entering an era where the ability to prompt > the ability to program."
-- "Three predictions for 2025: 1) AI pair programming becomes standard, 2) No-code reaches enterprises, 3) Web3 finds its real use case."
 ```
 
 ---
 
-## Automated Testing (Future Enhancement)
+## Automated Testing
 
 ### Unit Tests (Vitest)
 ```bash
 npm test
 ```
 
-**Test Coverage Goals:**
-- `api/openai.ts`: API call logic, error handling
-- `storage/encryption.ts`: Encryption/decryption correctness
-- `storage/db.ts`: IndexedDB operations
-- React components: Rendering, state management
+Current coverage is thin — encryption, settings, and a context-card helper. Highest-value additions:
+- `api/vision.ts`: the degraded-path fallback (image fetch fails → text-only summary)
+- `api/claude.ts`: sampling-parameter omission per model prefix
+- `utils/sanitize.ts`: caps and injection stripping
+- `utils/rateLimiter.ts`: sliding window boundaries
 
-### Integration Tests (Playwright)
-```bash
-npm run test:e2e
-```
-
-**Test Scenarios:**
-1. Full onboarding flow
-2. Generate and insert tweet
-3. Create thread
-4. Reply with context
-5. Error handling
-
-### Visual Regression Tests
-- Screenshot comparison of panel UI
-- Ensures UI consistency across updates
-
----
-
-## Performance Benchmarks
-
-**Target Metrics:**
-- Content script injection: < 100ms
-- Button appearance: < 500ms after compose box detected
-- Panel open animation: 300ms (as designed)
-- Tweet generation (API call): 2-5 seconds average
-- Content insertion: < 100ms
-
-**Measuring Performance:**
-```javascript
-// Add to content script
-console.time('button-injection')
-injectAIButton(composeBox)
-console.timeEnd('button-injection')
-
-// Measure panel opening
-console.time('panel-open')
-openPanel()
-panelIframe.addEventListener('load', () => {
-  console.timeEnd('panel-open')
-})
-```
+The DOM-dependent parts of `content-script.tsx` (target-tweet selection) are the most fragile code in
+the repo and are currently untested.
 
 ---
 
@@ -1398,45 +593,38 @@ When reporting bugs, include:
 
 1. **Extension version:** Check in `chrome://extensions/`
 2. **Browser:** Chrome/Edge version
-3. **Steps to reproduce:** Exact sequence of actions
-4. **Expected behavior:** What should happen
-5. **Actual behavior:** What actually happened
-6. **Screenshots/Videos:** Visual evidence
-7. **Console logs:** From both page and service worker contexts
-8. **Network logs:** If API-related issue
+3. **Provider + model** selected in Settings
+4. **Steps to reproduce:** exact sequence, including which page (timeline vs `/status/`)
+5. **Expected vs actual behaviour**
+6. **Screenshots/Videos**
+7. **Console logs:** from both the page and the service worker
+8. **Network logs:** if API-related
 
 **Template:**
 ```markdown
 ## Bug Report
 
-**Extension Version:** 1.0.0
+**Extension Version:** 1.7.2
 **Browser:** Chrome 120.0.6099.109
-**OS:** Windows 11
+**Provider/Model:** Claude / claude-sonnet-5
 
 ### Steps to Reproduce
-1. Go to Twitter.com
-2. Click compose box
-3. Click Kotodama button
-4. Enter prompt: "Test"
-5. Click Generate
+1. Open a tweet with 2 images
+2. Click reply
+3. Click the Kotodama button
+4. Type "react to the screenshot"
+5. Click Generate reply
 
 ### Expected
-Generated tweet appears in panel
+Reply references what the screenshot shows
 
 ### Actual
-Panel shows error: "Rate limit exceeded"
+Context card shows an error; reply is generic
 
 ### Console Logs
 ```
-[Service Worker] Error: 429 Too Many Requests
-[Service Worker] Falling back to gpt-4o-mini...
+[Kotodama] Vision pass failed, falling back to text-only summary: ...
 ```
-
-### Screenshots
-[Attach screenshot]
-
-### Additional Context
-This happens consistently after generating 3 tweets in a row.
 ```
 
 ---
@@ -1445,42 +633,13 @@ This happens consistently after generating 3 tweets in a row.
 
 | Problem | Quick Fix |
 |---------|-----------|
-| Button not appearing | Update selectors in `content-script.ts` |
-| Panel blank | Rebuild: `npm run build`, reload extension |
-| Generation fails | Check API key, verify balance at platform.openai.com |
+| Button not appearing | Rebuild + reload; check `#kotodama-host` exists; clear `buttonPosition` |
+| "No tweet in view" | Update selectors in `content-script.tsx` |
+| Panel unstyled | Rebuild — the second Vite pass produces the loaded `content.js` |
+| Summary always errors | Check the provider key and `pbs.twimg.com` host permission |
+| Generation fails | Check the service worker console for the raw provider error |
+| Claude 400 on `temperature` | Add the model prefix to `FIXED_TEMPERATURE_MODEL_PREFIXES` |
+| Claude 404 | Remove the date suffix from the model id |
 | Text not inserting | Update selectors in `findComposeEditable()` |
-| Service worker inactive | Click "service worker" link in extensions page |
-| Onboarding loops | Clear Chrome storage: `chrome.storage.local.clear()` |
-| "Context invalidated" | Reload extension, refresh Twitter page |
-
----
-
-## Next Steps
-
-After completing all tests:
-
-1. **Document Test Results:**
-   - Create a test report with pass/fail for each item
-   - Note any issues discovered
-   - Prioritize fixes (critical vs. nice-to-have)
-
-2. **Update TODO.md:**
-   - Mark completed test items
-   - Add newly discovered issues
-   - Reprioritize based on testing findings
-
-3. **Fix Critical Issues:**
-   - Focus on issues that prevent core functionality
-   - Test fixes thoroughly before moving on
-
-4. **Prepare for Launch:**
-   - Convert icons to PNG (see TODO.md)
-   - Write user documentation
-   - Create demo video
-   - Prepare Chrome Web Store listing
-
----
-
-**Testing completed?** 🎉
-
-Check out [TODO.md](TODO.md) for remaining pre-launch tasks!
+| Service worker inactive | Normal MV3 — it wakes on message |
+| "Extension was reloaded" | Refresh the Twitter page |

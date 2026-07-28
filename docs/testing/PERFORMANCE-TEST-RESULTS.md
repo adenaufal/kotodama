@@ -4,6 +4,10 @@
 **Tester:** User
 **Testing Version:** 1.2.0+
 
+> **Historical record.** These numbers were taken against the pre-pivot build (iframe panel, button
+> injected per compose box) using `[Kotodama Performance]` console timers that no longer exist. No
+> performance measurements have been taken for the reply-only build.
+
 ## Performance Metrics ✅ ALL TARGETS EXCEEDED
 
 ### Button Injection

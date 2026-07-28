@@ -1,3 +1,19 @@
+# Manual Test Record — 2025-10-18
+
+> **This record predates the reply-only pivot. It is history, not current status.**
+>
+> - It was taken against the compose-and-thread product: an iframe panel, a button injected per
+>   compose box, and thread generation. All of that has since been deleted.
+> - The **Thread Generation** section below tests features that no longer exist.
+> - **The reply-only build has NOT been manually tested in a browser.** Nothing here covers the
+>   shadow-root panel, the vision context-reading pass, the result carousel, or Gemini/Claude
+>   generation — those shipped after this pass and have zero manual coverage.
+>
+> Use [TESTING.md](TESTING.md) for the current test plan. Record a fresh pass in a new dated file
+> rather than editing the results below.
+
+---
+
 ### Build & Load
 ✅ `npm run build` succeeds without errors
 ✅ Extension loads in `chrome://extensions/` without warnings

@@ -1,13 +1,16 @@
 # Kotodama Agent Handbook
 
+> Read [CLAUDE.md](../../CLAUDE.md) first — especially its **Traps** section, which lists the things
+> that break silently. This handbook covers workflow and contribution conventions on top of that.
+
 ## Project Overview
-- **Purpose:** Kotodama is a Chrome/Edge extension that helps users compose tweets and replies that reflect their brand voice while leveraging OpenAI today (Gemini and Claude clients are prepared but not yet wired).
-- **Tech Stack:** React 19, TypeScript 5.9 (strict mode), Vite 7, Tailwind CSS 4, Zustand 5 for state, Dexie.js 4 for IndexedDB persistence, Web Crypto API for encryption, and Node.js 20+ toolchain.
+- **Purpose:** Kotodama is a Chrome/Edge extension that drafts **replies** on Twitter/X in the user's brand voice. It reads the tweet being replied to — text, preceding thread, and images via a vision model — shows that reading, then generates a reply. It does not compose new tweets and does not generate or post threads.
+- **Tech Stack:** React 19, TypeScript 5.9 (strict mode), Vite 7, Tailwind CSS 4, Dexie.js 4 for IndexedDB persistence, Framer Motion for panel animation, Web Crypto API for encryption, and Node.js 20+ toolchain.
 - **Key Directories:**
-  - `src/api/` – AI provider clients (`openai.ts` active; `gemini.ts`/`claude.ts` prototypes).
+  - `src/api/` – AI provider clients (`openai.ts`, `gemini.ts`, `claude.ts` — all wired) plus `vision.ts` for the context-reading pass.
   - `src/background/` – Service worker entry (`service-worker.ts`) handling messaging, encryption, and API calls.
-  - `src/content/` – Content script that injects UI into Twitter/X and coordinates messaging.
-  - `src/panel/` – React UI for the compose panel, including `App.tsx`, `Panel.tsx`, and UI components.
+  - `src/content/` – Content script (`content-script.tsx`) that mounts the panel into a shadow root on Twitter/X, captures reply context, and inserts drafts.
+  - `src/panel/` – React reply composer (`Panel.tsx` + components), mounted by the content script; it has no HTML page of its own.
   - `src/onboarding/` – First-run onboarding flow for collecting API keys and brand voice data.
   - `src/storage/` – IndexedDB schema (`db.ts`), encryption helpers, and settings management.
   - `src/types/` – Shared TypeScript definitions.
@@ -22,11 +25,7 @@
    ```
    > The repository ships with an `npm` lockfile. If you must use `pnpm` or `yarn`, remove `package-lock.json`, install afresh, and note the change in your PR description.
 2. **Environment Variables**
-   ```bash
-   # Only required if new features introduce environment-driven configuration
-   cp .env.example .env.local
-   ```
-   - The current codebase does not require runtime `.env` files; API keys are provided inside the extension UI and stored securely. If you add variables, update `.env.example`, document them, and never commit real secrets.
+   - None. There is no `.env` file and no `.env.example`; API keys are entered in the extension UI and stored encrypted. If you ever introduce env-driven config, document it here and never commit real secrets.
 3. **Start Development Build (watch mode)**
    ```bash
    npm run dev
@@ -41,7 +40,9 @@
   ```bash
   npm run build
   ```
-  This runs the Vite production build and post-build copy step (`scripts/build.js`).
+  This runs Vite twice — the main config, then `vite.content.config.ts`, which overwrites
+  `dist/content.js` with a single self-contained IIFE — followed by the post-build copy step
+  (`scripts/build.js`).
 - **Type Checking**
   ```bash
   npm run type-check
@@ -53,8 +54,8 @@
   Use additional Vite flags as needed when debugging environment-specific behavior.
 - **Manual Verification Checklist**
   1. Load the freshly built extension in Chrome/Edge.
-  2. Trigger the content script on Twitter/X and open the panel.
-  3. Exercise the feature or bug fix you worked on (panel UI, onboarding, background messaging, etc.).
+  2. Open a tweet on Twitter/X and click the floating sparkle button to open the panel.
+  3. Exercise the feature or bug fix you worked on (context capture, vision summary, generation, insertion, onboarding, settings).
 
 - **CRITICAL PROCEDURE**: After finishing EVERY task or making significant changes, you MUST run:
   ```bash
@@ -67,20 +68,20 @@
   - Strict typing is enforced (`strict`, `noUnusedLocals`, `noUnusedParameters`). Prefer explicit interfaces and discriminated unions to `any`.
   - Use modern React (function components + hooks). Avoid legacy class components.
 - **State & Data**
-  - Centralize shared UI state in Zustand stores under `src/panel/`.
+  - Panel state is local React state; there is no global store.
   - Persist long-lived data via the IndexedDB helpers in `src/storage/`; extend schemas deliberately and add migrations when needed.
 - **Styling**
   - Tailwind CSS 4 utility classes are the primary styling mechanism. Keep class lists sorted logically (layout → spacing → typography → effects) to ease diff review.
   - For reusable styling patterns, create helper components or utilities instead of duplicating long class strings.
 - **Formatting**
-  - Follow Prettier defaults used by the repo: 2-space indentation, single quotes for strings, trailing commas where valid, and no unnecessary semicolons in TSX modules.
+  - Follow [.prettierrc](../../.prettierrc): semicolons on, single quotes, 100-column print width, 2-space indent, ES5 trailing commas.
 - **Naming**
   - Components and React hooks: `PascalCase` for components (`SparkleButton`), `useCamelCase` for hooks.
   - Functions/variables: `camelCase`.
   - Constants: `UPPER_SNAKE_CASE`.
   - Files: prefer `kebab-case.ts` / `kebab-case.tsx` for modules, and place related styles/utilities alongside their component when practical.
 - **Architecture**
-  - Keep clear boundaries between the content script, background worker, and panel UI. Shared logic belongs in `src/shared/` (create if necessary) or `src/types/`.
+  - Keep clear boundaries between the content script, background worker, and panel UI. Shared logic belongs in `src/utils/`, shared contracts in `src/types/`. There is no `src/shared/` — do not create one.
   - When adding new APIs, mirror the existing structure in `src/api/` and wire them through the background worker.
   - When adjusting build behavior, update the relevant helper under `scripts/` rather than duplicating logic elsewhere.
 

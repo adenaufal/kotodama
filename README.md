@@ -1,273 +1,146 @@
-# Kotodama - AI Tweet Composer Extension
+# Kotodama
 
-> 言霊 (Kotodama) - "The spirit of language" in Japanese
+> 言霊 (Kotodama) — "the spirit of language"
 
-An intelligent Chrome/Edge browser extension that helps you compose tweets and replies that maintain your unique brand voice while adapting to your audience's communication style.
+A Chrome/Edge extension for **replying** on Twitter/X. Open a tweet, and Kotodama reads it — the text,
+the thread above it, and any attached images via a vision model — shows you that reading, then drafts a
+reply in a brand voice you defined.
 
-## Highlights (v1.7.0)
+Kotodama is reply-only. There is no compose-a-new-tweet flow and no thread generation.
 
-- **🖼️ New Logo Branding**: Modern and sharp visual identity across extension icons and UI components
-- **✨ AI Composer**: Generate tweets or full threads powered by OpenAI’s GPT-5 with automatic fallback handling
-- **💬 Reply Intelligence**: Auto-captures tweet context, surfaces reply templates, and blends in with the original conversation
-- **🏙️ Dashboard Sidebar**: Modern settings layout with sidebar navigation, flat UI, and API key visibility toggle
-- **🧵 Sequential Threads**: Intelligent thread posting that clicks the "Add" button and inserts tweets one-by-one with configurable delays
-- **🔒 Local-First Security**: API keys encrypted via Web Crypto; no data leaves the browser beyond OpenAI requests
+## How it works
 
-## Prerequisites
+1. Open a tweet or its reply composer. A draggable sparkle button (✨) floats on the page.
+2. Click it. The panel reads the tweet being replied to and shows a plain-language summary of what it
+   found — including what is in the images.
+3. Type what you want to say back, or pick one of 27 reply templates.
+4. Optionally stack tone presets and choose a length (S / M / L).
+5. Generate. Drafts land in a carousel; retry any one in place, then insert it into the reply box.
 
-- Node.js 20+ (ships with npm 10+)
-- OpenAI API key for the GPT-4o family ([create one](https://platform.openai.com/api-keys))
-- Chrome or Edge browser (latest stable release)
+Everything is stored locally. API keys are encrypted with the Web Crypto API and never leave your
+machine except to call the provider you chose.
 
-## Installation
+## Install
 
-### Development Setup
+Requires Node.js 20+ and Chrome or Edge (latest stable).
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/kotodama.git
-   cd kotodama
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Build the extension**
-   ```bash
-   npm run build
-   ```
-
-   This will create a `dist` folder with the compiled extension.
-
-4. **Load in Chrome/Edge**
-   - Open Chrome/Edge and navigate to `chrome://extensions/`
-   - Enable "Developer mode" (toggle in top-right)
-   - Click "Load unpacked"
-   - Select the `dist` folder
-
-### First-Time Setup
-
-1. Click the Kotodama extension icon in your browser toolbar
-2. Follow the onboarding wizard:
-   - **Step 1**: Securely add your OpenAI API key (encrypted before storage)
-   - **Step 2**: Define your brand voice — paste example tweets, drop tweet URLs to auto-fetch text, or import a Markdown file
-3. Navigate to Twitter/X and start composing!
-
-## Usage
-
-### Composing Tweets
-
-1. Go to Twitter/X and click on the tweet compose box
-2. A sparkle button (✨) will appear in the top-right corner
-3. Click the button to open the AI panel
-4. Enter your prompt (e.g., "Tweet about the importance of user research") or pick a template
-5. Select a brand voice if you want to override the default
-6. Click "Generate" to create the tweet
-7. Review, edit if needed, and click "Insert to X"
-
-### Creating Threads
-
-1. Open the AI panel from a compose box
-2. Toggle "Create thread" option
-3. Specify the number of tweets (2-10)
-4. Enter your thread outline or topic
-5. Generate and review the complete thread
-6. Set a **Thread Delay** (1–10 seconds) to ensure Twitter's UI can keep up
-7. Click **Insert All Tweets** — the extension will sequentially fill each box and click the (+) button for you
-
-### Replying to Tweets
-
-1. Click "Reply" on any tweet
-2. The sparkle button appears in the reply box
-3. Click to open the AI panel — the original tweet appears in the context card
-4. Pick a reply template (optional) or describe the response you want
-5. Generate — the AI blends the captured context with your brand voice
-6. Review and insert
-
-### Managing Brand Voices & Settings
-
-- Open the panel and click the gear icon to launch the settings dashboard
-- View, edit, or delete saved brand voices with real-time validation
-- Set a default voice and model, and rerun onboarding
-
-## Project Structure
-
-```
-kotodama/
-├── .agent/               # Agent workflows and automation
-├── src/                  # Source code
-│   ├── api/              # AI provider clients (OpenAI wired today; Gemini/Claude prototypes)
-│   ├── background/       # Manifest V3 service worker
-│   ├── components/       # Shared React building blocks
-│   ├── constants/        # Model metadata and design tokens
-│   ├── content/          # Twitter/X DOM integration
-│   ├── onboarding/       # First-time setup flow
-│   ├── panel/            # Main composer UI
-│   ├── settings/         # Settings + brand voice manager UI
-│   ├── storage/          # IndexedDB schema & encryption helpers
-│   ├── styles/           # Global styles and theme variables
-│   └── types/            # Shared TypeScript definitions
-├── docs/                 # Documentation hub (see docs/README.md)
-├── public/
-│   ├── manifest.json     # Chrome extension manifest
-│   └── icons/            # Extension icons
-├── scripts/              # Build scripts
-│   ├── build.js          # Post-build file copying
-│   └── create-icons.js   # Icon generation
-├── vite.config.ts        # Vite build configuration
-├── tsconfig.json         # TypeScript configuration
-├── tailwind.config.js    # Tailwind CSS configuration
-├── CLAUDE.md             # Claude Code project instructions
-├── CHANGELOG.md          # Version history
-└── README.md
+```bash
+npm install
+npm run build
 ```
 
-## Documentation
+Then load the `dist/` folder at `chrome://extensions/` with Developer mode enabled.
 
-Comprehensive documentation is available in the [docs/](docs/) directory:
+On first run, onboarding asks for **one** API key — OpenAI, Gemini, or Claude, your pick — and one
+brand voice (a name plus at least one example tweet). The other providers can be added later in
+Settings.
 
-- **[Quick Start Guide](docs/guides/QUICKSTART.md)** - Get started quickly
-- **[Quick Reference](docs/guides/QUICK_REFERENCE.md)** - Panel shortcuts & request flags
-- **[Development Guide](docs/development/DEVELOPMENT.md)** - Development setup and workflows
-- **[Testing Guide](docs/testing/TESTING.md)** - Testing strategies and procedures
-- **[API Reference](docs/reference/API_REFERENCE.md)** - API documentation
-- **[Model Reference](docs/reference/MODEL_REFERENCE.md)** - Supported models & mappings
-- **[Full Documentation Index](docs/README.md)** - Complete documentation overview
+## Providers
 
-## Development
+All three are wired end-to-end and selectable in Settings.
 
-### Available Scripts
+| Provider | Model a new install selects | Fallback | Reading (vision) model |
+|----------|-----------------------------|----------|------------------------|
+| OpenAI   | `gpt-5-mini-2025-08-07`     | `gpt-4o-mini-2024-07-18` | `gpt-4o-mini` |
+| Gemini   | `gemini-2.5-flash`          | `gemini-2.5-flash-lite`  | `gemini-2.5-flash-lite` |
+| Claude   | `claude-sonnet-5`           | `claude-haiku-4-5`       | `claude-haiku-4-5` |
 
-- **`npm run dev`**: Build in watch mode for development
-- **`npm run build`**: Production build
-- **`npm run type-check`**: Run TypeScript type checking
-- **`npm run lint`**: Lint the codebase
-- **`npm test`**: Run all tests
+Change the model anytime in Settings. The first column is what onboarding stores as your default; if no
+model is stored at all, the OpenAI client falls back to its own built-in default of `gpt-4o-2024-11-20`.
 
-### Development Workflow
+The reading pass always uses its own cheap vision-capable model, because the model you picked for
+writing may have no vision at all. If reading fails, it degrades to a text-only summary and never
+blocks generation.
 
-1. Make changes to the source files
-2. Run `npm run dev` to watch for changes
-3. Reload the extension in Chrome:
-   - Go to `chrome://extensions/`
-   - Click the refresh icon on the Kotodama extension
-4. Refresh Twitter/X page to see changes
-
-### Tech Stack
-
-- **Frontend**: React 19 + TypeScript 5.9
-- **Build Tool**: Vite 7
-- **Styling**: Tailwind CSS 4
-- **Storage**: IndexedDB (via Dexie.js 4.x)
-- **State Management**: Zustand 5
-- **Encryption**: Web Crypto API
-- **AI Models**:
-  - OpenAI `gpt-5-2025-08-07` (default), `gpt-5-mini`, and `gpt-4o-2024-11-20`
-  - Gemini and Claude clients exist but are not yet wired into the runtime
+Caveats per provider (Claude's bare model ids, Gemini's thinking budget, OpenAI's temperature rules)
+are documented in [docs/reference/MODEL_REFERENCE.md](docs/reference/MODEL_REFERENCE.md).
 
 ## Architecture
 
-### Components
+Three execution contexts:
 
-1. **Content Script**: Injects UI elements into Twitter/X pages, detects compose boxes
-2. **Background Service Worker**: Handles API calls, data processing, and message routing
-3. **Panel UI**: React-based side panel for tweet composition and editing
-4. **Onboarding UI**: First-time setup wizard
-5. **Settings UI**: Advanced configuration and brand voice management dashboard
-6. **Storage Layer**: IndexedDB for large data, Chrome Storage for settings
+- **Content script** ([src/content/content-script.tsx](src/content/content-script.tsx)) — injected into
+  twitter.com and x.com. Extracts the tweet being replied to, sanitizes it, and mounts the panel React
+  tree into a **shadow root** on the page. No iframe.
+- **Service worker** ([src/background/service-worker.ts](src/background/service-worker.ts)) — routes all
+  provider calls, runs the vision pass, decrypts keys, and owns the rate limiter.
+- **React UIs** — the panel (mounted in the shadow root by the content script), plus onboarding and
+  settings as their own extension pages.
 
-### Data Flow
+Storage is split between IndexedDB via Dexie (brand voices, draft history) and Chrome Storage
+(settings, encrypted keys, button position).
 
 ```
-Twitter Page (Content Script)
-    ↓ (detects compose box)
-Floating Button Click
-    ↓ (opens panel)
-Panel UI
-    ↓ (sends generate request)
-Background Service Worker
-    ↓ (API call)
-OpenAI API
-    ↓ (response)
-Panel UI (displays result)
-    ↓ (user clicks insert)
-Content Script (inserts to Twitter)
+src/
+├── api/          # One client per provider + vision.ts for the reading pass
+├── background/   # MV3 service worker
+├── content/      # Twitter/X DOM integration + panel mounting
+├── onboarding/   # First-run wizard (own page)
+├── panel/        # Reply composer (mounted into the shadow root)
+├── settings/     # Settings + brand voice manager (own page)
+├── storage/      # Dexie schema, encryption, settings
+├── styles/       # design-system.css is the only token file
+└── types/        # Shared TypeScript contracts
 ```
 
-## Security & Privacy
+Full map: [docs/project/PROJECT_MAP.md](docs/project/PROJECT_MAP.md).
 
-- ✅ **Local Storage**: All data stored locally on your device
-- ✅ **Encrypted Keys**: API keys encrypted using Web Crypto API
-- ✅ **No Telemetry**: No usage tracking or analytics
-- ✅ **Minimal Permissions**: Only accesses twitter.com and x.com
-- ✅ **GDPR/CCPA Compliant**: No personal data collection
+## Development
 
-## Roadmap
+```bash
+npm run dev         # watch mode
+npm run type-check  # tsc --noEmit
+npm run lint        # eslint
+npm test            # vitest
+npm run build       # production build
+```
 
-### Shipped in v1.7.0 (February 2026)
-- **New Logo Branding**: Refreshed visual identity with high-resolution PNG icons
-- **Cross-Platform Compatibility**: Complete set of icons from 16px to 192px and PWA manifests
-- **Asset Migration**: Successfully transitioned from SVG placeholders to production-ready assets
+`npm run build` runs two Vite passes plus an asset copy. The second pass rebuilds the content script
+on its own as a self-contained IIFE and overwrites `dist/content.js` — a content script cannot use ES
+module imports, so that pass is what the manifest actually loads. The build also stamps
+`package.json`'s version into the copied manifest, so the two can't drift.
 
-### Shipped in v1.6.0 (February 2026)
-- **Settings Overhaul**: Replaced floating navigation with a modern sidebar layout (General, Brand Voices, About)
-- **Onboarding Redesign**: New split-screen layout for a more guided and premium setup experience
-- **UI Flat Design**: Removed nested cards and heavy shadows for a professional Zen minimalist aesthetic
-- **Design System Consolidation**: Centralized theming in `design-system.css` and `pages.css`
-- **Model Upgrade**: Updated default model to OpenAI GPT-5
+Reload the unpacked extension and refresh Twitter/X after each rebuild.
 
-### Shipped in v1.5.0 (January 2026)
-- Sequential thread posting with automated insertion and progress toasts
-- API key visibility toggle and improved security messaging
-- Stability fixes for AI generation and tweet insertion
+**Tech stack:** React 19, TypeScript 5.9 (strict), Vite 7, Tailwind CSS 4, Dexie 4, Web Crypto.
 
-### Shipped in v1.4.0 (January 2026)
-- Redesigned Settings dashboard with floating navigation and full-page gradients
-- Enhanced brand voice management with better modal responsiveness
+## Security
 
-### Up Next
-1. Wire up Gemini and Claude providers end-to-end (service worker + UI selection)
-2. Multi-suggestion generation and side-by-side comparison
-3. Tone adjustment sliders with live preview
-4. Tweet performance tracking and export/import for voices
+Everything extracted from the page is attacker-controlled text that ends up in a model prompt.
+`sanitizeTweetContext` / `sanitizePrompt` ([src/utils/sanitize.ts](src/utils/sanitize.ts)) are the trust
+boundary and are covered by prompt-injection tests. Generation is rate limited in the service worker.
 
-### Longer Term
-- Multi-platform support (LinkedIn, Threads)
-- Analytics dashboard and insights
-- Team collaboration features
-- Optional cloud sync for settings
+No telemetry, no analytics, no data collection. Permissions are limited to `storage` and `activeTab`,
+plus host access to twitter.com, x.com, `*.twimg.com` (image fetches for the reading pass), and the
+three provider APIs.
 
-## Known Issues
+## Known limitations
 
-- Only the OpenAI provider is currently wired; Gemini/Claude clients are experimental
-- Twitter DOM selectors may break with Twitter UI updates
-- Profile tweet scraping is still stubbed (manual tweet samples required)
+- **Twitter DOM selectors are fragile** and may break when Twitter ships UI changes. The symptom is the
+  panel showing its "No tweet in view" empty state.
+- **Thread context is capped** at the 10 most recent preceding tweets, so long threads lose their opening.
+- **The reply-only build has not had a manual browser test pass.** See
+  [docs/testing/TESTING.md](docs/testing/TESTING.md).
+- **Profile analysis is a dead path** — the handler exists but no UI reaches it.
 
-## Contributing
+## Documentation
 
-This is currently a personal project. If you'd like to contribute:
+- [Quick Start](docs/guides/QUICKSTART.md) — install through first reply
+- [Quick Reference](docs/guides/QUICK_REFERENCE.md) — common tasks at a glance
+- [Development Guide](docs/development/DEVELOPMENT.md) — setup, workflows, conventions
+- [Testing Guide](docs/testing/TESTING.md) — manual test plan for the reply flow
+- [API Reference](docs/reference/API_REFERENCE.md) — provider client signatures and shapes
+- [Model Reference](docs/reference/MODEL_REFERENCE.md) — models and per-provider caveats
+- [Project Map](docs/project/PROJECT_MAP.md) — codebase architecture
+- [TODO](docs/project/TODO.md) — prioritised backlog
+- [Full index](docs/README.md)
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+## Releases
+
+Versioning is automated by `release-please` from Conventional Commit messages — do not bump versions by
+hand. See [docs/project/README_RELEASES.md](docs/project/README_RELEASES.md) and
+[CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-ISC License - see LICENSE file for details
-
-## Acknowledgments
-
-- Built with [Claude Code](https://claude.com/claude-code)
-- Inspired by the need for authentic, brand-consistent social media presence
-- Name "Kotodama" (言霊) reflects the Japanese concept of words having spiritual power
-
-## Support
-
-For issues, questions, or feature requests, please open an issue on the GitHub repository.
-
----
-
-**Note**: This is v1.7.0. The extension is under active development. Features and UI may change.
+ISC — see [LICENSE](LICENSE).

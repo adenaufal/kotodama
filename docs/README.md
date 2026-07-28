@@ -2,6 +2,12 @@
 
 Welcome to the Kotodama documentation! This directory contains all project documentation organized by category.
 
+Kotodama is **reply-only**: it reads the tweet you are replying to (text, preceding thread, and
+images via a vision model), shows that reading, and drafts a reply in your brand voice. Compose-a-
+new-tweet, thread generation, and thread posting were removed in the reply-only pivot (v1.8.0).
+Documents describing the older product were deleted in that release — recover them from git history
+if you need them.
+
 ## Quick Navigation
 
 ### Getting Started
@@ -12,27 +18,21 @@ Welcome to the Kotodama documentation! This directory contains all project docum
 - [Development Guide](development/DEVELOPMENT.md) - Development setup, workflows, and conventions
 
 ### Testing
-- [Testing Guide](testing/TESTING.md) - Comprehensive testing documentation
-- [Testing Recommendations](testing/TESTING-RECOMMENDATIONS.md) - Best practices for testing
-- [Testing Checklist](testing/tested-checklist-18102025.md) - Current testing status
-- [Performance Test Results](testing/PERFORMANCE-TEST-RESULTS.md) - Performance benchmarks and analysis
+- [Testing Guide](testing/TESTING.md) - Manual test plan for the reply flow
+- [Testing Recommendations](testing/TESTING-RECOMMENDATIONS.md) - Highest-value untested areas
+- [Testing Checklist](testing/tested-checklist-18102025.md) - _Historical_ — last manual pass, taken before the pivot. **The reply-only build has not been manually tested.**
+- [Performance Test Results](testing/PERFORMANCE-TEST-RESULTS.md) - _Historical_ — pre-pivot benchmarks
 
 ### Reference
-- [API Reference](reference/API_REFERENCE.md) - API endpoints and usage
-- [Model Reference](reference/MODEL_REFERENCE.md) - AI model configurations and capabilities
-- [Agents Reference](reference/AGENTS.md) - AI agent types and behaviors
+- [API Reference](reference/API_REFERENCE.md) - Provider client signatures, shapes, and dispatch
+- [Model Reference](reference/MODEL_REFERENCE.md) - AI model configurations and caveats
+- [Agents Reference](reference/AGENTS.md) - Handbook for agents working in this repo
 
 ### Project Information
-- [Product Requirements Document](project/prd.md) - Original product requirements and specifications
 - [Project Map](project/PROJECT_MAP.md) - Codebase structure and architecture overview
-- [Implementation Summary](project/IMPLEMENTATION_SUMMARY.md) - Key implementation decisions and patterns
-- [Project Summary](project/SUMMARY.md) - High-level project overview
 - [TODO](project/TODO.md) - Planned features and improvements
 - [Release Notes](project/README_RELEASES.md) - Release process documentation
-- [Recent Updates (2026)](project/UPDATES_2026.md) - Latest breakthrough changes (v1.6.0, v1.7.0)
-- [Updates (2025)](project/UPDATES_2025.md) - Archive of 2025 development
-- [Final Updates (2025)](project/UPDATES_FINAL_2025.md) - v1.3.0 snapshot
-- [Reply Context Fix](project/REPLY-CONTEXT-FIX.md) - Technical fix documentation
+- [Recent Updates (2026)](project/UPDATES_2026.md) - Release timeline, incl. the reply-only pivot
 
 ## Documentation Structure
 
@@ -57,7 +57,7 @@ When adding new documentation:
 
 ## Documentation Maintenance
 
-- Keep the [Testing Checklist](testing/tested-checklist-18102025.md) up to date after testing sessions
+- Record each manual test session in a **new dated checklist** rather than editing an old one — `tested-checklist-18102025.md` is a record of what was tested on that date
 - Update [TODO](project/TODO.md) when planning new features
 - Add release notes to [Release Notes](project/README_RELEASES.md) for each release
 - Document significant changes in UPDATES files
