@@ -17,8 +17,10 @@ Kotodama is reply-only. There is no compose-a-new-tweet flow and no thread gener
 4. Optionally stack tone presets and choose a length (S / M / L).
 5. Generate. Drafts land in a carousel; retry any one in place, then insert it into the reply box.
 
-Everything is stored locally. API keys are encrypted with the Web Crypto API and never leave your
-machine except to call the provider you chose.
+Settings and optional reply history are stored locally. Provider keys are encrypted at rest with a
+master passphrase and are sent to the provider you choose only when Kotodama makes a request. See
+the [credential and privacy threat model](docs/security/THREAT_MODEL.md) for storage limits and
+recovery details.
 
 ## Install
 
@@ -31,9 +33,10 @@ npm run build
 
 Then load the `dist/` folder at `chrome://extensions/` with Developer mode enabled.
 
-On first run, onboarding asks for **one** API key — OpenAI, Gemini, or Claude, your pick — and one
-brand voice (a name plus at least one example tweet). The other providers can be added later in
-Settings.
+On first run, onboarding asks for **one** API key — OpenAI, Gemini, or Claude, your pick — a master
+passphrase, and one brand voice (a name plus at least one example tweet). The passphrase is not
+stored; you will unlock the vault again after restarting the browser or reloading the extension.
+The other providers can be added later in Settings.
 
 ## Providers
 
@@ -113,6 +116,11 @@ boundary and are covered by prompt-injection tests. Generation is rate limited i
 No telemetry, no analytics, no data collection. Permissions are limited to `storage` and `activeTab`,
 plus host access to twitter.com, x.com, `*.twimg.com` (image fetches for the reading pass), and the
 three provider APIs.
+
+The credential vault protects API keys at rest after migration. Prompts, selected tweet context,
+images sent to vision models, brand voices, analyzed profiles, and optional generation history have
+separate storage and provider-retention considerations. Read the [threat model](docs/security/THREAT_MODEL.md)
+for exact boundaries, legacy migration behavior, and passphrase recovery limitations.
 
 ## Known limitations
 

@@ -1,23 +1,58 @@
-import { describe, expect, it } from 'vitest';
-import { decryptApiKey, encryptApiKey } from '../encryption';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  createCredentialVault,
+  getUnlockedCredentials,
+  isCredentialVaultUnlocked,
+  lockCredentialVault,
+  unlockCredentialVault,
+} from '../encryption';
 
-const SAMPLE_KEY = 'sk-live-1234567890abcdef';
-const DECRYPT_ERROR_MESSAGE = 'Failed to decrypt API key';
+const MASTER_PASSPHRASE = 'a strong master passphrase';
+const SAMPLE_KEY = 'sk-test-1234567890abcdef';
 
-describe('encryptApiKey and decryptApiKey', () => {
-  it('returns the original value after encryption and decryption', async () => {
-    const encrypted = await encryptApiKey(SAMPLE_KEY);
+beforeEach(async () => {
+  await lockCredentialVault();
+});
 
-    expect(typeof encrypted).toBe('string');
-    expect(encrypted).not.toBe(SAMPLE_KEY);
+describe('credential vault encryption', () => {
+  it('encrypts credentials with a fresh salt and IV and unlocks them', async () => {
+    const credentials = { apiKeys: { openai: SAMPLE_KEY } };
+    const first = await createCredentialVault(MASTER_PASSPHRASE, credentials);
+    const second = await createCredentialVault(MASTER_PASSPHRASE, credentials);
 
-    const decrypted = await decryptApiKey(encrypted);
-    expect(decrypted).toBe(SAMPLE_KEY);
+    expect(first).not.toEqual(second);
+    expect(first.ciphertext).not.toContain(SAMPLE_KEY);
+    expect(first.providers).toEqual(['openai']);
+    await lockCredentialVault();
+    await unlockCredentialVault(MASTER_PASSPHRASE, first);
+    expect(await getUnlockedCredentials(first)).toEqual(credentials);
+    expect(await isCredentialVaultUnlocked()).toBe(true);
   });
 
-  it('throws an error when provided malformed encrypted data', async () => {
-    await expect(decryptApiKey('not-base64')).rejects.toThrowError(
-      DECRYPT_ERROR_MESSAGE
+  it('requires a passphrase after locking and rejects an incorrect passphrase', async () => {
+    const vault = await createCredentialVault(MASTER_PASSPHRASE, {
+      apiKeys: { openai: SAMPLE_KEY },
+    });
+    await lockCredentialVault();
+
+    await expect(getUnlockedCredentials(vault)).rejects.toThrow('Credential vault is locked');
+    await expect(unlockCredentialVault('incorrect passphrase', vault)).rejects.toThrow(
+      'Could not unlock the credential vault',
     );
+    expect(await isCredentialVaultUnlocked()).toBe(false);
+
+    await expect(unlockCredentialVault(MASTER_PASSPHRASE, vault)).resolves.toMatchObject({
+      apiKeys: { openai: SAMPLE_KEY },
+    });
+  });
+
+  it('keeps the passphrase out of browser storage', async () => {
+    await createCredentialVault(MASTER_PASSPHRASE, { apiKeys: { openai: SAMPLE_KEY } });
+
+    const sessionState = await chrome.storage.session.get(null);
+    const localState = await chrome.storage.local.get(['user_settings', 'credential_vault']);
+    expect(JSON.stringify(sessionState)).not.toContain(MASTER_PASSPHRASE);
+    expect(JSON.stringify(localState)).not.toContain(MASTER_PASSPHRASE);
+    expect(JSON.stringify(localState)).not.toContain(SAMPLE_KEY);
   });
 });

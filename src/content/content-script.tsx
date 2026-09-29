@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import Panel from '../panel/Panel';
 import styles from '../panel/index.css?inline';
 import { applyTheme } from '../utils/theme';
+import { logger } from '../utils/logger';
 import type { TweetContext, TweetImage, ThreadEntry, UserSettings } from '../types';
 import { sanitizeTweetContext } from '../utils/sanitize';
 
@@ -218,7 +219,7 @@ function extractTweetContextFromPage(tweetElement: HTMLElement): TweetContext | 
             thread: extractThread(tweetElement)
         });
     } catch (error) {
-        console.error('[Kotodama] Error extracting tweet context:', error);
+        logger.error('Error extracting tweet context:', error);
         return null;
     }
 }
@@ -518,5 +519,5 @@ if (!host) {
     const root = createRoot(shadow);
     root.render(<App />);
 
-    console.log('[Kotodama] Shadow DOM injected');
+    logger.info('Shadow DOM injected');
 }

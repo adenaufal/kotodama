@@ -8,7 +8,16 @@ import {
   UserProfile,
 } from '../types';
 import { db } from '../storage/db';
-import { getSettings, saveSettings } from '../storage/settings';
+import {
+  getApiKey,
+  getCredentialVaultStatus,
+  getSettings,
+  resetCredentialVault,
+  saveSettings,
+  unlockOrMigrateCredentialVault,
+  updateVaultCredentials,
+} from '../storage/settings';
+import { lockCredentialVault } from '../storage/encryption';
 import { generateWithOpenAI, analyzeTwitterProfile } from '../api/openai';
 import { generateWithGemini } from '../api/gemini';
 import { generateWithClaude } from '../api/claude';
@@ -37,7 +46,7 @@ async function resolveProvider(
   requested?: AIProvider
 ): Promise<{ provider: AIProvider; apiKey: string }> {
   const provider = requested ?? settings.defaultProvider ?? 'openai';
-  const apiKey = settings.apiKeys[provider];
+  const apiKey = await getApiKey(provider);
 
   if (!apiKey) {
     throw new Error(
@@ -54,10 +63,8 @@ const SETTINGS_URL = chrome.runtime.getURL('src/settings/index.html');
 // Handle extension icon click - open onboarding or settings in new tab
 chrome.action.onClicked.addListener(async () => {
   try {
-    const settings = await getSettings();
-    const hasOpenAiKey = typeof settings.apiKeys.openai === 'string' && settings.apiKeys.openai.trim().length > 0;
-
-    const url = hasOpenAiKey ? SETTINGS_URL : ONBOARDING_URL;
+    const vaultStatus = await getCredentialVaultStatus();
+    const url = vaultStatus.hasCredentials ? SETTINGS_URL : ONBOARDING_URL;
 
     // Check if tab already exists
     const tabs = await chrome.tabs.query({ url });
@@ -76,8 +83,8 @@ chrome.action.onClicked.addListener(async () => {
 });
 
 // Listen for messages from content script and panel
-chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
-  handleMessage(message)
+chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+  handleMessage(message, sender)
     .then((response) => sendResponse(response))
     .catch((error) => {
       logger.error('Message handling error:', error);
@@ -91,7 +98,21 @@ chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) =
   return true;
 });
 
-async function handleMessage(message: Message): Promise<MessageResponse> {
+const CREDENTIAL_MESSAGES = new Set(['unlock-vault', 'update-vault-credentials', 'lock-vault', 'reset-vault']);
+
+function isTrustedExtensionPage(sender: chrome.runtime.MessageSender): boolean {
+  const extensionUrl = chrome.runtime.getURL('');
+  return sender.id === chrome.runtime.id && !!sender.url?.startsWith(extensionUrl);
+}
+
+async function handleMessage(
+  message: Message,
+  sender?: chrome.runtime.MessageSender,
+): Promise<MessageResponse> {
+  if (CREDENTIAL_MESSAGES.has(message.type) && (!sender || !isTrustedExtensionPage(sender))) {
+    return { success: false, error: 'Credential actions are available only from Kotodama settings pages.' };
+  }
+
   switch (message.type) {
     case 'generate':
       return handleGenerate(message.payload);
@@ -104,6 +125,21 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
 
     case 'get-settings':
       return handleGetSettings();
+
+    case 'get-vault-status':
+      return handleGetVaultStatus();
+
+    case 'unlock-vault':
+      return handleUnlockVault(message.payload);
+
+    case 'update-vault-credentials':
+      return handleUpdateVaultCredentials(message.payload);
+
+    case 'lock-vault':
+      return handleLockVault();
+
+    case 'reset-vault':
+      return handleResetVault();
 
     case 'save-settings':
       return handleSaveSettings(message.payload);
@@ -298,13 +334,12 @@ async function handleAnalyzeProfile(payload: {
   tweets: string[];
 }): Promise<MessageResponse> {
   try {
-    const settings = await getSettings();
-
-    if (!settings.apiKeys.openai) {
+    const openAiKey = await getApiKey('openai');
+    if (!openAiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
-    const analysis = await analyzeTwitterProfile(payload.tweets, settings.apiKeys.openai);
+    const analysis = await analyzeTwitterProfile(payload.tweets, openAiKey);
 
     // Save or update profile
     const profileId = `profile_${payload.username}`;
@@ -356,6 +391,71 @@ async function handleGetSettings(): Promise<MessageResponse> {
       success: false,
       error: error.message,
     };
+  }
+}
+
+async function handleGetVaultStatus(): Promise<MessageResponse> {
+  try {
+    return { success: true, data: await getCredentialVaultStatus() };
+  } catch {
+    return { success: false, error: 'Could not read credential security status.' };
+  }
+}
+
+async function handleUnlockVault(payload: {
+  passphrase: string;
+  credentials?: { apiKeys?: Partial<Record<AIProvider, string>>; claudeCookie?: string };
+}): Promise<MessageResponse> {
+  try {
+    const status = await unlockOrMigrateCredentialVault(payload.passphrase, {
+      apiKeys: payload.credentials?.apiKeys ?? {},
+      ...(payload.credentials?.claudeCookie ? { claudeCookie: payload.credentials.claudeCookie } : {}),
+    });
+    return { success: true, data: status };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Could not unlock credential vault.',
+    };
+  }
+}
+
+async function handleUpdateVaultCredentials(payload: {
+  apiKeys?: Partial<Record<AIProvider, string>>;
+  claudeCookie?: string;
+  providersToRemove?: AIProvider[];
+}): Promise<MessageResponse> {
+  try {
+    const status = await updateVaultCredentials(
+      {
+        apiKeys: payload.apiKeys ?? {},
+        ...(payload.claudeCookie ? { claudeCookie: payload.claudeCookie } : {}),
+      },
+      payload.providersToRemove ?? [],
+    );
+    return { success: true, data: status };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Could not update saved credentials.',
+    };
+  }
+}
+
+async function handleLockVault(): Promise<MessageResponse> {
+  try {
+    await lockCredentialVault();
+    return { success: true, data: await getCredentialVaultStatus() };
+  } catch {
+    return { success: false, error: 'Could not lock the credential vault.' };
+  }
+}
+
+async function handleResetVault(): Promise<MessageResponse> {
+  try {
+    return { success: true, data: await resetCredentialVault() };
+  } catch {
+    return { success: false, error: 'Could not reset the credential vault.' };
   }
 }
 

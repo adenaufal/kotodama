@@ -506,11 +506,16 @@ Use this checklist for systematic testing before each release:
 - [ ] Extension-reload overlay appears after a rebuild and the page recovers on refresh
 
 ### Security & Privacy
-- [ ] API keys encrypted in storage
+- [ ] Master passphrase is required to create a credential vault and is not saved in persistent storage
+- [ ] `chrome.storage.local` contains vault metadata and ciphertext, not provider keys or the master passphrase
+- [ ] `chrome.storage.session` contains only the derived session key and clears on browser restart, extension reload/update, or disable
+- [ ] Existing installs can migrate every saved provider key and legacy Claude cookie before old data is removed
   ```javascript
-  chrome.storage.local.get(null, r => console.log(r)) // no plain 'sk-...'
+  chrome.storage.local.get(['user_settings', 'credential_vault'], r => console.log(r)) // no plaintext credentials
   ```
-- [ ] No API keys in console logs (search the console for `sk-`)
+- [ ] Settings and content-script messages expose provider-presence flags, not API key values
+- [ ] No credentials, prompts, tweet text, provider response bodies, or generated text appear in console logs
+- [ ] Gemini API keys are sent in the `x-goog-api-key` header, not in request URLs
 - [ ] No telemetry or tracking
 - [ ] Network tab shows only provider APIs plus `pbs.twimg.com` image fetches
 - [ ] Prompt-injection text inside a tweet (e.g. "ignore previous instructions") does not change the assistant's behaviour

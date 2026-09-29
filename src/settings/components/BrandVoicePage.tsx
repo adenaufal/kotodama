@@ -3,6 +3,7 @@ import { BrandVoice, ToneAttributes } from '../../types';
 import { validateBrandVoice, TONE_PRESETS, getDefaultToneAttributes, getToneAttributeLabel } from '../../utils/brandVoiceUtils';
 import { VOICE_TEMPLATES } from '../../onboarding/constants/voiceTemplates';
 import { Plus, Edit3, Trash2, ChevronLeft, X } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 interface BrandVoicePageProps {
     voices: BrandVoice[];
@@ -65,7 +66,7 @@ export const BrandVoicePage: React.FC<BrandVoicePageProps> = ({
         try {
             const response = await chrome.runtime.sendMessage({ type: 'delete-brand-voice', payload: { id: voiceId } });
             if (response.success) onRefresh();
-        } catch (err) { console.error('Failed to delete voice:', err); }
+        } catch (err) { logger.error('Failed to delete voice:', err); }
     };
 
     const handleSave = async () => {

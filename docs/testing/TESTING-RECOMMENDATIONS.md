@@ -144,21 +144,9 @@ console.log(shadow?.querySelector('header'));
    the three reply surfaces. This is the single highest-value test to add.
 3. **Integration (Playwright)** — onboarding, then a reply happy path against a static fixture page.
 
-Example:
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { encryptApiKey, decryptApiKey } from '../src/storage/encryption';
-
-describe('API Key Encryption', () => {
-  it('should encrypt and decrypt correctly', async () => {
-    const original = 'sk-test123';
-    const encrypted = await encryptApiKey(original);
-    expect(await decryptApiKey(encrypted)).toBe(original);
-    expect(encrypted).not.toBe(original);
-  });
-});
-```
+Credential vault tests now cover passphrase encryption and unlock, session locking, legacy key/cookie
+migration with failure preservation, and console redaction. Keep those tests in
+`src/storage/__tests__/` and `src/utils/__tests__/` when changing the vault.
 
 ---
 

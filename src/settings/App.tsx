@@ -13,8 +13,9 @@ import About from './About';
 // Hooks & Types
 import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
 import { RuntimeInvalidatedModal } from '../components/RuntimeInvalidatedModal';
-import { UserSettings, BrandVoice, AIProvider } from '../types';
+import { UserSettings, BrandVoice, AIProvider, CredentialVaultStatus } from '../types';
 import { applyTheme, Theme } from '../utils/theme';
+import { logger } from '../utils/logger';
 
 export type PageType = 'general' | 'voices' | 'about';
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
@@ -37,6 +38,11 @@ const App: React.FC = () => {
   const [brandVoices, setBrandVoices] = useState<BrandVoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [vaultStatus, setVaultStatus] = useState<CredentialVaultStatus | null>(null);
+  const [vaultPassphrase, setVaultPassphrase] = useState('');
+  const [vaultPassphraseConfirmation, setVaultPassphraseConfirmation] = useState('');
+  const [vaultError, setVaultError] = useState('');
+  const [providersToRemove, setProvidersToRemove] = useState<AIProvider[]>([]);
 
   // Form State
   const [apiKeys, setApiKeys] = useState<Record<AIProvider, string>>(EMPTY_KEYS);
@@ -49,16 +55,14 @@ const App: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [settingsData, voicesData] = await Promise.all([
+      const [settingsData, voicesData, statusData] = await Promise.all([
         sendMessage<UserSettings>({ type: 'get-settings' }),
         sendMessage<BrandVoice[]>({ type: 'list-brand-voices' }),
+        sendMessage<CredentialVaultStatus>({ type: 'get-vault-status' }),
       ]);
       setSettings(settingsData);
-      setApiKeys({
-        openai: settingsData.apiKeys?.openai || '',
-        gemini: settingsData.apiKeys?.gemini || '',
-        claude: settingsData.apiKeys?.claude || '',
-      });
+      setApiKeys(EMPTY_KEYS);
+      setVaultStatus(statusData);
       setProvider(settingsData.defaultProvider || 'openai');
       setDefaultVoiceId(settingsData.defaultBrandVoiceId || '');
       setDefaultModel(settingsData.defaultModel || '');
@@ -66,7 +70,7 @@ const App: React.FC = () => {
       setTheme(settingsData.ui?.theme || 'auto');
       setBrandVoices(voicesData);
     } catch (err) {
-      console.error('Failed to load settings:', err);
+      logger.error('Failed to load settings:', err);
     } finally {
       setLoading(false);
     }
@@ -85,24 +89,97 @@ const App: React.FC = () => {
       const baseSettings = settings || defaultSettings;
       const updatedSettings: UserSettings = {
         ...baseSettings,
-        apiKeys: {
-          openai: apiKeys.openai.trim(),
-          gemini: apiKeys.gemini.trim(),
-          claude: apiKeys.claude.trim(),
-        },
+        apiKeys: {},
         defaultProvider: provider,
         defaultBrandVoiceId: defaultVoiceId,
         defaultModel: defaultModel,
         customModels: customModels,
         ui: { ...baseSettings.ui, theme },
       };
+
+      const credentialUpdates = Object.fromEntries(
+        PROVIDERS.flatMap((item) => apiKeys[item].trim() ? [[item, apiKeys[item].trim()]] : []),
+      ) as Partial<Record<AIProvider, string>>;
+      if (Object.keys(credentialUpdates).length > 0 || providersToRemove.length > 0) {
+        if (!vaultStatus?.unlocked) {
+          throw new Error('Unlock credential protection before changing API keys.');
+        }
+        const updatedVaultStatus = await sendMessage<CredentialVaultStatus>({
+          type: 'update-vault-credentials',
+          payload: { apiKeys: credentialUpdates, providersToRemove },
+        });
+        setVaultStatus(updatedVaultStatus);
+      }
       await sendMessage({ type: 'save-settings', payload: updatedSettings });
       setSettings(updatedSettings);
+      setApiKeys(EMPTY_KEYS);
+      setProvidersToRemove([]);
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 2000);
     } catch (err) {
-      console.error('Failed to save settings:', err);
+      logger.error('Failed to save settings:', err);
       setSaveState('error');
+    }
+  };
+
+  const handleUnlockVault = async () => {
+    setVaultError('');
+    if (!vaultPassphrase.trim()) {
+      setVaultError('Enter your master passphrase.');
+      return;
+    }
+    if (!vaultStatus?.hasVault) {
+      if (vaultPassphrase.length < 12) {
+        setVaultError('Choose a master passphrase with at least 12 characters.');
+        return;
+      }
+      if (vaultPassphrase !== vaultPassphraseConfirmation) {
+        setVaultError('The passphrases do not match.');
+        return;
+      }
+    }
+
+    try {
+      const status = await sendMessage<CredentialVaultStatus>({
+        type: 'unlock-vault',
+        payload: { passphrase: vaultPassphrase },
+      });
+      setVaultStatus(status);
+      setVaultPassphrase('');
+      setVaultPassphraseConfirmation('');
+      setVaultError('');
+    } catch (error) {
+      setVaultError(error instanceof Error ? error.message : 'Could not unlock credential protection.');
+    }
+  };
+
+  const handleLockVault = async () => {
+    try {
+      const status = await sendMessage<CredentialVaultStatus>({ type: 'lock-vault' });
+      setVaultStatus(status);
+      setApiKeys(EMPTY_KEYS);
+      setProvidersToRemove([]);
+    } catch {
+      setVaultError('Could not lock credential protection.');
+    }
+  };
+
+  const handleResetVault = async () => {
+    const confirmed = window.confirm(
+      'Reset the credential vault? Saved provider keys that are not available in a legacy copy will be erased and cannot be recovered. You will need to enter replacement keys and choose a new master passphrase.',
+    );
+    if (!confirmed) return;
+
+    try {
+      const status = await sendMessage<CredentialVaultStatus>({ type: 'reset-vault' });
+      setVaultStatus(status);
+      setApiKeys(EMPTY_KEYS);
+      setProvidersToRemove([]);
+      setVaultPassphrase('');
+      setVaultPassphraseConfirmation('');
+      setVaultError('');
+    } catch {
+      setVaultError('Could not reset credential protection.');
     }
   };
 
@@ -110,7 +187,8 @@ const App: React.FC = () => {
     if (!loading && settings) {
       const timeoutId = setTimeout(() => {
         if (
-          PROVIDERS.some((p) => apiKeys[p].trim() !== (settings.apiKeys?.[p] || '')) ||
+          PROVIDERS.some((p) => apiKeys[p].trim() !== '') ||
+          providersToRemove.length > 0 ||
           provider !== (settings.defaultProvider || 'openai') ||
           defaultVoiceId !== (settings.defaultBrandVoiceId || '') ||
           defaultModel !== (settings.defaultModel || '') ||
@@ -122,7 +200,7 @@ const App: React.FC = () => {
       }, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [apiKeys, provider, defaultVoiceId, defaultModel, customModels, theme, settings, loading]);
+  }, [apiKeys, providersToRemove, provider, defaultVoiceId, defaultModel, customModels, theme, settings, loading]);
 
   const handleRestartOnboarding = () => { chrome.tabs.create({ url: chrome.runtime.getURL('src/onboarding/index.html?skipRedirect=1') }); };
 
@@ -188,19 +266,110 @@ const App: React.FC = () => {
             </header>
 
             {currentPage === 'general' && (
-              <GeneralSettings
-                apiKeys={apiKeys}
-                setApiKeys={setApiKeys}
-                provider={provider}
-                setProvider={setProvider}
-                selectedModelId={defaultModel}
-                setSelectedModelId={setDefaultModel}
-                customModels={customModels}
-                setCustomModels={setCustomModels}
-                theme={theme}
-                setTheme={setTheme}
-                saveState={saveState}
-              />
+              <>
+                <section className="mb-10 rounded-koto border border-line bg-surface p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-sm font-medium text-ink">Credential protection</h2>
+                      {vaultStatus?.unlocked ? (
+                        <p className="mt-1 text-xs leading-relaxed text-muted">
+                          Unlocked for this browser session. The master passphrase is not stored; closing the browser or reloading the extension locks the vault.
+                        </p>
+                      ) : vaultStatus?.needsMigration ? (
+                        <p className="mt-1 text-xs leading-relaxed text-muted">
+                          Saved keys use the older bundle-derived protection. Create a master passphrase to migrate them;
+                          the old encrypted data is kept unless migration succeeds.
+                        </p>
+                      ) : vaultStatus?.hasVault ? (
+                        <p className="mt-1 text-xs leading-relaxed text-muted">
+                          Unlock your saved provider keys for this browser session. You will need the passphrase again
+                          after the browser closes or the extension reloads.
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs leading-relaxed text-muted">
+                          Create a master passphrase before saving provider keys. Kotodama does not store the passphrase.
+                        </p>
+                      )}
+                    </div>
+                    {vaultStatus?.unlocked && (
+                      <button
+                        type="button"
+                        onClick={handleLockVault}
+                        className="shrink-0 rounded-md border border-line px-3 py-1.5 text-xs text-muted transition-colors hover:text-ink"
+                      >
+                        Lock now
+                      </button>
+                    )}
+                  </div>
+
+                  {!vaultStatus?.unlocked && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <label className="text-xs text-muted" htmlFor="vault-passphrase">
+                        Master passphrase
+                        <input
+                          id="vault-passphrase"
+                          type="password"
+                          autoComplete="new-password"
+                          value={vaultPassphrase}
+                          onChange={(event) => setVaultPassphrase(event.target.value)}
+                          className="koto-field mt-1.5"
+                        />
+                      </label>
+                      {!vaultStatus?.hasVault && (
+                        <label className="text-xs text-muted" htmlFor="vault-passphrase-confirmation">
+                          Confirm passphrase
+                          <input
+                            id="vault-passphrase-confirmation"
+                            type="password"
+                            autoComplete="new-password"
+                            value={vaultPassphraseConfirmation}
+                            onChange={(event) => setVaultPassphraseConfirmation(event.target.value)}
+                            className="koto-field mt-1.5"
+                          />
+                        </label>
+                      )}
+                      <div className="sm:col-span-2 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleUnlockVault}
+                          className="rounded-md bg-accent px-3.5 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                        >
+                          {vaultStatus?.hasVault ? 'Unlock vault' : vaultStatus?.needsMigration ? 'Migrate and unlock' : 'Create vault'}
+                        </button>
+                        {vaultError && <p role="alert" className="text-xs text-danger">{vaultError}</p>}
+                      </div>
+                    </div>
+                  )}
+                  {vaultStatus?.hasVault && !vaultStatus.unlocked && (
+                    <button
+                      type="button"
+                      onClick={handleResetVault}
+                      className="mt-3 text-xs text-faint underline underline-offset-2 transition-colors hover:text-danger"
+                    >
+                      Forgot your passphrase? Reset the vault
+                    </button>
+                  )}
+                </section>
+
+                <GeneralSettings
+                  apiKeys={apiKeys}
+                  setApiKeys={setApiKeys}
+                  configuredProviders={vaultStatus?.providers ?? []}
+                  credentialsUnlocked={!!vaultStatus?.unlocked}
+                  onRemoveCredential={(item) => setProvidersToRemove((current) =>
+                    current.includes(item) ? current : [...current, item],
+                  )}
+                  provider={provider}
+                  setProvider={setProvider}
+                  selectedModelId={defaultModel}
+                  setSelectedModelId={setDefaultModel}
+                  customModels={customModels}
+                  setCustomModels={setCustomModels}
+                  theme={theme}
+                  setTheme={setTheme}
+                  saveState={saveState}
+                />
+              </>
             )}
 
             {currentPage === 'voices' && (
