@@ -141,6 +141,10 @@ async function main() {
 
   const keyInfo = await prepareKeyFile();
   if (!keyInfo) {
+    if (process.env.REQUIRE_CRX === 'true') {
+      throw new Error('Chrome extension private key is required when REQUIRE_CRX=true.');
+    }
+
     console.log('No Chrome extension private key provided; skipping CRX generation.');
     return;
   }

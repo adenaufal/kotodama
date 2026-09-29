@@ -9,15 +9,16 @@
 1. Merge feature branches into `main` using squash merges.
 2. `release-please` runs on every push to `main`. It keeps a draft **release PR** up to date with the next semantic version, changelog, and package version bump.
 3. When you merge the release PR, `release-please` automatically tags the merge commit as `vX.Y.Z` and publishes a GitHub Release. All commits merged since the previous tag are batched into this single release.
-4. The `Release Artifacts on Tag` workflow detects the new tag, rebuilds the project, packages the build output into `app-vX.Y.Z.tar.gz`, and attaches it to the GitHub Release.
+4. When release-please creates a GitHub Release, the `Release Please` workflow calls `Release Artifacts on Tag` directly. The artifact job checks that the tag matches `package.json`, `package-lock.json`, and the built manifest, then uploads `app-vX.Y.Z.tar.gz` and a signed `kotodama-X.Y.Z.crx` to that release. The direct call is needed because GitHub does not start a follow-on workflow for events created with `GITHUB_TOKEN`.
 
 ## Release artifacts
-- Build artifacts are searched in `.next/`, `dist/`, or `build/`. Any directories that exist are included in the tarball (source maps are omitted to keep downloads small).
-- Download the packaged archive from the GitHub Release assets list. The filename follows `app-<tag>.tar.gz`.
-- Need a fresh archive? Re-run the workflow from the **Actions** tab → `Release Artifacts on Tag` → choose the `v*.*.*` run → **Re-run all jobs**.
+- The archive contains the built extension in `dist/`; source maps are omitted to keep downloads small.
+- Download the archive and signed CRX from the GitHub Release assets list. Their filenames are `app-<tag>.tar.gz` and `kotodama-<version>.crx`.
+- Need to rebuild assets for an existing release? Run **Actions → Release Artifacts on Tag** and enter the published tag, such as `v1.8.0`.
 
 ## Secrets & optional integrations
 - `GITHUB_TOKEN` is provided automatically in GitHub Actions and is sufficient for release-please and uploading release assets.
+- Configure the repository secret `CHROME_EXTENSION_PRIVATE_KEY` with the extension's PEM signing key. The artifact job fails visibly if it cannot create the CRX or archive.
 - `NPM_TOKEN` (optional) can be added later if you choose to publish the package to npm as part of the tag workflow.
 - Optional deployment hooks:
   - **Render**: add `RENDER_DEPLOY_HOOK` to repository secrets and trigger it from an additional job after the archive upload.
