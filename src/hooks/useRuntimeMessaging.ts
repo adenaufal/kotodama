@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sendRuntimeMessage, isRuntimeValid, watchRuntimeValidity, createUserErrorMessage, RuntimeMessage } from '../utils/runtime';
+import { logger } from '../utils/logger';
 
 interface UseRuntimeMessagingReturn {
   sendMessage: <T = any>(message: RuntimeMessage) => Promise<T>;
@@ -39,7 +40,7 @@ export function useRuntimeMessaging(): UseRuntimeMessagingReturn {
     try {
       const response = await sendRuntimeMessage(message, {
         onRetry: (attempt, err) => {
-          console.log(`[Kotodama] Retrying message ${message.type} (attempt ${attempt})...`, err);
+          logger.info('Retrying a runtime message', message.type, attempt, err);
         }
       });
 

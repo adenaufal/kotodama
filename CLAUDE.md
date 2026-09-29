@@ -4,7 +4,7 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 
 ## Project Overview
 
-Kotodama (言霊) is a Chrome/Edge extension for **replying** on Twitter/X. It is reply-only: the user opens a tweet, Kotodama reads it (text + preceding thread + attached images, via a cheap vision model), shows that reading back, the user types a short intent, and a reply is drafted in their brand voice. Brand voices and settings are stored locally with encrypted API keys.
+Kotodama (言霊) is a Chrome/Edge extension for **replying** on Twitter/X. It is reply-only: the user opens a tweet, Kotodama reads it (text + preceding thread + attached images, via a cheap vision model), shows that reading back, the user types a short intent, and a reply is drafted in their brand voice. Brand voices and settings are stored locally; API keys use a passphrase-protected credential vault.
 
 There is no compose-a-new-tweet flow and no thread generation or thread posting. If a doc, comment, or test mentions those, it is stale — delete it, do not restore the feature.
 
@@ -78,7 +78,7 @@ Panel messages go through [src/utils/runtime.ts](src/utils/runtime.ts) (`sendRun
 ### Storage
 
 - **IndexedDB via Dexie** ([src/storage/db.ts](src/storage/db.ts)) — brand voices, reply history, and a `userProfiles` table nothing currently writes. Schema v2 adds `category`/`tags`/`isTemplate` and backfills newer tone attributes.
-- **Chrome Storage** ([src/storage/settings.ts](src/storage/settings.ts)) — settings, button position, rate-limiter window, and API keys **encrypted** via Web Crypto ([src/storage/encryption.ts](src/storage/encryption.ts)) on save / decrypted on read.
+- **Chrome Storage** ([src/storage/settings.ts](src/storage/settings.ts)) — public settings and a passphrase-protected credential vault. The passphrase is never persisted; a derived key lives in `chrome.storage.session` for the active browser session. UI settings responses contain no credential values. See [docs/security/THREAT_MODEL.md](docs/security/THREAT_MODEL.md).
 
 ### AI integration
 

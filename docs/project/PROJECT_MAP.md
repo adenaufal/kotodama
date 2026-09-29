@@ -85,7 +85,7 @@ Twitter/X Page
                 └─ chrome.runtime.sendMessage({ type: 'generate' })
                     └─ service-worker.ts
                         ├─ Rate-limit check
-                        ├─ Loads settings (encrypted key, default provider/model)
+                        ├─ Loads public settings and unlocks the credential vault for provider use
                         ├─ Fetches brand voice from IndexedDB
                         └─ Calls OpenAI / Gemini / Claude
                             └─ Receives draft → saves history (optional)
@@ -107,9 +107,9 @@ Key points:
 | Storage | Contents |
 |---------|----------|
 | IndexedDB (`src/storage/db.ts`) | Brand voices, optional generation history, cached user profiles |
-| Chrome storage (`src/storage/settings.ts`) | Encrypted API keys, UI preferences, default provider/voice/model, floating button position, rate-limit window |
+| Chrome storage (`src/storage/settings.ts`) | Passphrase-encrypted API keys, UI preferences, default provider/voice/model, floating button position, rate-limit window |
 
-Encryption uses Web Crypto (AES-GCM) before persisting values. Keys are decrypted only inside the service worker.
+The service worker decrypts credentials only when needed for a provider request. The derived key is held in session storage to survive service-worker suspension, then cleared when the browser session ends. See the [threat model](../security/THREAT_MODEL.md) for guarantees, limitations, and legacy migration behavior.
 
 ---
 

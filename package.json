@@ -1,6 +1,6 @@
 {
   "name": "kotodama",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "main": "index.js",
   "scripts": {
     "dev": "vite build --watch",
@@ -8,7 +8,8 @@
     "prebuild": "node scripts/build.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:release": "node scripts/verify-release-version.js"
   },
   "keywords": [],
   "author": "",

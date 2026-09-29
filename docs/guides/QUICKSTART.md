@@ -42,7 +42,8 @@ Click the Kotodama toolbar icon to launch the onboarding flow.
 
 1. **Connect an AI**
    - Pick a provider (OpenAI, Gemini, or Claude) and paste that provider's API key. One key is enough.
-   - Keys are encrypted locally using the Web Crypto API before they touch disk.
+   - Create and confirm a master passphrase (at least 12 characters). It is not stored; unlock the vault again after restarting the browser or reloading the extension.
+   - Keys are encrypted locally with a passphrase-derived key. If you forget the passphrase, Kotodama cannot recover the saved keys.
 
 2. **Teach Your Voice**
    - Supply a name, description, and at least one example tweet.
@@ -50,6 +51,8 @@ Click the Kotodama toolbar icon to launch the onboarding flow.
    - Tone sliders default to 50/50/50 and can be fine-tuned later.
 
 Finishing the wizard saves your settings, creates a default brand voice, and opens Twitter/X so you can start replying.
+Existing installations migrate their previously saved keys in Settings before using the new vault.
+See the [credential and privacy threat model](../security/THREAT_MODEL.md) for migration and storage details.
 
 ## Everyday Usage
 

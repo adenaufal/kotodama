@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AIProvider, BrandVoice, UserSettings } from '../types';
+import { AIProvider, BrandVoice, CredentialVaultStatus, UserSettings } from '../types';
 import { getDefaultModelForProvider } from '../constants/models';
 import { parseBrandVoiceMarkdown } from './brandVoiceImport';
 import { useRuntimeMessaging } from '../hooks/useRuntimeMessaging';
@@ -8,6 +8,7 @@ import { VOICE_TEMPLATES } from './constants/voiceTemplates';
 import { getDefaultToneAttributes } from '../utils/brandVoiceUtils';
 import { BrandLogo } from '../components/BrandLogo';
 import { applyTheme } from '../utils/theme';
+import { logger } from '../utils/logger';
 
 const MAX_EXAMPLE_TWEETS = 5;
 
@@ -49,7 +50,7 @@ const fetchTweetText = async (url: string): Promise<string | null> => {
       }
     }
   } catch (error) {
-    console.error('Failed to fetch tweet text', error);
+    logger.error('Failed to fetch tweet text', error);
     return null;
   }
 
@@ -82,6 +83,9 @@ const Onboarding: React.FC = () => {
 
   const [provider, setProvider] = useState<AIProvider>('openai');
   const [apiKey, setApiKey] = useState('');
+  const [masterPassphrase, setMasterPassphrase] = useState('');
+  const [masterPassphraseConfirmation, setMasterPassphraseConfirmation] = useState('');
+  const [vaultStatus, setVaultStatus] = useState<CredentialVaultStatus | null>(null);
   const [brandVoiceName, setBrandVoiceName] = useState('');
   const [brandVoiceDescription, setBrandVoiceDescription] = useState('');
   const [exampleTweets, setExampleTweets] = useState<string[]>(() =>
@@ -117,20 +121,20 @@ const Onboarding: React.FC = () => {
 
     const checkExistingConfiguration = async () => {
       try {
-        const existingSettings = await sendMessage<UserSettings>({
-          type: 'get-settings',
-        });
+        const [existingSettings, status] = await Promise.all([
+          sendMessage<UserSettings>({ type: 'get-settings' }),
+          sendMessage<CredentialVaultStatus>({ type: 'get-vault-status' }),
+        ]);
 
         applyTheme(existingSettings.ui?.theme);
+        setVaultStatus(status);
 
-        const hasKey = PROVIDER_META.some(({ id }) => existingSettings.apiKeys?.[id]?.trim());
-
-        if (hasKey && !skipRedirect) {
+        if (status.hasCredentials && (!skipRedirect || status.needsMigration)) {
           const settingsUrl = chrome.runtime.getURL('src/settings/index.html');
           window.location.replace(settingsUrl);
         }
-      } catch (error) {
-        console.error('Failed to verify existing configuration', error);
+      } catch {
+        // The form stays available if extension settings cannot be read.
       }
     };
 
@@ -287,7 +291,7 @@ const Onboarding: React.FC = () => {
         message: 'Loaded your brand voice from markdown.',
       });
     } catch (error) {
-      console.error('Failed to import brand voice markdown', error);
+      logger.error('Failed to import brand voice markdown', error);
       setImportFeedback({
         type: 'error',
         message:
@@ -309,13 +313,20 @@ const Onboarding: React.FC = () => {
     if (!brandVoiceName.trim()) return setSubmitError('Give this voice a name.');
     if (!brandVoiceDescription.trim()) return setSubmitError('Add a short description of how this voice sounds.');
     if (validExamples.length === 0) return setSubmitError('Add at least one example so the model has something to imitate.');
+    if (!masterPassphrase.trim()) return setSubmitError('Enter your master passphrase.');
+    if (!vaultStatus?.hasVault && masterPassphrase.length < 12) {
+      return setSubmitError('Choose a master passphrase with at least 12 characters.');
+    }
+    if (!vaultStatus?.hasVault && masterPassphrase !== masterPassphraseConfirmation) {
+      return setSubmitError('The passphrases do not match.');
+    }
 
     setSubmitError(null);
     setIsSubmitting(true);
 
     try {
       const settings: UserSettings = {
-        apiKeys: { [provider]: apiKey.trim() },
+        apiKeys: {},
         defaultProvider: provider,
         defaultModel: getDefaultModelForProvider(provider),
         analysisDepth: 20,
@@ -330,6 +341,14 @@ const Onboarding: React.FC = () => {
           showToneControls: true,
         },
       };
+
+      await sendMessage<CredentialVaultStatus>({
+        type: 'unlock-vault',
+        payload: {
+          passphrase: masterPassphrase,
+          credentials: { apiKeys: { [provider]: apiKey.trim() } },
+        },
+      });
 
       await sendMessage({
         type: 'save-settings',
@@ -360,10 +379,12 @@ const Onboarding: React.FC = () => {
         payload: settings,
       });
 
+      setApiKey('');
+      setMasterPassphrase('');
+      setMasterPassphraseConfirmation('');
       setStep(3);
     } catch (error) {
-      console.error('Setup failed:', error);
-      setSubmitError('Could not save your setup. Check your connection and try again.');
+      setSubmitError(error instanceof Error ? error.message : 'Could not save your setup. Check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -462,9 +483,48 @@ const Onboarding: React.FC = () => {
                     >
                       Generate one
                     </a>
-                    . It is encrypted with the Web Crypto API before it touches storage, and never leaves
-                    your machine except to call {activeProvider.label}.
+                    . Your key is encrypted locally and sent only to {activeProvider.label} when you use Kotodama.
                   </p>
+                </div>
+
+                <div className="space-y-3 rounded-koto border border-line bg-surface p-4">
+                  <div>
+                    <h2 className="text-sm font-medium text-ink">Protect your saved keys</h2>
+                    <p className="mt-1 text-xs leading-relaxed text-muted">
+                      {vaultStatus?.hasVault
+                        ? 'Enter your existing master passphrase to unlock the vault and add this key.'
+                        : 'Create a master passphrase to encrypt your keys. It is never stored; you will need it again after restarting the browser or reloading the extension.'}
+                    </p>
+                  </div>
+                  <label className="koto-label" htmlFor="onboarding-master-passphrase">
+                    Master passphrase
+                    <input
+                      id="onboarding-master-passphrase"
+                      type="password"
+                      value={masterPassphrase}
+                      onChange={(event) => setMasterPassphrase(event.target.value)}
+                      autoComplete="new-password"
+                      className="koto-field mt-1.5"
+                    />
+                  </label>
+                  {!vaultStatus?.hasVault && (
+                    <label className="koto-label" htmlFor="onboarding-master-passphrase-confirmation">
+                      Confirm master passphrase
+                      <input
+                        id="onboarding-master-passphrase-confirmation"
+                        type="password"
+                        value={masterPassphraseConfirmation}
+                        onChange={(event) => setMasterPassphraseConfirmation(event.target.value)}
+                        autoComplete="new-password"
+                        className="koto-field mt-1.5"
+                      />
+                    </label>
+                  )}
+                  {!vaultStatus?.hasVault && (
+                    <p className="text-xs leading-relaxed text-faint">
+                      Use at least 12 characters. If you forget it, Kotodama cannot recover these keys.
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-2">

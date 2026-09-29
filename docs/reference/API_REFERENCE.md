@@ -494,8 +494,10 @@ intent. Any new field added to the context must go through
 ## Security Considerations
 
 1. **API Key Storage**
-   - Keys are encrypted with the Web Crypto API before being written to `chrome.storage`
-   - Decrypted only inside the service worker; never logged or shown in the UI
+   - Keys are encrypted with AES-GCM under a PBKDF2-SHA-256 key derived from a user master passphrase before being written to `chrome.storage.local`
+   - The passphrase is not persisted. A derived key is kept in `chrome.storage.session` for the active browser session; browser restart, extension reload/update, or disable locks the vault. The key is exposed only to trusted extension contexts.
+   - UI pages and content-script messages receive provider-presence flags, never decrypted values; the service worker decrypts keys for provider calls.
+   - Pre-vault data uses a legacy bundle-derived key until the user completes migration in Settings. See the [threat model](../security/THREAT_MODEL.md).
 
 2. **Prompt Injection**
    - Page-scraped text is sanitized and length-capped before it reaches a prompt

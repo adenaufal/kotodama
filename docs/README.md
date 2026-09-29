@@ -13,6 +13,7 @@ if you need them.
 ### Getting Started
 - [Quickstart Guide](guides/QUICKSTART.md) - Get up and running quickly
 - [Quick Reference](guides/QUICK_REFERENCE.md) - Common tasks and commands at a glance
+- [Credential and Privacy Threat Model](security/THREAT_MODEL.md) - Vault protection, migration, and privacy boundaries
 
 ### Development
 - [Development Guide](development/DEVELOPMENT.md) - Development setup, workflows, and conventions
@@ -41,6 +42,7 @@ docs/
 ├── development/    # Development guides and workflows
 ├── guides/         # User and quick-start guides
 ├── reference/      # API, model, and technical references
+├── security/       # Credential and privacy threat model
 ├── testing/        # Testing guides and results
 └── project/        # Project planning and historical documents
 ```
