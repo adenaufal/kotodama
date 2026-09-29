@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/adenaufal/kotodama/compare/v1.8.0...v1.8.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* **release:** align versions and attach release artifacts ([#47](https://github.com/adenaufal/kotodama/issues/47)) ([1bfffcf](https://github.com/adenaufal/kotodama/commit/1bfffcf94b0dd71cf11a13f1ddd7dc33fba3d4bd))
+
 ## [1.7.0](https://github.com/adenaufal/kotodama/compare/v1.6.0...v1.7.0) (2026-07-28)
 
 
