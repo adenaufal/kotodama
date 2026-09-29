@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { REPLY_TEMPLATES } from '../constants/templates';
 import { sanitizePrompt } from '../utils/sanitize';
+import { logger } from '../utils/logger';
 import { sendRuntimeMessage, isRuntimeValid, watchRuntimeValidity, createUserErrorMessage } from '../utils/runtime';
 
 import { SolidContainer } from './components/Layout/SolidContainer';
@@ -85,7 +86,7 @@ const Panel: React.FC<PanelProps> = ({ initialContext, onClose, onInsert }) => {
                     ''
                 );
             }
-        })().catch((err) => console.error('Failed to load panel data:', err));
+        })().catch((err) => logger.error('Failed to load panel data:', err));
 
         return watchRuntimeValidity(() => setRuntimeInvalidated(true));
     }, []);

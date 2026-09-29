@@ -109,11 +109,11 @@ export interface GeneratedTweet {
 
 export interface UserSettings {
   apiKeys: {
-    openai?: string; // encrypted
-    gemini?: string; // encrypted
-    claude?: string; // encrypted
+    openai?: string; // Omitted from public settings responses; kept for migration compatibility.
+    gemini?: string;
+    claude?: string;
   };
-  claudeCookie?: string; // encrypted - For Claude web account
+  claudeCookie?: string; // Legacy credential field used only during vault migration.
   defaultProvider?: AIProvider;
   claudeAuthType?: 'api' | 'cookie'; // API key or cookie authentication
   defaultBrandVoiceId?: string;
@@ -135,6 +135,16 @@ export interface UserSettings {
 }
 
 export type AIProvider = 'openai' | 'gemini' | 'claude';
+
+export interface CredentialVaultStatus {
+  hasVault: boolean;
+  hasCredentials: boolean;
+  needsMigration: boolean;
+  hasLegacyData: boolean;
+  providers: AIProvider[];
+  hasClaudeCookie: boolean;
+  unlocked: boolean;
+}
 
 export interface GenerateRequest {
   prompt: string; // What the user wants to say back
@@ -177,7 +187,12 @@ export interface Message {
   | 'save-brand-voice'
   | 'list-brand-voices'
   | 'delete-brand-voice'
-  | 'open-settings';
+  | 'open-settings'
+  | 'get-vault-status'
+  | 'unlock-vault'
+  | 'update-vault-credentials'
+  | 'lock-vault'
+  | 'reset-vault';
   payload?: any;
 }
 

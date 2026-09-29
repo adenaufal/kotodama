@@ -30,29 +30,34 @@ export async function generateWithGemini(
     // ponytail: model sniffed by name - move to a flag in constants/models.ts if the
     // Gemini lineup grows past pro/flash/flash-lite.
     const isPro = modelName.includes('-pro');
-    const response = await fetch(`${GEMINI_API_URL}/${modelName}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: isPro ? 1024 : 300,
-          thinkingConfig: { thinkingBudget: isPro ? 128 : 0 },
+    let response: Response;
+    try {
+      response = await fetch(`${GEMINI_API_URL}/${modelName}:generateContent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
         },
-      }),
-    });
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: userPrompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: isPro ? 1024 : 300,
+            thinkingConfig: { thinkingBudget: isPro ? 128 : 0 },
+          },
+        }),
+      });
+    } catch {
+      throw new Error('Network error connecting to Gemini API.');
+    }
 
     if (!response.ok) {
-      const error = await response.json().catch(() => null);
-      throw new Error(error?.error?.message || `Gemini API request failed with status ${response.status}`);
+      throw new Error(`Gemini API request failed (status ${response.status}).`);
     }
 
     const data = await response.json();
@@ -72,14 +77,11 @@ export async function generateWithGemini(
   try {
     return await requestWithModel(requestedModel);
   } catch (error) {
-    console.error('Gemini generation failed:', error);
-
     if (requestedModel !== FALLBACK_MODEL) {
       try {
-        console.log('Attempting fallback to', FALLBACK_MODEL);
         return await requestWithModel(FALLBACK_MODEL);
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
+      } catch {
+        // The original, sanitized provider failure is returned below.
       }
     }
 
@@ -106,10 +108,11 @@ Tweets to analyze:
 ${tweets.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}/${FALLBACK_MODEL}:generateContent?key=${apiKey}`, {
+    const response = await fetch(`${GEMINI_API_URL}/${FALLBACK_MODEL}:generateContent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
       body: JSON.stringify({
         contents: [
@@ -134,8 +137,7 @@ ${tweets.map((t, i) => `${i + 1}. ${t}`).join('\n')}`;
     // Remove markdown code blocks if present
     const cleanJson = jsonText.replace(/```json\n?|\n?```/g, '');
     return JSON.parse(cleanJson);
-  } catch (error) {
-    console.error('Profile analysis failed:', error);
+  } catch {
     // Return defaults if analysis fails
     return {
       avgLength: 150,

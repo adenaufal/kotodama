@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { getModelsByProvider, getDefaultModelForProvider } from '../../constants/models';
 import { AIProvider } from '../../types';
 import { Theme } from '../../utils/theme';
@@ -20,6 +20,9 @@ const THEMES: { id: Theme; label: string }[] = [
 interface GeneralSettingsProps {
     apiKeys: Record<AIProvider, string>;
     setApiKeys: (keys: Record<AIProvider, string>) => void;
+    configuredProviders: AIProvider[];
+    credentialsUnlocked: boolean;
+    onRemoveCredential: (provider: AIProvider) => void;
 
     provider: AIProvider;
     setProvider: (provider: AIProvider) => void;
@@ -39,6 +42,9 @@ interface GeneralSettingsProps {
 export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
     apiKeys,
     setApiKeys,
+    configuredProviders,
+    credentialsUnlocked,
+    onRemoveCredential,
     provider,
     setProvider,
     selectedModelId,
@@ -49,9 +55,6 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
     setTheme,
     saveState
 }) => {
-    // Only one key is ever revealed at a time.
-    const [revealed, setRevealed] = React.useState<AIProvider | null>(null);
-
     // Models follow the selected provider; custom model IDs stay available to all.
     const allModels = useMemo(
         () => [...getModelsByProvider(provider), ...customModels.map(m => ({ id: m.id, name: m.name }))],
@@ -101,30 +104,34 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                             <div className="relative mt-1.5">
                                 <input
                                     id={`api-key-${id}`}
-                                    type={revealed === id ? 'text' : 'password'}
+                                    type="password"
                                     value={apiKeys[id]}
                                     onChange={(e) => setApiKeys({ ...apiKeys, [id]: e.target.value })}
-                                    placeholder={placeholder}
+                                    placeholder={configuredProviders.includes(id) ? 'Saved — enter a new key to replace' : placeholder}
                                     autoComplete="off"
                                     spellCheck={false}
-                                    className="koto-field pr-10 font-mono text-xs"
+                                    disabled={!credentialsUnlocked}
+                                    className="koto-field font-mono text-xs disabled:cursor-not-allowed disabled:opacity-60"
                                 />
+                            </div>
+                            {configuredProviders.includes(id) && (
                                 <button
                                     type="button"
-                                    aria-label={revealed === id ? `Hide ${label} key` : `Show ${label} key`}
-                                    onClick={() => setRevealed(revealed === id ? null : id)}
-                                    className="absolute right-1.5 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-faint transition-colors hover:text-ink"
+                                    onClick={() => onRemoveCredential(id)}
+                                    disabled={!credentialsUnlocked}
+                                    className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-faint transition-colors hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    {revealed === id ? <EyeOff size={15} strokeWidth={1.5} /> : <Eye size={15} strokeWidth={1.5} />}
+                                    <Trash2 size={12} strokeWidth={1.5} />
+                                    Remove saved key
                                 </button>
-                            </div>
+                            )}
                         </div>
                     ))}
                 </div>
 
                 <p className="mt-4 text-xs leading-relaxed text-faint">
-                    Keys are encrypted with the Web Crypto API and stored on this device only. One provider is
-                    enough — the rest can stay empty.
+                    Saved keys are encrypted with your master passphrase and stored on this device. Leave a field blank
+                    to keep its saved key; enter a new value to replace it. One provider is enough.
                 </p>
             </section>
 
@@ -143,8 +150,8 @@ export const GeneralSettings: React.FC<GeneralSettingsProps> = ({
                             className="koto-field"
                         >
                             {PROVIDER_META.map(({ id, label }) => (
-                                <option key={id} value={id} disabled={!apiKeys[id].trim()}>
-                                    {label}{apiKeys[id].trim() ? '' : ' — add a key first'}
+                                <option key={id} value={id} disabled={!apiKeys[id].trim() && !configuredProviders.includes(id)}>
+                                    {label}{apiKeys[id].trim() || configuredProviders.includes(id) ? '' : ' — add a key first'}
                                 </option>
                             ))}
                         </select>

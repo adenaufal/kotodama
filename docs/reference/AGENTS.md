@@ -25,7 +25,7 @@
    ```
    > The repository ships with an `npm` lockfile. If you must use `pnpm` or `yarn`, remove `package-lock.json`, install afresh, and note the change in your PR description.
 2. **Environment Variables**
-   - None. There is no `.env` file and no `.env.example`; API keys are entered in the extension UI and stored encrypted. If you ever introduce env-driven config, document it here and never commit real secrets.
+   - None. There is no `.env` file and no `.env.example`; API keys are entered in the extension UI and stored in the passphrase-protected credential vault. If you ever introduce env-driven config, document it here and never commit real secrets.
 3. **Start Development Build (watch mode)**
    ```bash
    npm run dev
@@ -100,7 +100,7 @@
 
 ## Security Considerations
 - Never hardcode or commit API keys, OAuth tokens, or user data. Secrets must only exist in local dev environments or encrypted storage.
-- The onboarding flow stores API keys via the Web Crypto helpers—do not bypass encryption or log decrypted values.
+- Onboarding sends credentials to the service worker, which stores them in the passphrase-protected Web Crypto vault. Never return key values to UI pages or log credentials, content, or raw provider errors.
 - Sanitize any user-generated or remote content rendered in the panel to avoid XSS. Avoid `dangerouslySetInnerHTML`; if unavoidable, sanitize first.
 - Use parameterized requests when interacting with external APIs and validate all inputs before sending them.
 - Treat content script messaging as untrusted input. Validate message schemas before acting and guard against prototype pollution or DOM injection.

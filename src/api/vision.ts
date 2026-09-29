@@ -187,9 +187,9 @@ async function callVision(
     })),
   ];
 
-  const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`, {
+  const response = await fetch(`${GEMINI_API_URL}/${model}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({
       contents: [{ role: 'user', parts }],
       generationConfig: { maxOutputTokens: MAX_SUMMARY_TOKENS },
@@ -202,13 +202,7 @@ async function callVision(
 }
 
 async function describeFailure(response: Response): Promise<string> {
-  const raw = await response.text();
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed?.error?.message || `Vision request failed (${response.status})`;
-  } catch {
-    return raw || `Vision request failed (${response.status})`;
-  }
+  return `Vision request failed (status ${response.status}).`;
 }
 
 function requireText(value: unknown): string {
@@ -241,13 +235,6 @@ export async function analyzeContext(
   // images that did load, and the vision call must not sit in this catch.
   const settled = await Promise.allSettled(images.map((img) => fetchImageAsBase64(img.url)));
   const inline = settled.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
-
-  if (inline.length < images.length) {
-    console.warn(
-      `[Kotodama] ${images.length - inline.length}/${images.length} tweet images failed to load:`,
-      settled.filter((r) => r.status === 'rejected').map((r) => (r as PromiseRejectedResult).reason)
-    );
-  }
 
   if (inline.length === 0) {
     const summary = await callVision(provider, apiKey, buildContextText(req.context, 0), []);

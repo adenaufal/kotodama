@@ -58,7 +58,9 @@ imports, so that second pass is the bundle the manifest actually loads.
 - **generatedTweets**: History of generated content (only persisted when `rememberHistory` is enabled in settings)
 
 #### Chrome Storage
-- **user_settings**: Encrypted API keys, UI preferences (theme, panel width, button position), feature flags, and default voice/model selections
+- **user_settings**: UI preferences (theme, panel width, button position), feature flags, and default voice/model selections. Legacy credential fields are cleared after migration.
+- **credential_vault**: Passphrase-encrypted provider credentials and non-secret provider-presence metadata.
+- **storage.session**: The derived vault key for the active browser session, restricted to trusted extension contexts.
 
 ### Message Flow
 

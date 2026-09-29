@@ -64,16 +64,15 @@ function isTemperatureUnsupportedError(message?: string): boolean {
   );
 }
 
-async function extractOpenAIErrorMessage(response: Response): Promise<{ message?: string; raw: string }> {
+async function extractOpenAIErrorMessage(response: Response): Promise<{ message?: string }> {
   const raw = await response.text();
   try {
     const parsed = JSON.parse(raw);
     return {
       message: parsed?.error?.message ?? parsed?.message ?? raw,
-      raw,
     };
   } catch {
-    return { message: raw, raw };
+    return { message: raw };
   }
 }
 
@@ -277,20 +276,11 @@ export async function generateWithOpenAI(
     throw new Error('OpenAI API key is missing or invalid');
   }
 
-  if (!apiKey.startsWith('sk-')) {
-    console.warn('[Kotodama] API key does not start with "sk-" - this may indicate an invalid key');
-  }
 
   // Use the requested model, or fallback to default
   // Allow the request to pass 'modelId' if it was added to the type, otherwise use preferredModel or default
   const requestedModel = (request as any).modelId || preferredModel || DEFAULT_MODEL;
 
-  console.log(`[Kotodama] Using model: ${requestedModel}`);
-  console.log(`[Kotodama] Request details:`, {
-    promptLength: request.prompt?.length || 0,
-    hasContextSummary: !!request.contextSummary,
-    brandVoice: brandVoice.name
-  });
 
   const messages: OpenAIMessage[] = [
     {
@@ -315,11 +305,6 @@ export async function generateWithOpenAI(
       requestBody.temperature = 0.7;
     }
 
-    console.log(`[Kotodama] Sending request to OpenAI API...`, {
-      model: modelName,
-      temperature: includeTemperature ? 0.7 : 'default',
-      maxTokens: requestBody.max_completion_tokens
-    });
 
     let response: Response;
     try {
@@ -331,62 +316,38 @@ export async function generateWithOpenAI(
         },
         body: JSON.stringify(requestBody),
       });
-    } catch (fetchError: any) {
-      console.error('[Kotodama] Network error calling OpenAI API:', fetchError);
-      throw new Error(`Network error: ${fetchError.message || 'Failed to connect to OpenAI API'}`);
+    } catch {
+      throw new Error('Network error connecting to OpenAI API.');
     }
-
-    console.log(`[Kotodama] OpenAI API response status: ${response.status}`);
 
     if (!response.ok) {
       const { message } = await extractOpenAIErrorMessage(response);
-      console.error('[Kotodama] OpenAI API error:', {
-        status: response.status,
-        message,
-        model: modelName
-      });
-
       if (includeTemperature && isTemperatureUnsupportedError(message)) {
         modelsRequiringDefaultTemperature.add(modelName);
-        console.log('[Kotodama] Retrying without temperature parameter...');
         return requestWithModel(modelName, false);
       }
 
-      throw new Error(message || `OpenAI API request failed with status ${response.status}`);
+      throw new Error(`OpenAI API request failed (status ${response.status}).`);
     }
 
     let data: any;
     try {
       data = await response.json();
-    } catch (parseError: any) {
-      console.error('[Kotodama] Failed to parse OpenAI response as JSON:', parseError);
+    } catch {
       throw new Error('Invalid response from OpenAI API');
     }
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('[Kotodama] Unexpected OpenAI response structure:', data);
       throw new Error('Unexpected response format from OpenAI API');
     }
 
     const rawContent = data.choices[0].message.content;
     const tokenUsage = data.usage?.total_tokens || 0;
 
-    // Log raw response for debugging
-    console.log('[Kotodama] Raw API response message:', {
-      rawContent: rawContent,
-      rawContentType: typeof rawContent,
-      finishReason: data.choices[0].finish_reason,
-      refusal: data.choices[0].message.refusal,
-      fullMessage: JSON.stringify(data.choices[0].message)
-    });
-
     // Handle null, undefined, or empty content
     if (rawContent === null || rawContent === undefined) {
-      console.error('[Kotodama] API returned null/undefined content. Full response:', JSON.stringify(data, null, 2));
-
-      // Check if there's a refusal
       if (data.choices[0].message.refusal) {
-        throw new Error(`Content generation refused: ${data.choices[0].message.refusal}`);
+        throw new Error('OpenAI declined to generate a reply for this request.');
       }
 
       throw new Error('OpenAI API returned empty content. This may be due to content filtering or model limitations.');
@@ -395,15 +356,8 @@ export async function generateWithOpenAI(
     const content = String(rawContent).trim();
 
     if (content.length === 0) {
-      console.error('[Kotodama] API returned empty string after trim. Full response:', JSON.stringify(data, null, 2));
       throw new Error('OpenAI API returned empty content. Please try again with a different prompt.');
     }
-
-    console.log('[Kotodama] Successfully generated content:', {
-      contentLength: content.length,
-      tokenUsage,
-      preview: content.substring(0, 100)
-    });
 
     return {
       content,
@@ -415,7 +369,6 @@ export async function generateWithOpenAI(
   try {
     return await requestWithModel(requestedModel);
   } catch (error) {
-    console.error('OpenAI generation failed:', error);
 
     const fallbackCandidates = [DEFAULT_MODEL, FALLBACK_MODEL];
     for (const candidate of fallbackCandidates) {
@@ -424,10 +377,9 @@ export async function generateWithOpenAI(
       }
 
       try {
-        console.log('Attempting fallback to', candidate);
         return await requestWithModel(candidate);
-      } catch (fallbackError) {
-        console.error(`Fallback to ${candidate} failed:`, fallbackError);
+      } catch {
+        // Keep provider errors out of the console; the first failure is returned below.
       }
     }
 
@@ -491,8 +443,7 @@ export async function analyzeTwitterProfile(
 
     const data = await response.json();
     return JSON.parse(data.choices[0].message.content);
-  } catch (error) {
-    console.error('Profile analysis failed:', error);
+  } catch {
     return {
       avgLength: 150,
       commonPhrases: [],

@@ -101,11 +101,10 @@ export async function generateWithClaude(
 
       if (includeTemperature && isSamplingUnsupportedError(message)) {
         modelsRequiringDefaultTemperature.add(modelName);
-        console.log('[Kotodama] Retrying Claude request without temperature...');
         return requestWithModel(modelName, false);
       }
 
-      throw new Error(message || `Claude API request failed with status ${response.status}`);
+      throw new Error(`Claude API request failed (status ${response.status}).`);
     }
 
     const data = await response.json();
@@ -125,14 +124,11 @@ export async function generateWithClaude(
   try {
     return await requestWithModel(requestedModel);
   } catch (error) {
-    console.error('Claude generation failed:', error);
-
     if (requestedModel !== FAST_MODEL) {
       try {
-        console.log('Attempting fallback to', FAST_MODEL);
         return await requestWithModel(FAST_MODEL);
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
+      } catch {
+        // Keep provider errors out of console output.
       }
     }
 
@@ -175,8 +171,7 @@ export async function analyzeTwitterProfileWithClaude(
     // Remove markdown code blocks if present
     const cleanJson = jsonText.replace(/```json\n?|\n?```/g, '');
     return JSON.parse(cleanJson);
-  } catch (error) {
-    console.error('Profile analysis failed:', error);
+  } catch {
     // Return defaults if analysis fails
     return {
       avgLength: 150,
