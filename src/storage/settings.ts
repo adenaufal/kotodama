@@ -35,7 +35,7 @@ export async function getSettings(): Promise<UserSettings> {
     if (!stored) continue;
     try {
       settings.apiKeys[provider] = await decryptApiKey(stored);
-    } catch (error) {
+    } catch {
       console.error(`Failed to decrypt ${provider} key`);
       settings.apiKeys[provider] = undefined;
     }
@@ -44,7 +44,7 @@ export async function getSettings(): Promise<UserSettings> {
   if (settings.claudeCookie) {
     try {
       settings.claudeCookie = await decryptApiKey(settings.claudeCookie);
-    } catch (error) {
+    } catch {
       console.error('Failed to decrypt Claude cookie');
       settings.claudeCookie = undefined;
     }

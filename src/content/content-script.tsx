@@ -5,6 +5,10 @@ import styles from '../panel/index.css?inline';
 import { applyTheme } from '../utils/theme';
 import type { TweetContext, TweetImage, ThreadEntry, UserSettings } from '../types';
 import { sanitizeTweetContext } from '../utils/sanitize';
+import {
+    getEarlierTweetArticles,
+    selectTargetTweetArticle,
+} from './tweet-target';
 
 interface ButtonPosition {
     top: number;
@@ -12,8 +16,6 @@ interface ButtonPosition {
 }
 
 // --- Helper Functions ---
-
-const TWEET_ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
 
 /**
  * X serves the same media at several sizes. We only want real tweet photos
@@ -111,15 +113,6 @@ function extractQuotedTweet(tweetElement: HTMLElement): string {
 }
 
 /**
- * When the composer opens as a modal, the background timeline is still in the
- * DOM and precedes the modal in document order — scope lookups to the dialog so
- * unrelated tweets don't leak into the context.
- */
-function conversationScope(node: Element): ParentNode {
-    return node.closest('[role="dialog"]') ?? document;
-}
-
-/**
  * The tweet being replied to is the article immediately BEFORE the compose box
  * in document order: X renders the conversation as a list of articles and drops
  * the reply composer right after the tweet it belongs to (both inline on a
@@ -128,29 +121,7 @@ function conversationScope(node: Element): ParentNode {
  */
 function findTargetTweetArticle(): HTMLElement | null {
     const compose = findComposeEditable();
-    const scope = compose ? conversationScope(compose) : document;
-    const articles = Array.from(scope.querySelectorAll<HTMLElement>(TWEET_ARTICLE_SELECTOR));
-    if (articles.length === 0) return null;
-
-    if (compose) {
-        // Composer nested inside the tweet card itself — that card is the target.
-        const own = compose.closest<HTMLElement>(TWEET_ARTICLE_SELECTOR);
-        if (own) return own;
-
-        const preceding = articles.filter(
-            (a) => (compose.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING) !== 0
-        );
-        if (preceding.length > 0) return preceding[preceding.length - 1];
-    }
-
-    // No composer to anchor against (logged out, or it hasn't mounted yet): the
-    // last article is some unrelated reply near the bottom of the loaded list, and
-    // a confident wrong pick means replying to a stranger. Admit we don't know —
-    // the panel already has a "no tweet in view" empty state.
-    // ponytail: on /status/ pages the focal tweet could be found by matching the
-    // status id in location.pathname against each article's permalink. Add that if
-    // "no tweet in view" starts firing on pages where the tweet is plainly there.
-    return null;
+    return selectTargetTweetArticle(compose, document);
 }
 
 /**
@@ -163,8 +134,7 @@ const THREAD_CONTEXT_LIMIT = 10;
 
 function extractThread(targetArticle: HTMLElement): ThreadEntry[] {
     const entries: ThreadEntry[] = [];
-    conversationScope(targetArticle).querySelectorAll<HTMLElement>(TWEET_ARTICLE_SELECTOR).forEach((article) => {
-        if ((targetArticle.compareDocumentPosition(article) & Node.DOCUMENT_POSITION_PRECEDING) === 0) return;
+    getEarlierTweetArticles(targetArticle, document).forEach((article) => {
         const { username, displayName } = extractAuthor(article);
         const text = extractTweetText(article);
         if (!username || !text) return;
