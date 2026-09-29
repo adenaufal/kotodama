@@ -9,11 +9,29 @@ permissions:
   pull-requests: write # Allows the action to manage the release PR.
 
 jobs:
+  verify-version:
+    name: Verify version baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check package version against published releases
+        run: node scripts/verify-package-version.js
+
   release:
     name: Run release-please
     runs-on: ubuntu-latest
+    needs: verify-version
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - name: Release using release-please
+        id: release
         uses: google-github-actions/release-please-action@v4
         with:
           release-type: node
@@ -22,3 +40,12 @@ jobs:
             [{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"},{"type":"perf","section":"Performance"},{"type":"refactor","section":"Refactoring"},{"type":"docs","section":"Documentation"},{"type":"chore","section":"Maintenance"}]
           # The action inspects commits on main, opens/updates a release PR,
           # and when merged, tags the commit (vX.Y.Z) plus creates a GitHub Release.
+
+  release-artifacts:
+    name: Build and attach release artifacts
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    uses: ./.github/workflows/release-on-tag.yml
+    with:
+      tag_name: ${{ needs.release.outputs.tag_name }}
+    secrets: inherit

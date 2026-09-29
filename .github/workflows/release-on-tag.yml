@@ -1,6 +1,18 @@
 name: Release Artifacts on Tag
 
 on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: The version tag created by release-please.
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Published release tag to rebuild and attach artifacts for.
+        required: true
+        type: string
   push:
     tags:
       - 'v*.*.*'
@@ -16,7 +28,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch full history so npm/yarn tooling can read tags if needed.
+          ref: ${{ inputs.tag_name || github.ref }}
+          fetch-depth: 0
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -28,45 +41,54 @@ jobs:
         run: npm ci
 
       - name: Build project
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
         run: npm run build
+
+      - name: Verify release versions
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
+          RELEASE_CHECK_MONOTONIC: ${{ github.event_name != 'workflow_dispatch' }}
+        run: npm run verify:release
 
       - name: Generate CRX package
         id: crx
         env:
           CHROME_EXTENSION_PRIVATE_KEY: ${{ secrets.CHROME_EXTENSION_PRIVATE_KEY }}
-          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ inputs.tag_name || github.ref_name }}
+          REQUIRE_CRX: 'true'
         run: node scripts/create-crx.js
 
       - name: Package build output
         id: package
+        env:
+          RELEASE_TAG: ${{ inputs.tag_name || github.ref_name }}
         run: |
           set -euo pipefail
           ARCHIVE_DIR="release-artifacts"
-          ARCHIVE_NAME="app-${GITHUB_REF_NAME}.tar.gz"
+          ARCHIVE_NAME="app-${RELEASE_TAG}.tar.gz"
           mkdir -p "$ARCHIVE_DIR"
 
-          declare -a build_dirs=()
-          for dir in .next dist build; do
-            if [ -d "$dir" ]; then
-              build_dirs+=("$dir")
-            fi
-          done
-
-          if [ "${#build_dirs[@]}" -eq 0 ]; then
-            echo "No build output directories were produced; nothing to package."
-            echo "archive=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          tar --exclude='*.map' -czf "$ARCHIVE_DIR/$ARCHIVE_NAME" "${build_dirs[@]}"
+          test -s dist/manifest.json
+          tar --exclude='*.map' -czf "$ARCHIVE_DIR/$ARCHIVE_NAME" dist
+          test -s "$ARCHIVE_DIR/$ARCHIVE_NAME"
           echo "archive=$ARCHIVE_DIR/$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Attach archive to GitHub Release
-        if: steps.package.outputs.archive != ''
+      - name: Verify release assets
+        env:
+          ARCHIVE_PATH: ${{ steps.package.outputs.archive }}
+          CRX_PATH: ${{ steps.crx.outputs.crx_path }}
+        run: |
+          test -s "$ARCHIVE_PATH"
+          test -s "$CRX_PATH"
+
+      - name: Attach archive and CRX to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag_name || github.ref_name }}
           files: |
             ${{ steps.package.outputs.archive }}
             ${{ steps.crx.outputs.crx_path }}
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
